@@ -188,9 +188,9 @@ VM.Officers = (function () {
     return order;
   }
 
-  function governorThink(state, c) {
-    const C = O(), gov = state.officers[c.governor], f = state.factions[c.owner];
-    const reserve = C.reserve * (gov.trait === 'Cautious' ? 1.6 : (gov.trait === 'Rash' ? 0.5 : 1)), st = c.stats, mode = c.policy;
+  function governorThink(state, c, modeOverride) {
+    const C = O(), gov = c.governor !== null ? state.officers[c.governor] : { trait: 'none' }, f = state.factions[c.owner];
+    const reserve = C.reserve * (gov.trait === 'Cautious' ? 1.6 : (gov.trait === 'Rash' ? 0.5 : 1)), st = c.stats, mode = modeOverride || c.policy;
     // Taxes: relieve a struggling city; a greedy governor squeezes a poor treasury.
     let tax = 'normal';
     if (st.prosperity < 0.65 || f.foodSec < 0.6) tax = 'low';
@@ -360,5 +360,5 @@ VM.Officers = (function () {
     proposalStep(state);
   }
 
-  return { step, bump, sendOfficer, search, recruit, gift, setPolicy, setOrder, answer, wanderersFor, visibleTo, recruitCost, loyaltyTarget, POLICIES, ORDERS };
+  return { step, bump, manage: governorThink, threatened, sendOfficer, search, recruit, gift, setPolicy, setOrder, answer, wanderersFor, visibleTo, recruitCost, loyaltyTarget, POLICIES, ORDERS };
 })();

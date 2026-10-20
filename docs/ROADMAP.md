@@ -37,16 +37,19 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 - Delivered: `js/sim/officers.js`, `tools/test_officers.js` (24 tests including a 5-year autopilot run), officers roster, alerts feed with per-category auto-pause, proposals. The AI (Phase 5) will use the same policies and orders.
 - **Done when:** a player can leave cities on Develop and armies on Defend and the empire runs itself sensibly.
 
-## Phase 5 — AI factions
+## Phase 5 — AI factions (DONE)
 - Rule-based planner using the player's commands; difficulty settings.
 - Win/lose flow (conquest; lose with no nodes), new game.
 - AI-vs-AI headless runs to check games finish and no faction stalls.
+- Delivered: `js/sim/ai.js`, `tools/test_ai.js` (16 tests), `tools/ai_tournament.js`. Over 80 games each against four normal rivals: easy wins 13%, normal 25%, hard 31% (fair share 20%); a hard AI against four easy ones wins 56%. AI-vs-AI games finish in 6 to 14 years (about 40 to 90 minutes at 1x).
 - **Done when:** a full campaign can be won or lost against AI.
 
-## Phase 6 — Polish: first playable
+## Phase 6 — Polish: first playable (DONE, Android build still to be run)
 - Deepward-style visuals for the map and UI, synthesised music and sfx.
 - Tutorial scenario and tips; settings; saves with Continue/New Game; i18n (English, Korean).
 - AdMob top-centre banner with HUD offset; Android build via Capacitor.
+- Delivered: generative music and synthesized effects (`js/ui/audio.js`), settings sheet (volumes, language, text size, replay tutorial, delete save), guided tutorial scenario (`js/ui/tutorial.js`), English and Korean (`js/i18n.js`, `js/lang_ko.js`, `tools/i18n_crawl.js --ko --missing` finds untranslated text), vector icons for specialties and a vignette on the map, AdMob top-centre banner with HUD offset (`js/ads.js`; test ids by default, release ids through `VX_ADS=real`), Capacitor project generation and patching (`tools/android_patch.js`), icons and splash (`tools/make_icons.py`), a GitHub workflow that runs the tests and builds the debug APK, and a browser smoke test (`tools/ui_smoke.js`).
+- Not verified here: building the APK (the Android SDK is not available in this environment). Run the GitHub workflow, then install on a phone.
 - **Done when:** installable on Android and playable start to finish. This is the release candidate for the 2D game.
 
 ## Phase 7 — City view (3D)

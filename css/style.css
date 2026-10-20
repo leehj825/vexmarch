@@ -48,11 +48,13 @@ select { background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 1
 .fac { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; text-align: left; padding: 8px 10px; background: rgba(20, 16, 22, 0.75); border: 1px solid rgba(255, 230, 190, 0.25); border-radius: 5px; color: #eee6d6; font-size: 14px; cursor: pointer; }
 .fac small { opacity: 0.65; margin-left: auto; font-size: 11px; }
 .fac.on { border-color: #f2d27a; background: rgba(242, 210, 122, 0.18); }
-#countSel { display: flex; gap: 6px; }
-#countSel button { flex: 1; padding: 7px 4px; background: rgba(20, 16, 22, 0.75); border: 1px solid rgba(255, 230, 190, 0.25); border-radius: 4px; color: #eee6d6; cursor: pointer; font-size: 12px; }
-#countSel button.on { border-color: #f2d27a; background: rgba(242, 210, 122, 0.18); }
+#countSel, #diffSel { display: flex; gap: 6px; }
+#countSel button, #diffSel button { flex: 1; padding: 7px 4px; background: rgba(20, 16, 22, 0.75); border: 1px solid rgba(255, 230, 190, 0.25); border-radius: 4px; color: #eee6d6; cursor: pointer; font-size: 12px; }
+#countSel button.on, #diffSel button.on { border-color: #f2d27a; background: rgba(242, 210, 122, 0.18); }
 .btns { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
 .btns button { padding: 11px 18px; font-size: 14px; font-weight: 700; letter-spacing: 0.06em; border: 1px solid rgba(255, 230, 190, 0.35); border-radius: 4px; background: rgba(20, 16, 22, 0.75); color: #eee6d6; cursor: pointer; }
+.btns button.pulse { border-color: #f2d27a; animation: pulse 1.6s infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 210, 122, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(242, 210, 122, 0); } }
 .btns .go { color: #1a1008; background: linear-gradient(#f2d27a, #c9963a); border: none; padding: 12px 30px; }
 @media (max-width: 720px) {
   #panel { left: 0; right: 0; bottom: 0; width: auto; max-height: 46vh; border-radius: 10px 10px 0 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
@@ -76,3 +78,28 @@ body.adLive #sheet { top: calc(110px + env(safe-area-inset-top)); }
 .alert { margin: 4px 0; padding: 4px 0; border-bottom: 1px solid rgba(255, 230, 190, 0.08); } .alert.urgent { color: #ffb0a0; } .alert .when { opacity: 0.5; font-size: 11px; margin-right: 4px; }
 .chk { display: block; margin: 2px 0; font-size: 12px; cursor: pointer; } .chk input { vertical-align: -2px; }
 @media (max-width: 720px) { #sheet { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-height: 62vh; border-radius: 10px 10px 0 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); } #speed button.wide { font-size: 11px; padding: 0 6px; } }
+
+/* Tutorial box */
+#lesson { position: fixed; left: 50%; top: calc(54px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); padding: 9px 12px; background: rgba(12, 10, 14, 0.93); border: 1px solid #f2d27a; border-radius: 6px; display: none; pointer-events: auto; }
+#lesson.on { display: block; }
+body.adLive #lesson { top: calc(112px + env(safe-area-inset-top)); }
+#lesson .lt { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #f2d27a; margin-bottom: 3px; }
+#lesson .lx { font-size: 14px; line-height: 1.4; } #lesson .lb { margin-top: 6px; }
+input[type=range] { width: 160px; accent-color: #f2d27a; }
+
+/* Text size (Settings) */
+html[data-size="small"] #panel, html[data-size="small"] #sheet { font-size: 12px; }
+html[data-size="large"] #panel, html[data-size="large"] #sheet { font-size: 15px; }
+html[data-size="large"] #lesson .lx, html[data-size="large"] #toast { font-size: 16px; }
+
+@media (max-width: 720px) {
+  #top { flex-wrap: wrap; row-gap: 4px; }
+  #res { width: 100%; }
+  #speed { width: 100%; justify-content: flex-end; }
+  #speed button { width: 34px; margin-left: 3px; }
+  #speed button.wide { width: auto; padding: 0 7px; }
+  #lesson { top: calc(88px + env(safe-area-inset-top)); }
+  #toast { top: calc(94px + env(safe-area-inset-top)); }
+  body.adLive #top { padding-top: 56px; }
+  body.adLive #lesson { top: calc(142px + env(safe-area-inset-top)); }
+}

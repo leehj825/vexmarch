@@ -138,16 +138,17 @@ VM.World = (function () {
     opts = opts || {};
     const C = VM.CFG, E = C.ECON, seed = (opts.seed === undefined ? 1 : opts.seed) >>> 0;
     const nf = Math.max(4, Math.min(6, opts.factions || C.FACTION_COUNT));
-    const state = { version: C.VERSION, seed, rng: seed, time: 0, acc: 0, player: Math.max(1, Math.min(nf, opts.player || 1)), factionCount: nf, events: [], armies: [], nextArmy: 1, over: null, proposals: [], nextProposal: 1, nextSpawn: C.OFFICERS.spawnEvery };
+    const state = { version: C.VERSION, seed, rng: seed, time: 0, acc: 0, player: Math.max(1, Math.min(nf, opts.player || 1)), factionCount: nf, events: [], armies: [], nextArmy: 1, over: null, difficulty: opts.difficulty || 'normal', aiOn: !!(opts.ai || opts.aiAll), aiAll: !!opts.aiAll, proposals: [], nextProposal: 1, nextSpawn: C.OFFICERS.spawnEvery };
     state.map = buildMap(state);
     const capitals = placeCapitals(state, state.map, nf);
     const spec = assignSpecialties(state, state.map, capitals);
     const owner = claimTerritory(state, state.map, capitals);
 
-    state.factions = [{ id: 0, name: C.FACTIONS[0].name, color: C.FACTIONS[0].color, neutral: true, gold: 0, food: 0, capital: -1, alive: true, foodSec: 1, starving: false, broke: false, income: { gold: 0, food: 0 } }];
+    state.factions = [{ id: 0, name: C.FACTIONS[0].name, color: C.FACTIONS[0].color, neutral: true, gold: 0, food: 0, capital: -1, alive: true, foodSec: 1, starving: false, broke: false, income: { gold: 0, food: 0 }, ai: null }];
     capitals.forEach((c, i) => state.factions.push({
       id: i + 1, name: C.FACTIONS[i + 1].name, color: C.FACTIONS[i + 1].color, neutral: false,
-      gold: C.START_GOLD, food: C.START_FOOD, capital: c, alive: true, foodSec: 1, starving: false, broke: false, income: { gold: 0, food: 0 }
+      gold: C.START_GOLD, food: C.START_FOOD, capital: c, alive: true, foodSec: 1, starving: false, broke: false, income: { gold: 0, food: 0 },
+      ai: { next: (i + 1) * 1.5, thinks: 0, plan: null, level: null, cities: 0, lastGain: 0 }
     }));
 
     state.cities = state.map.nodes.map((nd, i) => {

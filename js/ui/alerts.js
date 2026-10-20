@@ -10,6 +10,7 @@ VM.Alerts = (function () {
     battle:   { label: 'Battles joined', pause: false },
     famine:   { label: 'Famine', pause: false }
   };
+  const SOUND = { attacked: 'danger', battle: 'clash', rout: 'rout', destroyed: 'danger', cut: 'alert', defected: 'alert', proposal: 'alert', built: 'build', recruited: 'pick', found: 'coin', wanderer: 'click', starving: 'danger' };
   let ui, items = [], unread = 0, settings = { pause: {} };
 
   function load() {
@@ -70,6 +71,7 @@ VM.Alerts = (function () {
       if (items.length > 40) items.pop();
       unread++;
       if (d.toast) VM.Panels.toast(d.text);
+      if (ev.type === 'captured') VM.Audio.play(ev.owner === st.player ? 'capture' : (ev.from === st.player ? 'lose' : 'click')); else if (SOUND[ev.type] && (d.urgent || ev.owner === st.player)) VM.Audio.play(SOUND[ev.type]);
       if (d.urgent && settings.pause[d.cat] && ui.speed > 0) { ui.speed = 0; VM.Panels.toast('Paused: ' + d.text); }
     }
   }

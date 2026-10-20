@@ -63,7 +63,7 @@ VM.Armies = (function () {
     return army;
   }
 
-  function form(state, faction, cityId, officerId) {
+  function form(state, faction, cityId, officerId, keep) {
     const city = state.cities[cityId], o = state.officers[officerId];
     if (!city || city.owner !== faction) return { ok: false, reason: 'not your city' };
     if (!o || o.owner !== faction) return { ok: false, reason: 'not your officer' };
@@ -71,8 +71,10 @@ VM.Armies = (function () {
     if (city.governor === o.id) return { ok: false, reason: 'officer is governing; relieve them first' };
     if (o.loc !== cityId) return { ok: false, reason: 'officer is not in this city' };
     if (VM.Eco.troopsOf(city.garrison) <= 0) return { ok: false, reason: 'no troops in the garrison' };
-    const army = spawn(state, faction, cityId, Object.assign({}, city.garrison), o.id);
-    for (const k in city.garrison) city.garrison[k] = 0;
+    const have = VM.Eco.troopsOf(city.garrison), left = Math.max(0, Math.min(have - 1, keep || 0)), take = (have - left) / have, troops = {};
+    if (take <= 0) return { ok: false, reason: 'no troops to spare' };
+    for (const k in city.garrison) { troops[k] = city.garrison[k] * take; city.garrison[k] -= troops[k]; }
+    const army = spawn(state, faction, cityId, troops, o.id);
     return { ok: true, army: army.id };
   }
 
@@ -109,6 +111,37 @@ VM.Armies = (function () {
     return { ok: true };
   }
 
+  // Folds the garrison's spare troops (everything above `keep`) into an army standing in one of its own cities.
+  function reinforce(state, a, keep) {
+    if (a.at === null) return { ok: false, reason: 'the army must be in a city' };
+    const city = state.cities[a.at];
+    if (city.owner !== a.owner) return { ok: false, reason: 'only inside your own city' };
+    if (a.fighting.length || a.routed) return { ok: false, reason: 'not while in battle or routed' };
+    const have = VM.Eco.troopsOf(city.garrison), take = have - Math.max(0, keep || 0);
+    if (take < 1) return { ok: false, reason: 'no spare troops' };
+    const f = take / have, n0 = sizeOf(a);
+    for (const k in city.garrison) { const t = city.garrison[k] * f; city.garrison[k] -= t; a.troops[k] = (a.troops[k] || 0) + t; }
+    a.morale = (a.morale * n0 + 100 * take) / (n0 + take);
+    a.rations = Math.min(sizeOf(a) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays, a.rations + take * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
+    a.peak = Math.max(a.peak, sizeOf(a));
+    return { ok: true, added: take };
+  }
+
+  // Two armies of one faction standing in the same node become one; the better commander leads.
+  function merge(state, a, b) {
+    if (a === b || a.owner !== b.owner) return { ok: false, reason: 'armies must belong to you' };
+    if (a.at === null || a.at !== b.at) return { ok: false, reason: 'armies must be in the same place' };
+    if (a.fighting.length || b.fighting.length || a.routed || b.routed) return { ok: false, reason: 'not while in battle or routed' };
+    const na = sizeOf(a), nb = sizeOf(b), oa = state.officers[a.officer], ob = state.officers[b.officer];
+    for (const k in b.troops) a.troops[k] = (a.troops[k] || 0) + b.troops[k];
+    a.morale = (a.morale * na + b.morale * nb) / (na + nb);
+    a.rations = Math.min(a.rations + b.rations, sizeOf(a) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
+    a.peak = Math.max(a.peak, sizeOf(a));
+    if (ob.command > oa.command) { oa.army = null; oa.role = 'idle'; oa.loc = a.at; ob.army = a.id; a.officer = ob.id; } else { ob.army = null; ob.role = 'idle'; ob.loc = a.at; }
+    state.armies.splice(state.armies.indexOf(b), 1);
+    return { ok: true };
+  }
+
   function step(state, dd) {
     for (const army of state.armies) {
       if (army.fighting.length) continue;                 // locked in battle
@@ -136,5 +169,5 @@ VM.Armies = (function () {
     return path(state, o, army.home);
   }
 
-  return { form, spawn, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
+  return { form, spawn, merge, reinforce, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
 })();

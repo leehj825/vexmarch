@@ -13,14 +13,17 @@ VM.Sheets = (function () {
     box.addEventListener('change', e => { if (e.target.dataset.pause) VM.Alerts.setPause(e.target.dataset.pause, e.target.checked); });
     $('offBtn').addEventListener('click', () => toggle('officers'));
     $('alertBtn').addEventListener('click', () => toggle('alerts'));
+    $('setBtn').addEventListener('click', () => toggle('settings'));
+    box.addEventListener('input', e => { const k = e.target.dataset.vol; if (k) { VM.Audio.set(k, +e.target.value / 100); } });
   }
 
-  function toggle(which) { ui.sheet = ui.sheet === which ? null : which; if (ui.sheet === 'alerts') VM.Alerts.read(); lastHTML = ''; }
+  function toggle(which) { ui.sheet = ui.sheet === which ? null : which; if (ui.sheet === 'alerts') VM.Alerts.read(); lastHTML = ''; VM.Audio.play('click'); }
 
   function cmd(c) {
     c.faction = ui.state.player;
     const r = VM.Commands.exec(ui.state, c);
-    if (!r.ok) VM.Panels.toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1));
+    if (!r.ok) { VM.Panels.toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); VM.Audio.play('error'); }
+    else VM.Audio.play('coin');
     lastHTML = ''; return r;
   }
 
@@ -34,6 +37,11 @@ VM.Sheets = (function () {
       case 'send': { const sel = $('send-' + d.o); if (!sel || sel.value === '') { VM.Panels.toast('Choose a city first'); break; } const r = cmd({ type: 'sendOfficer', officer: +d.o, to: +sel.value }); if (r.ok) VM.Panels.toast(`On the road: ${r.days} days`); break; }
       case 'recruitO': { const r = cmd({ type: 'recruitOfficer', officer: +d.o }); if (r.ok) VM.Panels.toast(r.joined ? 'They accepted your offer!' : 'They refused and moved on'); break; }
       case 'center': ui.centerOn(+d.loc); break;
+      case 'mute': VM.Audio.toggleMute(); lastHTML = ''; break;
+      case 'lang': VM.I18N.set(d.l); lastHTML = ''; break;
+      case 'size': VM.UIPrefs.set('size', d.v); lastHTML = ''; break;
+      case 'tutorial': VM.Tutorial.finish(false); ui.sheet = null; VM.Title.startTutorial(); break;
+      case 'delsave': try { localStorage.removeItem('vexmarch.save'); VM.Panels.toast('Saved game deleted'); } catch (e) { /* ignore */ } break;
       case 'answer': { const r = cmd({ type: 'answerProposal', proposal: +d.p, accept: d.yes === '1' }); if (r.ok && d.yes === '1') VM.Panels.toast('Approved'); break; }
     }
   }
@@ -89,15 +97,28 @@ VM.Sheets = (function () {
     return h;
   }
 
+  function settingsHTML() {
+    const A = VM.Audio, vol = (k, label) => `<div class="row between"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(A.get(k) * 100)}" data-vol="${k}"></div>`;
+    let h = `<div class="ph"><b>Settings</b><span class="sub">Vexmarch</span><button data-act="sheetClose" class="x">✕</button></div>`;
+    h += vol('master', 'Master volume') + vol('music', 'Music') + vol('sfx', 'Effects');
+    h += `<div class="row"><button data-act="mute" class="chip${A.get('mute') ? ' on' : ''}">${A.get('mute') ? 'Sound off' : 'Sound on'}</button></div>`;
+    h += `<div class="sec">Language</div><div class="row">` + VM.I18N.NAMES.map(([l, n]) => `<button data-act="lang" data-l="${l}" class="chip${VM.I18N.lang === l ? ' on' : ''}" translate="no">${n}</button>`).join('') + `</div>`;
+    h += `<div class="sec">Text size</div><div class="row">` + [['small', 'Small'], ['normal', 'Normal'], ['large', 'Large']].map(([v, n]) => `<button data-act="size" data-v="${v}" class="chip${VM.UIPrefs.get('size') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
+    h += `<div class="sec">Help</div><div class="row"><button data-act="tutorial" class="btn">Replay the tutorial</button></div>`;
+    h += `<div class="row"><button data-act="delsave" class="btn">Delete saved game</button></div>`;
+    h += `<div class="row dim">Pausing for alerts is chosen in the Alerts list.</div>`;
+    return h;
+  }
+
   function update() {
     const st = ui.state, n = VM.Alerts.unread() + st.proposals.length;
     const ab = $('alertBtn'); ab.textContent = n ? 'Alerts ' + n : 'Alerts'; ab.classList.toggle('hot', n > 0);
-    $('offBtn').classList.toggle('on', ui.sheet === 'officers'); ab.classList.toggle('on', ui.sheet === 'alerts');
+    $('offBtn').classList.toggle('on', ui.sheet === 'officers'); ab.classList.toggle('on', ui.sheet === 'alerts'); $('setBtn').classList.toggle('on', ui.sheet === 'settings');
     box.classList.toggle('open', !!ui.sheet);
     if (!ui.sheet) { lastHTML = ''; return; }
     if (ui.sheet === 'alerts') VM.Alerts.read();
-    const h = ui.sheet === 'officers' ? officersHTML() : alertsHTML();
-    const typing = document.activeElement && box.contains(document.activeElement) && document.activeElement.tagName === 'SELECT';
+    const h = ui.sheet === 'officers' ? officersHTML() : (ui.sheet === 'settings' ? settingsHTML() : alertsHTML());
+    const typing = document.activeElement && box.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.type === 'range');
     if (h !== lastHTML && !typing) { box.innerHTML = h; lastHTML = h; }
   }
 

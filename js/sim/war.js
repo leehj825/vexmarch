@@ -173,8 +173,9 @@ VM.War = (function () {
   function checkOver(state) {
     if (state.over) return;
     const mine = state.cities.filter(c => c.owner === state.player).length;
-    if (mine === 0) state.over = { type: 'lose', t: state.time };
-    else if (mine === state.cities.length) state.over = { type: 'win', t: state.time };
+    const first = state.cities[0].owner;
+    if (first > 0 && state.cities.every(c => c.owner === first)) state.over = { type: first === state.player ? 'win' : 'lose', winner: first, t: state.time };   // someone holds every node
+    else if (mine === 0 && !state.aiAll) state.over = { type: 'lose', winner: null, t: state.time };
   }
 
   // ---- Battles and sieges ----

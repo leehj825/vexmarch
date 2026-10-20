@@ -2,8 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.MapView = (function () {
-  const RES = 4, LAND = 118, MARG = 60;                    // territory raster: map units per pixel, and how far land reaches from a node
-  const MARK = { capital: '★', farmland: 'F', market: 'M', pass: '^', port: '~', iron: 'I', horse: 'H', holy: '+' };
+  const RES = 4, LAND = 118, MARG = 130;                    // territory raster: map units per pixel, and how far land reaches from a node
   let canvas, ctx, ui, view = { s: 1, ox: 0, oy: 0 }, fitScale = 1, dpr = 1;
   let terr = null, terrKey = '', nearest = null, pointers = new Map(), drag = null, pinch = null;
 
@@ -126,6 +125,24 @@ VM.MapView = (function () {
   // ---- Drawing ----
   function dashed(on) { ctx.setLineDash(on ? [4, 5] : []); }
 
+  // Little vector icons for the specialties, drawn in dark ink on the node.
+  function drawMark(spec, x, y, r) {
+    const k = r * 0.52; ctx.save(); ctx.translate(x, y); ctx.fillStyle = ctx.strokeStyle = 'rgba(10,8,12,0.88)'; ctx.lineWidth = Math.max(1.4, r * 0.14); ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.beginPath();
+    switch (spec) {
+      case 'capital': for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? k * 0.45 : k * 1.05; ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr + 1); } ctx.closePath(); ctx.fill(); break;
+      case 'farmland': for (const dx of [-k * 0.6, 0, k * 0.6]) { ctx.moveTo(dx, k * 0.9); ctx.lineTo(dx, -k * 0.7); ctx.moveTo(dx, -k * 0.2); ctx.lineTo(dx - k * 0.3, -k * 0.5); ctx.moveTo(dx, -k * 0.2); ctx.lineTo(dx + k * 0.3, -k * 0.5); } ctx.stroke(); break;
+      case 'market': ctx.arc(0, 0, k * 0.9, 0, 7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-k * 0.4, 0); ctx.lineTo(k * 0.4, 0); ctx.moveTo(0, -k * 0.45); ctx.lineTo(0, k * 0.45); ctx.stroke(); break;
+      case 'pass': ctx.moveTo(-k, k * 0.8); ctx.lineTo(-k * 0.25, -k * 0.8); ctx.lineTo(k * 0.2, k * 0.1); ctx.lineTo(k * 0.55, -k * 0.35); ctx.lineTo(k, k * 0.8); ctx.closePath(); ctx.fill(); break;
+      case 'port': ctx.moveTo(-k, -k * 0.2); ctx.quadraticCurveTo(-k * 0.5, -k * 0.7, 0, -k * 0.2); ctx.quadraticCurveTo(k * 0.5, k * 0.3, k, -k * 0.2); ctx.moveTo(-k, k * 0.5); ctx.quadraticCurveTo(-k * 0.5, 0, 0, k * 0.5); ctx.quadraticCurveTo(k * 0.5, k, k, k * 0.5); ctx.stroke(); break;
+      case 'iron': ctx.moveTo(0, -k); ctx.lineTo(k * 0.85, 0); ctx.lineTo(0, k); ctx.lineTo(-k * 0.85, 0); ctx.closePath(); ctx.fill(); break;
+      case 'horse': ctx.arc(0, -k * 0.1, k * 0.85, 0.2 * Math.PI, 0.8 * Math.PI, true); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-k * 0.75, -k * 0.1); ctx.lineTo(-k * 0.75, k * 0.6); ctx.moveTo(k * 0.75, -k * 0.1); ctx.lineTo(k * 0.75, k * 0.6); ctx.stroke(); break;
+      case 'holy': ctx.moveTo(0, -k); ctx.lineTo(0, k); ctx.moveTo(-k * 0.65, -k * 0.25); ctx.lineTo(k * 0.65, -k * 0.25); ctx.stroke(); break;
+      default: ctx.moveTo(-k * 0.8, k * 0.7); ctx.lineTo(-k * 0.8, -k * 0.1); ctx.lineTo(0, -k * 0.85); ctx.lineTo(k * 0.8, -k * 0.1); ctx.lineTo(k * 0.8, k * 0.7); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawFlag(x, y, color, count, selected, label) {
     ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + 12); ctx.lineTo(x, y - 8); ctx.stroke();
     ctx.fillStyle = color; ctx.fillRect(x, y - 8, 15, 10);
@@ -183,11 +200,13 @@ VM.MapView = (function () {
       }
       if (c.depot) { ctx.fillStyle = '#f2d27a'; ctx.fillRect(x + r - 2, y - r - 2, 7, 7); ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 1; ctx.strokeRect(x + r - 2, y - r - 2, 7, 7); }
       if (c.besieged || c.contested) { ctx.strokeStyle = '#e0483a'; ctx.lineWidth = 2.5; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 11 + (Math.sin(Date.now() / 250) + 1) * 1.5, 0, 7); ctx.stroke(); dashed(false); }
-      const mk = MARK[c.spec];
-      if (mk) { ctx.fillStyle = 'rgba(10,8,12,0.85)'; ctx.font = 'bold ' + Math.round(r * 1.05) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(mk, x, y + 1); ctx.textBaseline = 'alphabetic'; }
+      drawMark(c.spec, x, y, r);
       ctx.font = fs + 'px system-ui'; ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(7,6,10,0.8)'; ctx.fillText(n.name, x + 1, y + r + fs + 5); ctx.fillStyle = c.owner === me ? '#f2d27a' : 'rgba(238,230,214,0.9)'; ctx.fillText(n.name, x, y + r + fs + 4);
     }
+
+    const fo = VM.Tutorial.focus();                                           // the node the tutorial wants you to look at
+    if (fo >= 0) { const n = N[fo], r = 22 + (Math.sin(Date.now() / 200) + 1) * 5; ctx.strokeStyle = '#f2d27a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx(n.x), sy(n.y), r, 0, 7); ctx.stroke(); }
 
     // Armies
     const slots = {};
@@ -209,6 +228,8 @@ VM.MapView = (function () {
       const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), bx = sx((p.x + q.x) / 2), by = sy((p.y + q.y) / 2) - 4, z = 7 + Math.sin(Date.now() / 120);
       ctx.strokeStyle = '#ff5a48'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - z, by - z); ctx.lineTo(bx + z, by + z); ctx.moveTo(bx + z, by - z); ctx.lineTo(bx - z, by + z); ctx.stroke();
     }
+    const vg = ctx.createRadialGradient(innerWidth / 2, innerHeight / 2, Math.min(innerWidth, innerHeight) * 0.45, innerWidth / 2, innerHeight / 2, Math.max(innerWidth, innerHeight) * 0.75);
+    vg.addColorStop(0, 'rgba(7,6,10,0)'); vg.addColorStop(1, 'rgba(7,6,10,0.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, innerWidth, innerHeight);
   }
 
   return { init, render, fit, centerOn, resize, view: () => view };

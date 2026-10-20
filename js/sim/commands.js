@@ -61,7 +61,7 @@ VM.Commands = (function () {
     },
     formArmy(state, cmd) {
       const [city, err] = ownCity(state, cmd); if (err) return err;
-      return VM.Armies.form(state, cmd.faction, city.id, cmd.officer);
+      return VM.Armies.form(state, cmd.faction, city.id, cmd.officer, cmd.keep);
     },
     moveArmy(state, cmd) {
       const a = ownArmy(state, cmd); if (a.err) return a.err;
@@ -74,6 +74,16 @@ VM.Commands = (function () {
     disbandArmy(state, cmd) {
       const a = ownArmy(state, cmd); if (a.err) return a.err;
       return VM.Armies.disband(state, a.army);
+    },
+    reinforceArmy(state, cmd) {
+      const a = ownArmy(state, cmd); if (a.err) return a.err;
+      return VM.Armies.reinforce(state, a.army, cmd.keep);
+    },
+    mergeArmies(state, cmd) {
+      const a = ownArmy(state, cmd); if (a.err) return a.err;
+      const b = state.armies.find(x => x.id === cmd.with);
+      if (!b || b.owner !== cmd.faction) return fail('not your army');
+      return VM.Armies.merge(state, a.army, b);
     },
     ability(state, cmd) {
       const a = ownArmy(state, cmd); if (a.err) return a.err;

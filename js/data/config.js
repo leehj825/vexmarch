@@ -2,7 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.CFG = {
-  VERSION: 4,
+  VERSION: 5,
 
   // ---- Time ----
   DAY_SECONDS: 2,          // real seconds per in-game day at 1x
@@ -115,6 +115,17 @@ VM.CFG = {
     abilityCooldown: 40, chargeDays: 6, chargeMult: 1.6,
     fateDead: 0.3, fateCaptured: 0.65      // officer of a destroyed army: dies below, captured below, else escapes
   },
+
+  // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  AI: {
+    // odds = how many times stronger than a target's defence the AI wants to be before it attacks (it relaxes 10% a year without gains).
+    // Measured over 80 games each against four 'normal' rivals: easy wins about 13% of games, normal 25%, hard 33% (fair share is 20%).
+    easy:   { think: 20, odds: 2.75, armiesMax: 2, guards: 1, mil: 0.04, spend: 0.35, reach: 520, search: false, abilities: false, depots: false },
+    normal: { think: 10, odds: 1.8,  armiesMax: 3, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false },
+    hard:   { think: 5,  odds: 2.1,  armiesMax: 5, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false }
+  },
+  AI_RESERVE: 800,          // gold an AI keeps back when recruiting, so its governors can still afford to build
+  AI_KEEP: 0.03,            // share of a city's people left as garrison when an army is formed there
 
   // ---- Officers, delegation and alerts (Phase 4) ----
   OFFICERS: {

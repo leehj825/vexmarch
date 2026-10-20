@@ -4,6 +4,7 @@ var VM = globalThis.VM = globalThis.VM || {};
 
 VM.Panels = (function () {
   let ui, panel, lastHTML = '', toastTimer = 0;
+  const SPEND = { build: 'coin', recruit: 'recruit', buildDepot: 'coin', setDepot: 'click', moveArmy: 'order', stopArmy: 'order', setOrder: 'order', formArmy: 'horn', ability: 'ability', disbandArmy: 'click' };
   const $ = id => document.getElementById(id);
   const num = v => Math.round(v).toLocaleString('en-US');
   const sgn = v => (v >= 0 ? '+' : '') + Math.round(v);
@@ -17,7 +18,8 @@ VM.Panels = (function () {
   function cmd(c) {
     c.faction = ui.state.player;
     const r = VM.Commands.exec(ui.state, c);
-    if (!r.ok) toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1));
+    if (!r.ok) { toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); VM.Audio.play('error'); }
+    else VM.Audio.play(SPEND[c.type] || 'click');
     lastHTML = ''; return r;
   }
 
