@@ -39,13 +39,27 @@ VM.Armies = (function () {
     for (const k in army.troops) if (army.troops[k] > 0) s = Math.min(s, VM.CFG.TROOPS[k].speed);
     return s === Infinity ? 0 : s;
   }
-  const sizeOf = army => army.troops.infantry + army.troops.spear + army.troops.cavalry + army.troops.archer;
+  const sizeOf = army => { let n = 0; for (const k in army.troops) n += army.troops[k]; return n; };
 
   function position(state, army) {
     const N = state.map.nodes;
     if (army.at !== null) return { x: N[army.at].x, y: N[army.at].y };
     const e = army.edge, a = N[e.from], b = N[e.to], t = e.prog / e.len;
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  }
+
+  // The node whose territory the army stands in (the nearer end of the road when it is between nodes).
+  function zoneOf(army) { return army.at !== null ? army.at : (army.edge.prog < army.edge.len / 2 ? army.edge.from : army.edge.to); }
+
+  // Puts a new army on the map (used by form() and by scripted scenarios).
+  function spawn(state, faction, at, troops, officerId) {
+    const o = state.officers[officerId];
+    const army = { id: state.nextArmy++, owner: faction, officer: o.id, troops, home: at, at, edge: null, path: [], dest: null,
+      morale: 100, rations: 0, fighting: [], routed: false, retreat: 0, buff: null, abilityReady: 0, supply: null };
+    army.rations = sizeOf(army) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays;
+    o.army = army.id; o.role = 'commander'; o.loc = at;
+    state.armies.push(army);
+    return army;
   }
 
   function form(state, faction, cityId, officerId) {
@@ -56,15 +70,15 @@ VM.Armies = (function () {
     if (city.governor === o.id) return { ok: false, reason: 'officer is governing; relieve them first' };
     if (o.loc !== cityId) return { ok: false, reason: 'officer is not in this city' };
     if (VM.Eco.troopsOf(city.garrison) <= 0) return { ok: false, reason: 'no troops in the garrison' };
-    const army = { id: state.nextArmy++, owner: faction, officer: o.id, troops: Object.assign({}, city.garrison), home: cityId, at: cityId, edge: null, path: [], dest: null };
+    const army = spawn(state, faction, cityId, Object.assign({}, city.garrison), o.id);
     for (const k in city.garrison) city.garrison[k] = 0;
-    o.army = army.id; o.role = 'commander';
-    state.armies.push(army);
     return { ok: true, army: army.id };
   }
 
   function move(state, army, to) {
     if (!state.cities[to]) return { ok: false, reason: 'no such place' };
+    if (army.routed) return { ok: false, reason: 'the army is routed and fleeing' };
+    if (army.fighting.length) { army.morale = Math.max(1, army.morale - 10); army.fighting = []; army.retreat = 2; }   // breaking off a battle costs morale
     if (army.at !== null) {
       const p = path(state, army.at, to);
       if (!p) return { ok: false, reason: 'no road there' };
@@ -85,6 +99,7 @@ VM.Armies = (function () {
 
   function disband(state, army) {
     if (army.at === null) return { ok: false, reason: 'army is on the road' };
+    if (army.fighting.length) return { ok: false, reason: 'army is in battle' };
     const city = state.cities[army.at];
     if (city.owner !== army.owner) return { ok: false, reason: 'only inside your own city' };
     for (const k in army.troops) city.garrison[k] += army.troops[k];
@@ -95,7 +110,8 @@ VM.Armies = (function () {
 
   function step(state, dd) {
     for (const army of state.armies) {
-      let left = speedOf(army) * dd, guard = 0;
+      if (army.fighting.length) continue;                 // locked in battle
+      let left = speedOf(army) * dd * (army.routed ? VM.CFG.WAR.routSpeed : 1), guard = 0;
       while (left > 1e-9 && guard++ < 20) {
         if (army.at !== null) {
           if (!army.path.length) { army.dest = null; break; }
@@ -119,5 +135,5 @@ VM.Armies = (function () {
     return path(state, o, army.home);
   }
 
-  return { form, move, stop, disband, step, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
+  return { form, spawn, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
 })();

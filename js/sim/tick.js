@@ -7,6 +7,7 @@ VM.Sim = (function () {
   function stepOnce(state) {
     const dd = VM.CFG.STEP_DAYS;
     VM.Armies.step(state, dd);
+    VM.War.step(state, dd);
     VM.Eco.step(state, dd);
     state.time += dd;
   }
@@ -14,15 +15,16 @@ VM.Sim = (function () {
   // Advance by a number of in-game days (headless runs and tests).
   function advance(state, days, each) {
     const steps = Math.round(days / VM.CFG.STEP_DAYS);
-    for (let i = 0; i < steps; i++) { stepOnce(state); if (each) each(state); }
+    for (let i = 0; i < steps && !state.over; i++) { stepOnce(state); if (each) each(state); }
   }
 
   // Advance by real seconds at a speed multiplier (the browser loop). Leftover time is kept in state.acc.
   function update(state, dtSeconds, speed) {
     const stepSec = VM.CFG.STEP_DAYS * VM.CFG.DAY_SECONDS;
+    if (state.over) return;
     state.acc += Math.min(dtSeconds, 0.25) * speed;
     let n = 0;
-    while (state.acc >= stepSec && n < 40) { stepOnce(state); state.acc -= stepSec; n++; }
+    while (state.acc >= stepSec && n < 40 && !state.over) { stepOnce(state); state.acc -= stepSec; n++; }
     if (n === 40) state.acc = 0;
   }
 

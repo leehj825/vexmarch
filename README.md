@@ -2,7 +2,7 @@
 
 A real-time grand strategy game: 30 nodes, 4 to 6 factions, officers who run your cities, and supply lines that decide wars. Plain JavaScript (no build step, no modules) so it opens from `file://`; Capacitor wraps it for Android (`com.vexmarch.game`).
 
-See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 2 done** (setup, headless simulation, playable map view). War, officers' autonomy and AI are next.
+See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 3 done** (setup, simulation, map view, war and logistics). Officer autonomy and the AI factions are next.
 
 ## Run
 
@@ -11,7 +11,7 @@ Open `index.html` in a browser. Pick a faction on the title screen. Click a node
 ## Test and balance (Node 18+, no dependencies)
 
 ```
-npm test              # node tools/test.js: map, determinism, saves, economy, commands
+npm test              # tools/test.js (map, determinism, saves, economy, commands, armies) and tools/test_war.js (battles, sieges, supply)
 npm run balance       # node tools/balance.js [seed] [years]: yearly economy tables for low/normal/high tax
 ```
 
@@ -26,6 +26,7 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/sim/economy.js` | Gold, food, population growth, construction |
 | `js/sim/commands.js` | `VM.Commands.exec(state, cmd)`: build, setTax, recruit, setGovernor |
 | `js/sim/armies.js` | Armies: form, march along roads, disband, supply route |
+| `js/sim/war.js` | Battles, sieges, supply and cut-off, morale, abilities, capture, elimination, depots |
 | `js/sim/tick.js` | Fixed-timestep clock, save/load, hash |
 | `js/ui/map.js` | Canvas map: territory, roads, nodes, armies, pan/zoom/tap input |
 | `js/ui/panels.js` | HUD bar, node and army panels, toasts |

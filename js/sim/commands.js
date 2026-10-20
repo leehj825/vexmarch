@@ -73,6 +73,19 @@ VM.Commands = (function () {
     disbandArmy(state, cmd) {
       const a = ownArmy(state, cmd); if (a.err) return a.err;
       return VM.Armies.disband(state, a.army);
+    },
+    ability(state, cmd) {
+      const a = ownArmy(state, cmd); if (a.err) return a.err;
+      return VM.War.useAbility(state, a.army);
+    },
+    buildDepot(state, cmd) {
+      const [city, err] = ownCity(state, cmd); if (err) return err;
+      return VM.War.buildDepot(state, cmd.faction, city.id);
+    },
+    setDepot(state, cmd) {
+      const [city, err] = ownCity(state, cmd); if (err) return err;
+      if (!city.depot) return fail('no depot here');
+      city.depot.target = Math.max(0, Math.min(20000, cmd.target | 0)); return { ok: true };
     }
   };
 

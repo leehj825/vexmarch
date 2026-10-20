@@ -2,7 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.CFG = {
-  VERSION: 2,
+  VERSION: 3,
 
   // ---- Time ----
   DAY_SECONDS: 2,          // real seconds per in-game day at 1x
@@ -83,7 +83,37 @@ VM.CFG = {
     infantry: { label: 'Infantry', cost: 20, upkeep: 0.05, speed: 45 },
     spear:    { label: 'Spearmen', cost: 22, upkeep: 0.05, speed: 45 },
     cavalry:  { label: 'Cavalry',  cost: 40, upkeep: 0.10, speed: 80 },
-    archer:   { label: 'Archers',  cost: 30, upkeep: 0.07, speed: 45 }
+    archer:   { label: 'Archers',  cost: 30, upkeep: 0.07, speed: 45 },
+    siege:    { label: 'Siege engines', cost: 90, upkeep: 0.25, speed: 30, siege: true }   // weak in the field, breaks walls
+  },
+
+  // ---- War (Phase 3) ----
+  // Troop types beat each other in a cycle: spear > cavalry > archer > infantry > spear.
+  WAR: {
+    contact: 16,            // map units: armies this close are in battle
+    k: 0.035,               // casualties per day = k x effective strength of the enemy
+    strong: 1.4, weak: 0.7, // matchup multipliers
+    siegeField: 0.25,       // siege engines fight at this strength against troops
+    cmdBonus: 0.4,          // officer Command 100 = +40% strength
+    home: 1.15,             // defender on its own land
+    moraleRate: 8,          // morale lost per day at even odds (scaled by the odds, 0.3x to 3x)
+    wallHp: [0, 600, 1500, 3000],
+    wallBonus: 1.5,         // garrison strength behind an unbroken wall
+    wallProtect: 0.35,      // share of normal damage the garrison takes while the wall stands
+    siegeWall: 4,           // wall hit points per siege engine per day
+    chip: 0.15,             // wall hit points per other soldier per day
+    wallRepair: 0.01,       // fraction of max per day when nobody threatens the city
+    captureMin: 1,          // garrison at or below this falls
+    captureLoss: 0.15,      // population lost when a city is taken
+    foreignFood: 3,         // food eaten per soldier in enemy or neutral land
+    rationDays: 12,         // days of food an army carries
+    refill: 4,              // rations refill speed when supplied (x consumption)
+    cutDrain: 3, starveDrain: 8, recover: 1,   // morale per day: line cut / no food / recovery when safe
+    desert: 0.02,           // troops lost per day while starving
+    routSpeed: 1.25, routRecover: 30,
+    depotCost: 300, depotRange: 230, depotRate: 40,
+    abilityCooldown: 40, chargeDays: 6, chargeMult: 1.6,
+    fateDead: 0.3, fateCaptured: 0.65      // officer of a destroyed army: dies below, captured below, else escapes
   },
 
   // ---- Officers ----

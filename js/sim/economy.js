@@ -3,7 +3,7 @@ var VM = globalThis.VM = globalThis.VM || {};
 
 VM.Eco = (function () {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const troopsOf = g => g.infantry + g.spear + g.cavalry + g.archer;
+  const troopsOf = g => { let n = 0; for (const k in g) n += g[k]; return n; };
 
   function cap(city) {
     const E = VM.CFG.ECON, S = VM.CFG.SPEC[city.spec], b = city.buildings;
@@ -60,6 +60,7 @@ VM.Eco = (function () {
           city.build.left -= dd * (1 + C.GOVERNOR_BUILD_SPEED * gov);
           if (city.build.left <= 0) {
             city.buildings[city.build.type]++;
+            if (city.build.type === 'wall') city.wallHp += VM.War.wallMax(city) - VM.War.wallMax({ spec: city.spec, buildings: { wall: city.buildings.wall - 1 } });
             if (!f.neutral) pushEvent(state, { type: 'built', city: city.id, owner: f.id, building: city.build.type, level: city.buildings[city.build.type] });
             city.build = null;
           }
@@ -69,8 +70,7 @@ VM.Eco = (function () {
       }
       if (f.neutral) continue;
       for (const a of state.armies) if (a.owner === f.id) {      // armies eat and draw pay like garrisons
-        const n = a.troops.infantry + a.troops.spear + a.troops.cavalry + a.troops.archer;
-        cons += n * E.foodPerHead;
+        cons += a.supply ? a.supply.poolDraw : troopsOf(a.troops) * E.foodPerHead;
         for (const k in a.troops) upkeep += a.troops[k] * C.TROOPS[k].upkeep;
       }
       const salary = state.officers.filter(o => o.owner === f.id).length * E.officerSalary;

@@ -162,7 +162,7 @@ VM.MapView = (function () {
       const sp = VM.Armies.supplyPath(st, sel);
       if (sp && sp.length > 1) {
         const pos = VM.Armies.position(st, sel), pts = [{ x: sx(pos.x), y: sy(pos.y) }].concat(sp.map(id => ({ x: sx(N[id].x), y: sy(N[id].y) })));
-        polyline(pts, 'rgba(200,224,112,0.85)', 2);
+        polyline(pts, sel.supply && sel.supply.line !== 'ok' ? '#e0483a' : 'rgba(200,224,112,0.85)', 2.5);
       }
     }
 
@@ -176,6 +176,13 @@ VM.MapView = (function () {
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
       if (c.id === ui.selectedCity) { ctx.beginPath(); ctx.arc(x, y, r + 8, 0, 7); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); }
       if (c.build) { ctx.beginPath(); ctx.arc(x, y, r + 2.5, -Math.PI / 2, -Math.PI / 2 + 6.283 * (1 - c.build.left / c.build.total)); ctx.strokeStyle = '#c8e070'; ctx.lineWidth = 3; ctx.stroke(); }
+      const wmax = VM.War.wallMax(c);
+      if (wmax > 0) {                                           // wall hit points
+        ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(x - 13, y - r - 9, 26, 4);
+        ctx.fillStyle = c.wallHp < wmax * 0.35 ? '#e0483a' : '#d0b080'; ctx.fillRect(x - 13, y - r - 9, 26 * Math.max(0, Math.min(1, c.wallHp / wmax)), 4);
+      }
+      if (c.depot) { ctx.fillStyle = '#f2d27a'; ctx.fillRect(x + r - 2, y - r - 2, 7, 7); ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 1; ctx.strokeRect(x + r - 2, y - r - 2, 7, 7); }
+      if (c.besieged || c.contested) { ctx.strokeStyle = '#e0483a'; ctx.lineWidth = 2.5; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 11 + (Math.sin(Date.now() / 250) + 1) * 1.5, 0, 7); ctx.stroke(); dashed(false); }
       const mk = MARK[c.spec];
       if (mk) { ctx.fillStyle = 'rgba(10,8,12,0.85)'; ctx.font = 'bold ' + Math.round(r * 1.05) + 'px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(mk, x, y + 1); ctx.textBaseline = 'alphabetic'; }
       ctx.font = fs + 'px system-ui'; ctx.textAlign = 'center';
@@ -187,8 +194,20 @@ VM.MapView = (function () {
     for (const a of st.armies) {
       const k = a.at !== null ? a.at : -1 - a.id, slot = slots[k] = slots[k] || 0; slots[k]++;
       const pos = armyScreenPos(a, slot);
-      const n = VM.Armies.sizeOf(a), lbl = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
-      drawFlag(pos.x, pos.y, st.factions[a.owner].color, n, a.id === ui.selectedArmy, lbl);
+      const n = VM.Armies.sizeOf(a), lbl = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n));
+      ctx.globalAlpha = a.routed ? 0.5 : 1;
+      drawFlag(pos.x, pos.y, st.factions[a.owner].color, n, a.id === ui.selectedArmy, lbl + (a.routed ? ' R' : ''));
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)'; ctx.fillRect(pos.x, pos.y + 4, 15, 3);
+      ctx.fillStyle = a.morale < 30 ? '#e0483a' : '#c8e070'; ctx.fillRect(pos.x, pos.y + 4, 15 * Math.max(0, Math.min(1, a.morale / 100)), 3);
+      if (a.supply && a.supply.line !== 'ok' && !a.supply.depot) { ctx.fillStyle = '#e0483a'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'left'; ctx.fillText('!', pos.x + 18, pos.y - 8); }
+    }
+    // Battles: a red cross between armies in contact
+    for (const a of st.armies) for (const id of a.fighting) {
+      if (id < a.id) continue;
+      const e = st.armies.find(x => x.id === id); if (!e) continue;
+      const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), bx = sx((p.x + q.x) / 2), by = sy((p.y + q.y) / 2) - 4, z = 7 + Math.sin(Date.now() / 120);
+      ctx.strokeStyle = '#ff5a48'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - z, by - z); ctx.lineTo(bx + z, by + z); ctx.moveTo(bx + z, by - z); ctx.lineTo(bx - z, by + z); ctx.stroke();
     }
   }
 

@@ -30,7 +30,7 @@ VM.Title = (function () {
     $('rerollBtn').addEventListener('click', () => roll(false));
     $('startBtn').addEventListener('click', () => { box.classList.remove('on'); ui.start(); });
     $('contBtn').addEventListener('click', () => {
-      try { ui.setState(VM.Sim.load(localStorage.getItem('vexmarch.save'))); VM.MapView.fit(); box.classList.remove('on'); ui.start(); }
+      try { const saved = VM.Sim.load(localStorage.getItem('vexmarch.save')); if (saved.version !== VM.CFG.VERSION || saved.over) throw new Error('old or finished save'); ui.setState(saved); VM.MapView.fit(); box.classList.remove('on'); ui.start(); }
       catch (e) { VM.Panels.toast('Saved game could not be loaded'); }
     });
   }
