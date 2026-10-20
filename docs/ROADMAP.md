@@ -2,17 +2,18 @@
 
 Principle: prove the strategy layer is fun in 2D before spending on 3D. Each phase ends with something runnable.
 
-## Phase 0 — Project setup
+## Phase 0 — Project setup (DONE)
 - `index.html`, `css/style.css`, `js/` skeleton with plain scripts (no build step).
 - `package.json`, Capacitor config with app ID `com.vexmarch.game`.
 - `tools/` folder, Node test runner for the sim.
 - **Done when:** a blank page loads from `file://` and the Node harness runs.
 
-## Phase 1 — Headless simulation
+## Phase 1 — Headless simulation (DONE)
 - State object, seeded RNG, fixed-timestep `step(dt)`, command queue.
 - 30-node map data with specialties and roads; 5 factions + neutral.
 - Economy: gold, food, population growth with prosperity and tax; recruiting.
 - Balance script prints economy curves over simulated years.
+- Delivered: `npm test` (20 tests) and `npm run balance`. Armies, supply and combat are Phase 3; Phase 1 recruits go into city garrisons.
 - **Done when:** 10,000 simulated days run in Node, are deterministic for a seed, and economy curves look sane.
 
 ## Phase 2 — Map view and controls
