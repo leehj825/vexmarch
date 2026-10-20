@@ -4,9 +4,15 @@
   "private": true,
   "description": "Vexmarch - a real-time grand strategy game (web + Android wrapper)",
   "scripts": {
-    "test": "node tools/test.js && node tools/test_war.js",
+    "test": "node tools/test.js && node tools/test_war.js && node tools/test_officers.js && node tools/test_ai.js",
     "balance": "node tools/balance.js",
-    "www": "node tools/make_www.js"
+    "www": "node tools/make_www.js",
+    "android:sync": "npm run www && npx cap sync android",
+    "android:debug": "npm run www && ([ -d android ] || npx cap add android) && node tools/android_patch.js && npx cap sync android && cd android && ./gradlew assembleDebug",
+    "icons": "python3 tools/make_icons.py",
+    "tournament": "node tools/ai_tournament.js",
+    "ui:test": "node tools/ui_smoke.js",
+    "i18n:check": "node tools/i18n_crawl.js --ko --missing"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",

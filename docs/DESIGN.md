@@ -180,6 +180,30 @@ Multiplayer; the hero joining wars; free-form building placement; more than 4 tr
 - **Abilities (40-day cooldown):** by the officer's best stat: Might = Charge (+60% damage for 6 days), Intellect = Fire attack (6 to 14% of the enemy's troops and 15 morale, or the garrison and wall), Command = Rally (+30 morale).
 - Not yet: front-width cap on stacking; diplomacy; naval movement for ports.
 
+### Officers and delegation as built (Phase 4)
+
+- **Loyalty** drifts toward a target: 55, +25 Loyal, +5 Brave, -15 Greedy when the treasury is broke or under 100, -10 Schemer, a governor's city prosperity (-10 to +8), a commander's army morale (-8 to +3), -10 once unemployed for 60 days. A gift (100 gold, 30-day cooldown) gives +15. Rout -8, capturing a city +10, approving a proposal +3, declining -1. Below 35 an alert is raised; below 20 an idle officer or governor may defect to the nearest rival. Commanders in the field do not defect.
+- **Governors and policies** (city): Manual, Develop, Fortify, Recruit. A governor decides every 14 - 8 x Politics/100 days, saving a gold reserve (x1.6 Cautious, x0.5 Rash). Develop: tax relief when prosperity is low, farms when food runs short, then market, temple, farm, barracks (the order depends on the trait), and a small garrison. Fortify: walls (to Lv2, Lv3 under Fortify), archers, 6% garrison. Recruit: barracks, spears and archers, 10% garrison. Greedy governors squeeze a poor treasury with High tax.
+- **Armies' standing orders:** Hold, Defend (guard the station, meet intruders within 300 map units when the odds are good enough for the officer's temperament: Rash 0.8, Brave 0.9, other 1.15, Cautious 1.6), Reinforce (go to your cities that are contested or besieged), Raid (hit weak hostile towns in range; odds 1.0 to 2.2 by temperament; fall back and rest when morale < 35, cut off, starving, or below 40% of peak strength).
+- **Proposals** (player only, expire after 20 days, 40-day cooldown per officer): Rash, Brave and Greedy commanders on Hold or Defend ask to attack a weak town nearby; Cautious governors on Manual ask to build a wall when enemies are close.
+- **Wandering officers** drift between nodes every 25 to 55 days; one new wanderer appears every 120 days (up to 6 in the world). You see wanderers in your own territory; an idle officer can search (50 gold, 15 days) to reveal others within 330 units. Recruiting costs 100 + 2 x total stats; the odds are 35% + half of your best Politics, and a refusal sends them away. Officers walk between your cities at 70 units a day.
+- **Alerts:** every event is turned into a message. Categories that pause the game (changeable, remembered in localStorage): cities attacked or lost, armies cut off/routed/lost, officers defecting, officers asking permission (on by default); battles joined and famine (off).
+
+### AI factions as built (Phase 5)
+
+- **Same rules as the player.** `js/sim/ai.js` only issues commands (`VM.Commands.exec`); a test greps the source to make sure it never edits gold, food, population, garrisons or buildings directly. Difficulty changes how often it thinks (20, 10 or 5 days), how much margin it wants before attacking, how many armies it keeps, and which features it uses (searching for officers, officer abilities, forward depots). It does not get extra income.
+- **Each think:** staff (governors for the most populous cities, keeping two officers free as commanders; policies Fortify when threatened, Recruit in its two biggest cities, otherwise Develop), recruit wanderers (and search for more), recruit troops from a budget that leaves 800 gold for its governors, choosing the troop type that counters the mix of nearby enemies and siege engines when its goal city has a wall, form armies leaving 3% behind as garrison, top idle armies up from garrison surplus, post guard armies (Defend) at the most threatened cities, and run the strike force.
+- **Strike force:** choose the most valuable hostile city in reach that the combined ready armies beat with margin (value: population, capital, finishing a weak rival; distance penalised), gather at the own city nearest the target, merge the armies, check the odds again when leaving, march, use abilities, fall back to rest when weary or cut off. If nothing is feasible it still picks a goal city and builds toward it. The required odds relax by 10% a year without gains (down to 60%) so no faction sits still forever.
+- Not done: alliances and truces, naval moves, scouting fog (the AI sees the whole map).
+
+### Polish as built (Phase 6)
+
+- **Sound:** a small generative score (calm on the map, drums and a minor key when your armies fight or a city of yours is attacked) and synthesized effects; master, music and effects volumes and a mute switch, remembered on the device.
+- **Tutorial:** ten steps on a fixed small world (4 factions, the AI asleep until it ends): pause, open the capital, build a farm, recruit, form an army, march on the highlighted village, watch the siege, appoint a governor on Develop, open Officers, open Alerts. Each step can be skipped; completion is remembered; Settings replays it.
+- **Languages:** the code is English. A layer watches the page and swaps every text for the Korean table (numbers match as `{0}`, names as `{a}`); English comes back by restoring the originals. `tools/i18n_crawl.js --ko --missing` drives the game through every panel and message and lists what is still untranslated.
+- **Ads:** `js/ads.js` shows Google's test banner at the top centre of the Android app while a game is running; set `VX_ADS=real` with your own ids to build a release. The HUD moves down by the banner's height (`body.adLive`).
+- **Android:** `npm run android:debug` (or the GitHub workflow) generates the Capacitor project, applies `tools/android_patch.js` (fullscreen, icons, splash, AdMob app id) and builds the debug APK.
+
 ## 15. Open questions
 
 - Fictional world name, factions and officer names.

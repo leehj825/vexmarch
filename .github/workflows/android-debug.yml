@@ -1,0 +1,43 @@
+# Builds an installable Android *debug* APK of Vexmarch (a Capacitor wrapper around the web game).
+# Run it from GitHub: Actions -> "Android debug APK" -> Run workflow. When it finishes, open the run and download the
+# "vexmarch-debug-apk" artifact (a zip holding the .apk), then install it on a phone. The debug build shows Google's TEST ad banner.
+name: Android debug APK
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+    branches: ['main']
+    paths: ['js/**', 'css/**', 'index.html', 'tools/make_www.js', 'tools/android_patch.js', 'package.json', 'package-lock.json', 'capacitor.config.json', 'resources/**', 'icons/**', '.github/workflows/android-debug.yml']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Accept Android SDK licenses (the runner already has the SDK)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Test the game logic
+        run: npm ci && npm test
+      - name: Generate the Android project and copy the game into it
+        run: |
+          npm run www
+          [ -d android ] || npx cap add android
+          node tools/android_patch.js
+          npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Name the APK after the commit
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "vexmarch-debug-${GITHUB_SHA::7}.apk"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: vexmarch-debug-apk
+          path: vexmarch-debug-*.apk
+          if-no-files-found: error
