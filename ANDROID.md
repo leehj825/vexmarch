@@ -4,8 +4,8 @@ The game is wrapped with [Capacitor](https://capacitorjs.com/) (`com.vexmarch.ga
 
 ## Easiest way: let GitHub build the APK
 1. Push the repository to GitHub.
-2. Open **Actions -> "Android debug APK" -> Run workflow**. (It also runs on pushes to `main` that change the game, and on tags such as `v1.0.0`.) The workflow first runs `npm test`.
-3. When the run is green, download the **vexmarch-debug-apk** artifact and unzip it to get the `.apk`.
+2. Open **Actions -> "Android debug APK" -> Run workflow**. (It also runs on every push to any branch that changes the game, and on tags such as `v1.0.0`; each branch gets its own artifact, `vexmarch-debug-apk-<branch>`, and a new push to the same branch cancels the older run.) The workflow first runs `npm test`.
+3. When the run is green, download the `vexmarch-debug-apk-<branch>` artifact and unzip it to get the `.apk`.
 4. Copy the APK to your phone, open it and allow "Install unknown apps" for the app you opened it from (or `adb install file.apk`).
 
 A *debug* APK is signed with a debug key: fine for your phone and testers, not for the Play Store. It shows Google's **test** banner.
