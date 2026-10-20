@@ -128,7 +128,7 @@ VM.World = (function () {
     return {
       id, name: uniqueName(state, used, () => R.pick(state, GIVEN) + ' ' + R.pick(state, FAMILY)),
       command: stat(), might: stat(), politics: stat(), intellect: stat(),
-      trait: R.pick(state, VM.CFG.TRAITS), loyalty: 70, owner, loc, role: 'idle'
+      trait: R.pick(state, VM.CFG.TRAITS), loyalty: 70, owner, loc, role: 'idle', army: null
     };
   }
 
@@ -136,7 +136,7 @@ VM.World = (function () {
     opts = opts || {};
     const C = VM.CFG, E = C.ECON, seed = (opts.seed === undefined ? 1 : opts.seed) >>> 0;
     const nf = Math.max(4, Math.min(6, opts.factions || C.FACTION_COUNT));
-    const state = { version: C.VERSION, seed, rng: seed, time: 0, acc: 0, player: 1, factionCount: nf, events: [] };
+    const state = { version: C.VERSION, seed, rng: seed, time: 0, acc: 0, player: Math.max(1, Math.min(nf, opts.player || 1)), factionCount: nf, events: [], armies: [], nextArmy: 1, over: null };
     state.map = buildMap(state);
     const capitals = placeCapitals(state, state.map, nf);
     const spec = assignSpecialties(state, state.map, capitals);
@@ -152,7 +152,7 @@ VM.World = (function () {
       const city = {
         id: i, owner: owner[i], spec: spec[i], pop: 0, tax: 'normal', governor: null, devastation: 0, contested: false,
         buildings: { farm: 0, market: 0, barracks: 0, wall: 0, temple: 0 }, build: null,
-        garrison: { infantry: 0, spear: 0, cavalry: 0, archer: 0 }, stats: null
+        garrison: { infantry: 0, spear: 0, cavalry: 0, archer: 0, siege: 0 }, wallHp: 0, depot: null, besieged: false, stats: null
       };
       if (spec[i] === 'capital') { city.buildings.farm = 1; city.buildings.market = 1; city.buildings.barracks = 1; }
       if (spec[i] === 'farmland') city.buildings.farm = 1;

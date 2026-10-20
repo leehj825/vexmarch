@@ -16,16 +16,18 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 - Delivered: `npm test` (20 tests) and `npm run balance`. Armies, supply and combat are Phase 3; Phase 1 recruits go into city garrisons.
 - **Done when:** 10,000 simulated days run in Node, are deterministic for a seed, and economy curves look sane.
 
-## Phase 2 — Map view and controls
+## Phase 2 — Map view and controls (DONE)
 - Canvas map: nodes, roads, derived borders, faction colours, pan/zoom (mouse and touch).
 - HUD: gold, food, date, pause/1x/2x/4x; node panel (build, tax, recruit).
 - Army creation, move orders along roads, supply line display.
+- Delivered: title screen with faction picker (and map preview), player marking (gold rings, HUD faction badge), derived territory and borders, army move/halt/disband, supply line display, autosave and Continue. Supply cutting and combat are Phase 3.
 - **Done when:** the player can run an economy and march an army on the map.
 
-## Phase 3 — War and logistics
+## Phase 3 — War and logistics (DONE)
 - Contact combat, troop type matchups, morale, officer abilities.
 - Sieges and walls, contested zones, supply drain and Cut Off.
 - Depots and forward bases; reinforcements joining fights.
+- Delivered: `js/sim/war.js`, `tools/test_war.js` (23 scripted scenarios) and a rough `tools/war_bot.js` that Phase 5 replaces. Not done: the front-width cap (stacking limit) and auto-pause on alerts (Phase 4).
 - **Done when:** a siege and a supply-cut raid both play out correctly in a scripted test scenario.
 
 ## Phase 4 — Officers and delegation

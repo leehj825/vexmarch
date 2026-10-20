@@ -3,7 +3,7 @@ var VM = globalThis.VM = globalThis.VM || {};
 
 VM.Eco = (function () {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const troopsOf = g => g.infantry + g.spear + g.cavalry + g.archer;
+  const troopsOf = g => { let n = 0; for (const k in g) n += g[k]; return n; };
 
   function cap(city) {
     const E = VM.CFG.ECON, S = VM.CFG.SPEC[city.spec], b = city.buildings;
@@ -39,7 +39,7 @@ VM.Eco = (function () {
 
   function factionCities(state, f) { return state.cities.filter(c => c.owner === f.id); }
 
-  function pushEvent(state, ev) { ev.t = state.time; state.events.push(ev); if (state.events.length > 200) state.events.shift(); }
+  function pushEvent(state, ev) { ev.t = state.time; ev.n = state.nextEvent = (state.nextEvent || 0) + 1; state.events.push(ev); if (state.events.length > 200) state.events.shift(); }
 
   function step(state, dd) {
     const C = VM.CFG, E = C.ECON;
@@ -60,6 +60,7 @@ VM.Eco = (function () {
           city.build.left -= dd * (1 + C.GOVERNOR_BUILD_SPEED * gov);
           if (city.build.left <= 0) {
             city.buildings[city.build.type]++;
+            if (city.build.type === 'wall') city.wallHp += VM.War.wallMax(city) - VM.War.wallMax({ spec: city.spec, buildings: { wall: city.buildings.wall - 1 } });
             if (!f.neutral) pushEvent(state, { type: 'built', city: city.id, owner: f.id, building: city.build.type, level: city.buildings[city.build.type] });
             city.build = null;
           }
@@ -68,6 +69,10 @@ VM.Eco = (function () {
         gold += st.gold; upkeep += st.upkeep; prod += st.foodProd; cons += st.foodCons;
       }
       if (f.neutral) continue;
+      for (const a of state.armies) if (a.owner === f.id) {      // armies eat and draw pay like garrisons
+        cons += a.supply ? a.supply.poolDraw : troopsOf(a.troops) * E.foodPerHead;
+        for (const k in a.troops) upkeep += a.troops[k] * C.TROOPS[k].upkeep;
+      }
       const salary = state.officers.filter(o => o.owner === f.id).length * E.officerSalary;
       const netGold = gold - upkeep - salary, netFood = prod - cons;
       f.gold += netGold * dd; f.food += netFood * dd;
@@ -76,6 +81,7 @@ VM.Eco = (function () {
       if (f.gold < 0) {                                  // broke: troops desert instead of being paid
         f.gold = 0; f.broke = true;
         for (const city of cities) for (const k in city.garrison) city.garrison[k] = Math.floor(city.garrison[k] * (1 - E.desertion * dd));
+        for (const a of state.armies) if (a.owner === f.id) for (const k in a.troops) a.troops[k] = Math.floor(a.troops[k] * (1 - E.desertion * dd));
       }
       const wasStarving = f.starving;
       if (f.food <= 0 && netFood < 0) { f.food = 0; f.starving = true; f.foodSec = 0; }

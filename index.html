@@ -11,17 +11,38 @@
 <canvas id="map"></canvas>
 <div id="hud">
   <div id="top">
-    <div id="res"><span id="gold">0</span><span id="food">0</span><span id="date"></span></div>
-    <div id="speed"><button data-s="0">II</button><button data-s="1" class="on">1x</button><button data-s="2">2x</button><button data-s="4">4x</button></div>
+    <div id="res">
+      <span id="who"><i id="fdot" class="dot"></i><b id="fname"></b></span>
+      <span id="gold"></span><span id="food"></span><span id="date"></span>
+    </div>
+    <div id="speed"><button data-s="0" title="Pause (space)">II</button><button data-s="1">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button id="menuBtn" title="Menu">☰</button></div>
   </div>
-  <div id="info"></div>
+  <div id="panel"></div>
+  <div id="toast"></div>
+  <div id="over"><div><h2 id="overT"></h2><p id="overP"></p><button id="overBtn">Main menu</button></div></div>
+</div>
+<div id="title" class="screen">
+  <div class="card">
+    <h1>Vexmarch</h1>
+    <p class="tag">Command your realm in real time. Thirty nodes, many banners, one march.</p>
+    <div class="lbl">Choose your faction</div>
+    <div id="facList"></div>
+    <div class="lbl">Rivals</div>
+    <div id="countSel"><button data-n="4">4 factions</button><button data-n="5">5 factions</button><button data-n="6">6 factions</button></div>
+    <div class="btns"><button id="startBtn" class="go">Start</button><button id="rerollBtn">New map</button><button id="contBtn">Continue</button></div>
+  </div>
 </div>
 <script src="js/data/config.js"></script>
 <script src="js/sim/rng.js"></script>
 <script src="js/sim/economy.js"></script>
+<script src="js/sim/armies.js"></script>
+<script src="js/sim/war.js"></script>
 <script src="js/sim/world.js"></script>
 <script src="js/sim/commands.js"></script>
 <script src="js/sim/tick.js"></script>
+<script src="js/ui/map.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/ui/title.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

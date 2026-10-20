@@ -169,6 +169,17 @@ Multiplayer; the hero joining wars; free-form building placement; more than 4 tr
 - Tax: Low (+0.15 prosperity, x0.6 gold), Normal, High (-0.35 prosperity, x1.5 gold). Population adjusts slowly, so High tax is a short-term cash boost that shrinks the recruit pool; the balance script shows the long-run gold gain is small (about +15%) for about 25% fewer people. Loyalty effects arrive with officers and loyalty in Phase 4.
 - Faction names are placeholders.
 
+### War rules as built (Phase 3)
+
+- **Troops:** infantry, spearmen, cavalry, archers (spear > cavalry > archer > infantry > spear, x1.4 / x0.7) plus **siege engines** (x0.25 in the field, 4 wall hit points per day each, other soldiers chip 0.15).
+- **Battle:** armies within 16 map units lock in battle and stop marching. Each side's casualties per day = 3.5% x the enemy's effective strength (troop mix matchup x officer Command x morale x home ground). Morale drops 8 per day at even odds (0.3x to 3x by the odds); at 0 the army **routs** to its nearest city, is not chased, and recovers there. Moving out of a battle costs 10 morale. Several armies can fight one enemy; damage is split between contacts.
+- **Siege:** an army standing still in a hostile or neutral city attacks its garrison. While the wall holds the garrison hits at x1.5 and takes only 35% damage. A garrison at 1 or fewer with no defending army at the node means the city falls: owner changes, 15% of the people are lost, devastation, buildings kept, construction cancelled, governor released, depot lost. Mountain passes give x1.5 wall and defence.
+- **Contested:** an enemy army in a city's zone with none of its own halts that city's gold and cuts its security.
+- **Officers of a defeated army:** 30% die, 35% are captured and join the victor (loyalty 40), 35% escape home. A faction with no nodes is eliminated; you lose when you hold none and win when you hold all 30.
+- **Supply:** each army traces a road route to the nearest uncontested city of its own. **Enemy armies on that route cut it.** Soldiers eat 3x in enemy or neutral land. A cut army lives on its carried rations (12 days), loses 3 morale a day while cut and 8 a day plus 2% desertion once the rations are gone. A **forward depot** (300 gold, stocked from the food pool at 40 a day up to a target) feeds armies within 230 map units at the normal rate, even deep in enemy land and even when the line is cut.
+- **Abilities (40-day cooldown):** by the officer's best stat: Might = Charge (+60% damage for 6 days), Intellect = Fire attack (6 to 14% of the enemy's troops and 15 morale, or the garrison and wall), Command = Rally (+30 morale).
+- Not yet: front-width cap on stacking; diplomacy; naval movement for ports.
+
 ## 15. Open questions
 
 - Fictional world name, factions and officer names.
