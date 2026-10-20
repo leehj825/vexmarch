@@ -2,7 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.CFG = {
-  VERSION: 3,
+  VERSION: 4,
 
   // ---- Time ----
   DAY_SECONDS: 2,          // real seconds per in-game day at 1x
@@ -114,6 +114,28 @@ VM.CFG = {
     depotCost: 300, depotRange: 230, depotRate: 40,
     abilityCooldown: 40, chargeDays: 6, chargeMult: 1.6,
     fateDead: 0.3, fateCaptured: 0.65      // officer of a destroyed army: dies below, captured below, else escapes
+  },
+
+  // ---- Officers, delegation and alerts (Phase 4) ----
+  OFFICERS: {
+    loyaltyBase: 55, loyaltyDrift: 0.01,       // loyalty moves this fraction per day toward its target
+    traitLoyal: 25, traitGreedyBroke: -15, traitSchemer: -10, idleAfter: 60, idlePenalty: -10,
+    defectBelow: 20, defectRate: 0.05, warnBelow: 35,
+    giftCost: 100, giftGain: 15, giftCooldown: 30,
+    speed: 70,                                 // map units per day when an officer travels between cities
+    searchCost: 50, searchDays: 15, searchRange: 330,
+    recruitBase: 100, recruitPerStat: 2,
+    wanderMin: 25, wanderMax: 55, spawnEvery: 120, wanderersMax: 6,
+    reserve: 250,                              // gold a governor keeps back when spending
+    thinkBase: 14, thinkPol: 8,                // governor decides every (14 - 8 x Politics/100) days
+    armyThink: 2,                              // army commanders look around every 2 days
+    sense: 300,                                // map units: how far a defender watches from its station
+    proposalEvery: 40, proposalExpires: 20, proposalMax: 5,
+    // Attack odds (my strength / theirs) an officer wants before acting alone, by trait
+    odds: { Rash: 0.8, Brave: 0.9, Cautious: 1.6, other: 1.15 },
+    raidOdds: { Rash: 1.0, Brave: 1.2, Cautious: 2.2, other: 1.5 },
+    garrisonTarget: { develop: 0.03, fortify: 0.06, recruit: 0.10 },
+    recruitBatch: 60
   },
 
   // ---- Officers ----

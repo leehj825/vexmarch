@@ -30,10 +30,11 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 - Delivered: `js/sim/war.js`, `tools/test_war.js` (23 scripted scenarios) and a rough `tools/war_bot.js` that Phase 5 replaces. Not done: the front-width cap (stacking limit) and auto-pause on alerts (Phase 4).
 - **Done when:** a siege and a supply-cut raid both play out correctly in a scripted test scenario.
 
-## Phase 4 — Officers and delegation
+## Phase 4 — Officers and delegation (DONE)
 - Officer stats, traits, loyalty; governor and commander roles.
 - Standing orders; wandering officers and search; capture and recruit.
 - Alerts feed with auto-pause on urgent events.
+- Delivered: `js/sim/officers.js`, `tools/test_officers.js` (24 tests including a 5-year autopilot run), officers roster, alerts feed with per-category auto-pause, proposals. The AI (Phase 5) will use the same policies and orders.
 - **Done when:** a player can leave cities on Develop and armies on Defend and the empire runs itself sensibly.
 
 ## Phase 5 — AI factions

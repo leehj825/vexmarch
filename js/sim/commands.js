@@ -53,6 +53,7 @@ VM.Commands = (function () {
       const o = state.officers[cmd.officer];
       if (!o || o.owner !== cmd.faction) return fail('not your officer');
       if (o.army !== null) return fail('officer leads an army');
+      if (o.role === 'traveling' || o.role === 'searching') return fail('officer is busy');
       state.cities.forEach(c => { if (c.governor === o.id) c.governor = null; });
       const old = state.officers[city.governor]; if (old) old.role = 'idle';
       city.governor = o.id; o.role = 'governor'; o.loc = city.id;
@@ -82,6 +83,13 @@ VM.Commands = (function () {
       const [city, err] = ownCity(state, cmd); if (err) return err;
       return VM.War.buildDepot(state, cmd.faction, city.id);
     },
+    setPolicy(state, cmd) { return VM.Officers.setPolicy(state, cmd.faction, cmd.city, cmd.mode); },
+    setOrder(state, cmd) { return VM.Officers.setOrder(state, cmd.faction, cmd.army, cmd.mode); },
+    sendOfficer(state, cmd) { return VM.Officers.sendOfficer(state, cmd.faction, cmd.officer, cmd.to); },
+    searchOfficers(state, cmd) { return VM.Officers.search(state, cmd.faction, cmd.officer); },
+    recruitOfficer(state, cmd) { return VM.Officers.recruit(state, cmd.faction, cmd.officer); },
+    giftOfficer(state, cmd) { return VM.Officers.gift(state, cmd.faction, cmd.officer); },
+    answerProposal(state, cmd) { return VM.Officers.answer(state, cmd.faction, cmd.proposal, !!cmd.accept); },
     setDepot(state, cmd) {
       const [city, err] = ownCity(state, cmd); if (err) return err;
       if (!city.depot) return fail('no depot here');

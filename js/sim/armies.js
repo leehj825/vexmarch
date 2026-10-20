@@ -55,8 +55,9 @@ VM.Armies = (function () {
   function spawn(state, faction, at, troops, officerId) {
     const o = state.officers[officerId];
     const army = { id: state.nextArmy++, owner: faction, officer: o.id, troops, home: at, at, edge: null, path: [], dest: null,
-      morale: 100, rations: 0, fighting: [], routed: false, retreat: 0, buff: null, abilityReady: 0, supply: null };
-    army.rations = sizeOf(army) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays;
+      morale: 100, rations: 0, fighting: [], routed: false, retreat: 0, buff: null, abilityReady: 0, supply: null,
+      order: 'hold', station: null, nextThink: 0, rest: false, peak: 0 };
+    army.rations = sizeOf(army) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays; army.peak = sizeOf(army);
     o.army = army.id; o.role = 'commander'; o.loc = at;
     state.armies.push(army);
     return army;

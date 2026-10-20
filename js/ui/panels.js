@@ -40,6 +40,8 @@ VM.Panels = (function () {
       case 'ability': { const r = cmd({ type: 'ability', army: +d.army }); if (r.ok) toast(({ charge: 'Charge! Your troops hit harder for a few days', fire: 'Fire attack!', rally: 'Rally! Morale restored' })[r.kind]); break; }
       case 'depot': cmd({ type: 'buildDepot', city: +d.city }); break;
       case 'depotTarget': { const c = st.cities[+d.city]; cmd({ type: 'setDepot', city: +d.city, target: (c.depot ? c.depot.target : 0) + +d.n }); break; }
+      case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
+      case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
       case 'goto': ui.centerOn(+d.city); break;
     }
   }
@@ -56,6 +58,8 @@ VM.Panels = (function () {
   const officerLine = o => `${o.name} (Cmd ${o.command} Mig ${o.might} Pol ${o.politics} Int ${o.intellect}, ${o.trait})`;
   const troopList = (t, all) => Object.keys(VM.CFG.TROOPS).filter(k => all || t[k] >= 0.5).map(k => `${VM.CFG.TROOPS[k].label} ${num(t[k])}`).join(' · ') || 'none';
   const bar = (frac, cls) => `<div class="bar ${cls || ''}"><i style="width:${Math.max(0, Math.min(100, frac * 100)).toFixed(0)}%"></i></div>`;
+  const POLICY_TIP = { manual: 'You decide everything here.', develop: 'The governor builds, sets taxes and keeps a small garrison, saving a gold reserve.', fortify: 'Walls first, then archers and a larger garrison.', recruit: 'Barracks first, then a large standing garrison to draw armies from.' };
+  const ORDER_TIP = { hold: 'Stays where it is.', defend: 'Guards its station and meets intruders when the odds suit the officer.', reinforce: 'Marches to your cities that are under attack.', raid: 'Seeks weak hostile towns nearby, falls back to rest when worn down or cut off.' };
   const ABILITY = { charge: 'Charge', fire: 'Fire attack', rally: 'Rally' };
 
   function cityHTML(c) {
@@ -75,6 +79,12 @@ VM.Panels = (function () {
     h += `<div class="row">Tax ` + ['low', 'normal', 'high'].map(k => `<button data-act="tax" data-city="${c.id}" data-tax="${k}" class="chip${c.tax === k ? ' on' : ''}">${VM.CFG.TAX[k].label}</button>`).join('') + `</div>`;
     const offs = st.officers.filter(o => o.owner === me && o.army === null);
     h += `<div class="row">Governor <select id="govSel" data-city="${c.id}"><option value="">(none)</option>` + offs.map(o => `<option value="${o.id}"${c.governor === o.id ? ' selected' : ''}>${o.name} · Pol ${o.politics}</option>`).join('') + `</select></div>`;
+    if (c.governor !== null) {
+      const g = st.officers[c.governor];
+      h += `<div class="row dim">${g.name} · ${g.trait} · loyalty ${Math.round(g.loyalty)}</div>`;
+      h += `<div class="row">Policy ` + VM.Officers.POLICIES.map(k => `<button data-act="policy" data-city="${c.id}" data-mode="${k}" class="chip${c.policy === k ? ' on' : ''}" title="${POLICY_TIP[k]}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + `</div>`;
+      h += `<div class="row dim">${POLICY_TIP[c.policy]}</div>`;
+    }
     h += `<div class="sec">Buildings</div>`;
     for (const k of Object.keys(VM.CFG.BUILD)) {
       const B = VM.CFG.BUILD[k], lvl = c.buildings[k], building = c.build && c.build.type === k;
@@ -104,7 +114,7 @@ VM.Panels = (function () {
   function armyHTML(a) {
     const st = ui.state, o = st.officers[a.officer], f = st.factions[a.owner], mine = a.owner === st.player, N = st.map.nodes, n = VM.Armies.sizeOf(a);
     let h = `<div class="ph"><b>Army of ${f.name}</b><span class="sub">${num(n)} troops</span><button data-act="close" class="x">✕</button></div>`;
-    h += `<div class="row dim">${officerLine(o)}</div>`;
+    h += `<div class="row dim">${officerLine(o)} · loyalty ${Math.round(o.loyalty)}</div>`;
     h += `<div class="row">${troopList(a.troops)}</div>`;
     h += `<div class="row">Morale <b>${Math.round(a.morale)}</b>${bar(a.morale / 100, a.morale < 30 ? 'low' : '')}</div>`;
     const where = a.at !== null ? 'in ' + N[a.at].name : 'on the road to ' + N[a.edge.to].name;
@@ -121,6 +131,7 @@ VM.Panels = (function () {
       h += `<div class="row">${line}</div><div class="row dim">Rations ${days.toFixed(1)} days · supplied from ${N[a.home].name}${s.starving ? ' · <span class="bad">STARVING</span>' : ''}</div>`;
     }
     if (!mine) return h;
+    h += `<div class="row">Orders ` + VM.Officers.ORDERS.map(k => `<button data-act="order" data-army="${a.id}" data-mode="${k}" class="chip${a.order === k ? ' on' : ''}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + `</div><div class="row dim">${ORDER_TIP[a.order]}${a.rest ? ' Resting now.' : ''}</div>`;
     const kind = VM.War.abilityOf(o), wait = Math.max(0, a.abilityReady - st.time);
     h += `<div class="row"><button data-act="ability" data-army="${a.id}" class="btn"${wait > 0 || a.routed ? ' disabled' : ''}>${ABILITY[kind]}</button> <span class="dim">${wait > 0 ? 'ready in ' + Math.ceil(wait) + ' days' : 'ready'}</span></div>`;
     h += `<div class="row dim">Tap a node to march there (right-click works too). Moving out of a battle costs morale. Tap empty ground to deselect.</div>`;

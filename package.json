@@ -4,7 +4,7 @@
   "private": true,
   "description": "Vexmarch - a real-time grand strategy game (web + Android wrapper)",
   "scripts": {
-    "test": "node tools/test.js && node tools/test_war.js",
+    "test": "node tools/test.js && node tools/test_war.js && node tools/test_officers.js",
     "balance": "node tools/balance.js",
     "www": "node tools/make_www.js"
   },

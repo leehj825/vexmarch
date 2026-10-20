@@ -66,6 +66,11 @@ VM.War = (function () {
       if (a.owner !== c.owner && a.at !== null) c.besieged = true;
     }
     for (const c of state.cities) if (c.owner !== 0 && enemy[c.id] && !friendly.has(c.id)) c.contested = true;
+    for (const c of state.cities) {
+      const hot = c.contested || c.besieged;
+      if (hot && !c.warn) VM.Eco.pushEvent(state, { type: 'attacked', owner: c.owner, city: c.id, besieged: c.besieged });
+      c.warn = hot;
+    }
   }
 
   // ---- Supply: food reaches an army along a road line from a city of its own; enemy armies on the line cut it ----
@@ -160,6 +165,7 @@ VM.War = (function () {
     if (city.governor !== null) { state.officers[city.governor].role = 'idle'; city.governor = null; }
     for (const o of state.officers) if (o.owner === old && o.loc === city.id && o.army === null && old !== 0) fate(state, o, by, old);
     VM.Eco.pushEvent(state, { type: 'captured', city: city.id, owner: by, from: old });
+    for (const a of state.armies) if (a.owner === by && a.at === city.id) VM.Officers.bump(state, a.officer, 10);
     if (old !== 0 && !state.cities.some(c => c.owner === old)) eliminate(state, state.factions[old]);
     checkOver(state);
   }
@@ -249,6 +255,7 @@ VM.War = (function () {
         if (home >= 0) VM.Armies.move(state, a, home);     // order the retreat before the rout flag blocks further orders
         a.routed = true;
         VM.Eco.pushEvent(state, { type: 'rout', owner: a.owner, army: a.id, at: from });
+        VM.Officers.bump(state, a.officer, -8);
       }
       if (a.routed && a.at !== null && !a.path.length) {
         if (state.cities[a.at].owner === a.owner) { a.routed = false; a.morale = W().routRecover; } else a.morale = Math.max(a.morale, 1);
@@ -337,5 +344,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, power, matchup, wallMax, armyMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
+  return { step, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
 })();
