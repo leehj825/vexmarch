@@ -87,8 +87,11 @@ VM.MapView = (function () {
     return best;
   }
 
+  let lastTap = { t: 0, id: -2 };
   function tap(px, py) {
-    const h = hit(px, py);
+    const h = hit(px, py), now = performance.now();
+    if (h && h.kind === 'node' && lastTap.id === h.id && now - lastTap.t < 380 && ui.selectedArmy === null) { ui.openCity(h.id); lastTap = { t: 0, id: -2 }; return; }   // double tap: into the city
+    lastTap = { t: now, id: h && h.kind === 'node' ? h.id : -2 };
     if (!h) ui.onTap(null);
     else ui.onTap(h);
   }

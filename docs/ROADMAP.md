@@ -52,11 +52,12 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 - Not verified here: building the APK (the Android SDK is not available in this environment). Run the GitHub workflow, then install on a phone.
 - **Done when:** installable on Android and playable start to finish. This is the release candidate for the 2D game.
 
-## Phase 7 — City view (3D)
+## Phase 7 — City view (3D) (DONE)
 - Three.js r128 scene generated from city state; slot-based buildings, walls, fields, decorative houses by population.
 - Transition from the map; one city loaded at a time; low-end Android budget.
+- Delivered: `js/view3d/layout.js` (the city as pure data, 10 tests in `tools/test_layout.js`), `js/view3d/city3d.js` (Three.js r128 renderer: the whole static city is one merged vertex-coloured mesh, soldiers are instanced; worst case 16 draw calls and about 18k triangles), a View city button in the city panel and a double tap on a node to enter, Back to map button and Escape to leave, a browser test (`tools/ui_3d.js`, 50 checks on desktop and phone). The sim keeps running in the city view and the picture follows it (building scaffolds, wall damage, sieges, garrison).
 
-## Phase 8 — Armies in 3D
+## Phase 8 — Armies in 3D (partly done in Phase 7)
 - Instanced soldier formations scaled to troop count, siege gear, siege animations driven by sim events. Cosmetic only.
 
 ## Phase 9 — Walk mode (optional extra)

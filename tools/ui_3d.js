@@ -1,0 +1,64 @@
+// Browser test for the 3D city view. Usage: PLAYWRIGHT=/path/to/playwright node tools/ui_3d.js
+// Opens cities (by the panel button and by double tap), checks the scene against the draw-call and triangle budget in the worst cases,
+// watches the scene follow the game (a building finishing, a siege starting), and checks the way back to the map.
+const path = require('path');
+const assert = require('assert');
+const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
+(async () => {
+  const b = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox', '--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  let n = 0;
+  for (const [w, h, touch] of [[1280, 760, false], [390, 780, true]]) {
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, hasTouch: touch, isMobile: touch });
+    const p = await ctx.newPage(); const errs = [];
+    p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push(String(e)));
+    await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(300);
+    const ev = (fn, a) => p.evaluate(({ f, a }) => (new Function('return ' + f))()(a), { f: fn.toString(), a });
+    const ok = (c, m) => { assert(c, `[${w}px] ${m}`); n++; };
+    await p.click('#startBtn'); await p.waitForTimeout(300);
+    await ev(() => { __vm.speed = 0; __vm.state.aiOn = false; });
+    const cap = await ev(() => __vm.state.factions[__vm.state.player].capital);
+
+    // Into the city from the panel button, and back out
+    await ev(c => { __vm.selectedCity = c; }, cap); await p.waitForTimeout(300);
+    await p.click('[data-act="view3d"]'); await p.waitForTimeout(900);
+    ok(await ev(() => __vm.cityView) === cap, 'the view button opens the city'); ok(await ev(() => document.body.classList.contains('in3d')), 'in3d class');
+    let info = await ev(() => VM.City3D.info()); ok(info && info.calls > 0 && info.calls <= 40, 'draw calls ' + info.calls); ok(info.triangles < 60000, 'triangles ' + info.triangles);
+    const shot = await p.screenshot(); ok(shot.length > 20000, 'the canvas is not blank (' + shot.length + ' bytes)');
+    await p.click('#backBtn'); await p.waitForTimeout(500);
+    ok(await ev(() => __vm.cityView === null), 'back to the map'); ok(await ev(() => !document.body.classList.contains('in3d')), 'in3d cleared');
+    await ev(c => { __vm.selectedCity = c; __vm.openCity(c); }, cap); await p.waitForTimeout(500); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+    ok(await ev(() => __vm.cityView === null), 'Escape leaves the city');
+
+    // Double tap on a node on the map
+    const pos = await ev(c => { const v = VM.MapView.view(), nd = __vm.state.map.nodes[c]; return { x: nd.x * v.s + v.ox, y: nd.y * v.s + v.oy }; }, cap);
+    await ev(() => { __vm.selectedCity = -1; __vm.selectedArmy = null; });
+    await p.mouse.click(pos.x, pos.y); await p.mouse.click(pos.x, pos.y); await p.waitForTimeout(700);
+    ok(await ev(() => __vm.cityView) === cap, 'a double tap on a node opens the city'); await ev(() => __vm.closeCity());
+
+    // The scene follows the game: a building finishing changes it
+    await ev(c => { const s = __vm.state; s.factions[s.player].gold = 1e5; VM.Commands.exec(s, { type: 'build', faction: s.player, city: c, building: 'temple' }); __vm.openCity(c); }, cap);
+    await p.waitForTimeout(600); const sig0 = await ev(() => VM.City3D.layout().sig); ok(await ev(() => VM.City3D.layout().construction !== null), 'scaffolding while building');
+    await ev(() => { __vm.speed = 4; }); await p.waitForTimeout(5000); await ev(() => { __vm.speed = 0; }); await p.waitForTimeout(800);
+    ok(await ev(() => VM.City3D.layout().sig) !== sig0, 'the scene changed as the game went on');
+
+    // The worst case: a capital with everything at level 3, a full garrison, a besieging army with engines, a defending army
+    await ev(c => {
+      const s = __vm.state, me = s.player, T = o => Object.assign({ infantry: 0, spear: 0, cavalry: 0, archer: 0, siege: 0 }, o), city = s.cities[c];
+      city.buildings = { farm: 3, market: 3, barracks: 3, wall: 3, temple: 3 }; city.wallHp = VM.War.wallMax(city) * 0.3; city.pop = 1e5; city.garrison = T({ infantry: 3000, archer: 2000 }); city.depot = { food: 5000, target: 5000 };
+      const foe = s.factions.find(f => !f.neutral && f.id !== me).id;
+      VM.Armies.spawn(s, foe, c, T({ infantry: 3000, spear: 1000, siege: 6 }), s.officers.find(o => o.owner === foe && o.role === 'idle').id);
+      const o2 = s.officers.find(o => o.owner === me && o.role === 'idle' && o.army === null); VM.Armies.spawn(s, me, c, T({ infantry: 3000 }), o2.id);
+      VM.War.updateZones(s);
+    }, cap);
+    await p.waitForTimeout(1200);
+    info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'worst-case draw calls ' + info.calls); ok(info.triangles < 60000, 'worst-case triangles ' + info.triangles); ok(info.soldiers <= 200, 'soldiers ' + info.soldiers);
+    ok((await ev(() => VM.City3D.layout().armies.length)) === 2, 'both armies are in the scene');
+    // Other places: every kind of city opens
+    const kinds = await ev(() => { const s = __vm.state, seen = {}; for (const c of s.cities) if (!seen[c.spec]) seen[c.spec] = c.id; return seen; });
+    for (const k in kinds) { await ev(id => { __vm.closeCity(); __vm.openCity(id); }, kinds[k]); await p.waitForTimeout(250); ok(await ev(() => VM.City3D.info().calls) > 0, k + ' city draws'); }
+    ok(errs.length === 0, 'no console errors: ' + errs.join(' | '));
+    await ctx.close();
+  }
+  console.log(`3D view test: ${n} checks passed`);
+  await b.close();
+})().catch(e => { console.error('FAIL', e.message); process.exit(1); });

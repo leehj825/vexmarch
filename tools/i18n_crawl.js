@@ -10,7 +10,7 @@ const seen = new Set();
 (async () => {
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
   const page = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
-  const errs = []; page.on('pageerror', e => errs.push(String(e)));
+  const errs = []; page.on('pageerror', e => errs.push(e.stack || String(e)));
   await page.goto('file://' + path.join(__dirname, '..', 'index.html'));
   await page.waitForTimeout(300);
   if (KO) { await page.evaluate(() => VM.I18N.set('ko')); }
@@ -52,7 +52,7 @@ const seen = new Set();
     const s = __vm.state, me = s.player, cap = s.factions[me].capital, T = o => Object.assign({ infantry: 0, spear: 0, cavalry: 0, archer: 0, siege: 0 }, o);
     window.__T = T; s.factions[me].gold = 20000; s.factions[me].food = 20000; s.aiOn = false;
     const own = s.cities.filter(c => c.owner === me), c2 = own.find(c => c.id !== cap);
-    const nb = s.map.nodes[cap].adj.find(n => s.cities[n].owner !== me);
+    const nb = s.map.nodes[cap].adj.find(n => s.cities[n].owner !== me) ?? s.map.nodes[cap].adj.find(n => n !== c2.id);
     s.cities[nb].owner = 0; s.cities[nb].buildings.wall = 2; s.cities[nb].wallHp = VM.War.wallMax(s.cities[nb]);
     const o2 = s.officers.find(o => o.owner === me && o.role === 'idle'); o2.loc = c2.id; VM.Commands.exec(s, { type: 'setGovernor', faction: me, city: c2.id, officer: o2.id });
     window.__ids = { me, cap, c2: c2.id, nb, foe: s.cities.find(c => c.owner > 0 && c.owner !== me).id };
