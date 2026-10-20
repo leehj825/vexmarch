@@ -8,7 +8,7 @@
     cityView: null,
     openCity(id) {
       if (!VM.City3D.open(id)) { VM.Panels.toast('The 3D view is not available on this device'); VM.Audio.play('error'); return; }
-      ui.cityView = id; document.body.classList.add('in3d'); VM.Audio.play('pick');
+      ui.cityView = id; ui.speed = 1; document.body.classList.add('in3d'); VM.Audio.play('pick');      // the 2x and 4x speeds are for testing: inside a city time runs at normal speed
     },
     closeCity() { if (ui.cityView === null) return; VM.City3D.close(); ui.cityView = null; document.body.classList.remove('in3d'); },
     onTap(h) {
