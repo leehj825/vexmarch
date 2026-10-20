@@ -1,0 +1,67 @@
+# Vexmarch — Roadmap
+
+Principle: prove the strategy layer is fun in 2D before spending on 3D. Each phase ends with something runnable.
+
+## Phase 0 — Project setup
+- `index.html`, `css/style.css`, `js/` skeleton with plain scripts (no build step).
+- `package.json`, Capacitor config with app ID `com.vexmarch.game`.
+- `tools/` folder, Node test runner for the sim.
+- **Done when:** a blank page loads from `file://` and the Node harness runs.
+
+## Phase 1 — Headless simulation
+- State object, seeded RNG, fixed-timestep `step(dt)`, command queue.
+- 30-node map data with specialties and roads; 5 factions + neutral.
+- Economy: gold, food, population growth with prosperity and tax; recruiting.
+- Balance script prints economy curves over simulated years.
+- **Done when:** 10,000 simulated days run in Node, are deterministic for a seed, and economy curves look sane.
+
+## Phase 2 — Map view and controls
+- Canvas map: nodes, roads, derived borders, faction colours, pan/zoom (mouse and touch).
+- HUD: gold, food, date, pause/1x/2x/4x; node panel (build, tax, recruit).
+- Army creation, move orders along roads, supply line display.
+- **Done when:** the player can run an economy and march an army on the map.
+
+## Phase 3 — War and logistics
+- Contact combat, troop type matchups, morale, officer abilities.
+- Sieges and walls, contested zones, supply drain and Cut Off.
+- Depots and forward bases; reinforcements joining fights.
+- **Done when:** a siege and a supply-cut raid both play out correctly in a scripted test scenario.
+
+## Phase 4 — Officers and delegation
+- Officer stats, traits, loyalty; governor and commander roles.
+- Standing orders; wandering officers and search; capture and recruit.
+- Alerts feed with auto-pause on urgent events.
+- **Done when:** a player can leave cities on Develop and armies on Defend and the empire runs itself sensibly.
+
+## Phase 5 — AI factions
+- Rule-based planner using the player's commands; difficulty settings.
+- Win/lose flow (conquest; lose with no nodes), new game.
+- AI-vs-AI headless runs to check games finish and no faction stalls.
+- **Done when:** a full campaign can be won or lost against AI.
+
+## Phase 6 — Polish: first playable
+- Deepward-style visuals for the map and UI, synthesised music and sfx.
+- Tutorial scenario and tips; settings; saves with Continue/New Game; i18n (English, Korean).
+- AdMob top-centre banner with HUD offset; Android build via Capacitor.
+- **Done when:** installable on Android and playable start to finish. This is the release candidate for the 2D game.
+
+## Phase 7 — City view (3D)
+- Three.js r128 scene generated from city state; slot-based buildings, walls, fields, decorative houses by population.
+- Transition from the map; one city loaded at a time; low-end Android budget.
+
+## Phase 8 — Armies in 3D
+- Instanced soldier formations scaled to troop count, siege gear, siege animations driven by sim events. Cosmetic only.
+
+## Phase 9 — Walk mode (optional extra)
+- Third-person hero walking the city, clock paused while active. No combat and no war participation.
+
+## Phase 10 — Optional flavour
+- Optional on-device language-model text for officer messages, with template fallback. May be dropped.
+
+## Later / unscheduled
+Diplomacy, joining wars as a hero, extra scenarios and maps, unique faction bonuses.
+
+## Risks
+- **3D on Android:** keep draw calls low, instance everything, one city at a time.
+- **AI quality:** AI-vs-AI harness from Phase 1 onward.
+- **Scope creep:** Phases 7 to 10 start only after the 2D game is fun.
