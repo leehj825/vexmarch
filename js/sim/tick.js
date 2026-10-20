@@ -6,6 +6,7 @@ VM.Sim = (function () {
 
   function stepOnce(state) {
     const dd = VM.CFG.STEP_DAYS;
+    VM.Armies.step(state, dd);
     VM.Eco.step(state, dd);
     state.time += dd;
   }

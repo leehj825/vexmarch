@@ -2,7 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.CFG = {
-  VERSION: 1,
+  VERSION: 2,
 
   // ---- Time ----
   DAY_SECONDS: 2,          // real seconds per in-game day at 1x
@@ -78,12 +78,12 @@ VM.CFG = {
   MAX_BUILD_LEVEL: 3,
   GOVERNOR_BUILD_SPEED: 0.5,   // governor Politics 100 builds 50% faster
 
-  // ---- Troops ----
+  // ---- Troops (speed = map units per day; an army moves at its slowest troop type) ----
   TROOPS: {
-    infantry: { label: 'Infantry', cost: 20, upkeep: 0.05 },
-    spear:    { label: 'Spearmen', cost: 22, upkeep: 0.05 },
-    cavalry:  { label: 'Cavalry',  cost: 40, upkeep: 0.10 },
-    archer:   { label: 'Archers',  cost: 30, upkeep: 0.07 }
+    infantry: { label: 'Infantry', cost: 20, upkeep: 0.05, speed: 45 },
+    spear:    { label: 'Spearmen', cost: 22, upkeep: 0.05, speed: 45 },
+    cavalry:  { label: 'Cavalry',  cost: 40, upkeep: 0.10, speed: 80 },
+    archer:   { label: 'Archers',  cost: 30, upkeep: 0.07, speed: 45 }
   },
 
   // ---- Officers ----

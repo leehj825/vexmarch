@@ -1,59 +1,67 @@
-// Boot and main loop. Phase 0 placeholder view: draws the road map and a resource readout so the whole script chain is proven to load.
+// Boot and main loop. Owns the UI state shared by the map, panels and title screen.
 (function () {
-  const canvas = document.getElementById('map'), ctx = canvas.getContext('2d');
-  const state = VM.Sim.create({ seed: (Date.now() & 0xffff) || 1 });
-  let speed = 1, selected = -1, last = performance.now(), view = { s: 1, ox: 0, oy: 0 };
+  const ui = {
+    state: null, speed: 1, running: false, selectedCity: -1, selectedArmy: null, lastEvent: 0, lastSave: 0,
+    setState(s) { ui.state = s; ui.selectedCity = -1; ui.selectedArmy = null; ui.lastEvent = s.nextEvent || 0; ui.lastSave = Math.floor(s.time / 30); },
+    start() { document.getElementById('hud').style.visibility = 'visible'; ui.running = true; ui.speed = 1; VM.MapView.centerOn(ui.state.factions[ui.state.player].capital); },
+    centerOn(id) { VM.MapView.centerOn(id); },
+    onTap(h) {
+      if (!ui.running) return;
+      if (h && h.kind === 'army') { ui.selectedArmy = h.id; ui.selectedCity = -1; return; }
+      if (h && h.kind === 'node') {
+        if (ui.selectedArmy !== null) { ui.onOrder(h.id); return; }
+        ui.selectedCity = h.id; return;
+      }
+      ui.selectedArmy = null; ui.selectedCity = -1;
+    },
+    onOrder(nodeId) {
+      if (ui.selectedArmy === null) { ui.selectedCity = nodeId; return; }
+      const r = VM.Commands.exec(ui.state, { type: 'moveArmy', faction: ui.state.player, army: ui.selectedArmy, to: nodeId });
+      if (!r.ok) VM.Panels.toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1));
+    }
+  };
+  window.VMUI = ui;
 
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
-    const m = state.map, pad = 50;
-    view.s = Math.min((innerWidth - pad * 2) / m.w, (innerHeight - pad * 2) / m.h);
-    view.ox = (innerWidth - m.w * view.s) / 2; view.oy = (innerHeight - m.h * view.s) / 2 + 20;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  const px = n => n.x * view.s + view.ox, py = n => n.y * view.s + view.oy;
+  function save() { try { localStorage.setItem('vexmarch.save', VM.Sim.save(ui.state)); } catch (e) { /* saving is optional */ } }
 
-  function draw() {
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
-    const N = state.map.nodes;
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(238,230,214,0.25)';
-    for (const [a, b] of state.map.edges) { ctx.beginPath(); ctx.moveTo(px(N[a]), py(N[a])); ctx.lineTo(px(N[b]), py(N[b])); ctx.stroke(); }
-    for (const c of state.cities) {
-      const n = N[c.id], f = state.factions[c.owner];
-      ctx.beginPath(); ctx.arc(px(n), py(n), c.spec === 'capital' ? 13 : 9, 0, 7);
-      ctx.fillStyle = f.color; ctx.fill();
-      ctx.lineWidth = c.id === selected ? 3 : 1; ctx.strokeStyle = c.id === selected ? '#fff' : 'rgba(0,0,0,0.6)'; ctx.stroke();
-      ctx.fillStyle = 'rgba(238,230,214,0.8)'; ctx.font = '11px system-ui'; ctx.textAlign = 'center';
-      ctx.fillText(n.name, px(n), py(n) + 24);
+  function toasts() {
+    const st = ui.state;
+    for (const ev of st.events) {
+      if (ev.n <= ui.lastEvent) continue;
+      ui.lastEvent = ev.n;
+      if (ev.owner !== st.player) continue;
+      if (ev.type === 'built') VM.Panels.toast(`${VM.CFG.BUILD[ev.building].label} Lv${ev.level} finished in ${st.map.nodes[ev.city].name}`);
+      if (ev.type === 'starving') VM.Panels.toast('Your people are starving! Build farms or lower the army upkeep.');
     }
   }
 
-  function hud() {
-    const f = state.factions[state.player], d = VM.Sim.date(state);
-    document.getElementById('gold').textContent = 'Gold ' + Math.floor(f.gold);
-    document.getElementById('food').textContent = 'Food ' + Math.floor(f.food);
-    document.getElementById('date').textContent = 'Y' + d.year + ' M' + d.month + ' D' + d.day;
-    const c = state.cities[selected];
-    document.getElementById('info').textContent = c
-      ? state.map.nodes[c.id].name + ' - ' + VM.CFG.SPEC[c.spec].label + '\nOwner: ' + state.factions[c.owner].name + '\nPopulation ' + Math.round(c.pop) + ' / ' + (c.stats ? Math.round(c.stats.cap) : '') + '\nProsperity ' + (c.stats ? c.stats.prosperity.toFixed(2) : '')
-      : 'Tap a node. (Phase 0 placeholder view)';
-  }
-
+  let last = performance.now();
   function frame(now) {
-    VM.Sim.update(state, (now - last) / 1000, speed); last = now;
-    draw(); hud(); requestAnimationFrame(frame);
+    const dt = (now - last) / 1000; last = now;
+    if (ui.running) {
+      VM.Sim.update(ui.state, dt, ui.speed);
+      toasts();
+      const m = Math.floor(ui.state.time / 30); if (m !== ui.lastSave) { ui.lastSave = m; save(); }
+    }
+    VM.MapView.render();
+    if (ui.running) VM.Panels.update();
+    requestAnimationFrame(frame);
   }
 
-  canvas.addEventListener('pointerdown', e => {
-    let best = -1, bd = 24 * 24;
-    state.map.nodes.forEach(n => { const dx = px(n) - e.clientX, dy = py(n) - e.clientY, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = n.id; } });
-    selected = best;
+  document.querySelectorAll('#speed button').forEach(b => b.addEventListener('click', () => { ui.speed = +b.dataset.s; }));
+  const $menu = document.getElementById('menuBtn');
+  $menu.addEventListener('click', () => { save(); ui.running = false; ui.selectedArmy = null; ui.selectedCity = -1; document.getElementById('panel').classList.remove('open'); document.getElementById('hud').style.visibility = 'hidden'; VM.Title.show(); });
+  addEventListener('keydown', e => {
+    if (!ui.running) return;
+    if (e.key === ' ') { ui.speed = ui.speed === 0 ? 1 : 0; e.preventDefault(); }
+    else if (e.key === '1') ui.speed = 1; else if (e.key === '2') ui.speed = 2; else if (e.key === '3') ui.speed = 4;
+    else if (e.key === 'Escape') { ui.selectedArmy = null; ui.selectedCity = -1; }
   });
-  document.querySelectorAll('#speed button').forEach(b => b.addEventListener('click', () => {
-    speed = +b.dataset.s; document.querySelectorAll('#speed button').forEach(x => x.classList.toggle('on', x === b));
-  }));
-  addEventListener('resize', resize); resize();
-  window.__vm = { state };    // test hook
+
+  VM.MapView.init(document.getElementById('map'), ui);
+  VM.Panels.init(ui); VM.Title.init(ui);
+  document.getElementById('hud').style.visibility = 'hidden';
+  VM.Title.roll(false); VM.Title.show();
+  window.__vm = ui;     // test hook
   requestAnimationFrame(frame);
 })();

@@ -12,6 +12,12 @@ VM.Commands = (function () {
     return [city, null];
   }
 
+  function ownArmy(state, cmd) {
+    const army = state.armies.find(a => a.id === cmd.army);
+    if (!army || army.owner !== cmd.faction) return { err: fail('not your army') };
+    return { army };
+  }
+
   const handlers = {
     build(state, cmd) {
       const [city, err] = ownCity(state, cmd); if (err) return err;
@@ -46,10 +52,27 @@ VM.Commands = (function () {
       if (cmd.officer === null) { const o = state.officers[city.governor]; if (o) o.role = 'idle'; city.governor = null; return { ok: true }; }
       const o = state.officers[cmd.officer];
       if (!o || o.owner !== cmd.faction) return fail('not your officer');
+      if (o.army !== null) return fail('officer leads an army');
       state.cities.forEach(c => { if (c.governor === o.id) c.governor = null; });
       const old = state.officers[city.governor]; if (old) old.role = 'idle';
       city.governor = o.id; o.role = 'governor'; o.loc = city.id;
       return { ok: true };
+    },
+    formArmy(state, cmd) {
+      const [city, err] = ownCity(state, cmd); if (err) return err;
+      return VM.Armies.form(state, cmd.faction, city.id, cmd.officer);
+    },
+    moveArmy(state, cmd) {
+      const a = ownArmy(state, cmd); if (a.err) return a.err;
+      return VM.Armies.move(state, a.army, cmd.to);
+    },
+    stopArmy(state, cmd) {
+      const a = ownArmy(state, cmd); if (a.err) return a.err;
+      return VM.Armies.stop(state, a.army);
+    },
+    disbandArmy(state, cmd) {
+      const a = ownArmy(state, cmd); if (a.err) return a.err;
+      return VM.Armies.disband(state, a.army);
     }
   };
 

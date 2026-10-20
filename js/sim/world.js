@@ -128,7 +128,7 @@ VM.World = (function () {
     return {
       id, name: uniqueName(state, used, () => R.pick(state, GIVEN) + ' ' + R.pick(state, FAMILY)),
       command: stat(), might: stat(), politics: stat(), intellect: stat(),
-      trait: R.pick(state, VM.CFG.TRAITS), loyalty: 70, owner, loc, role: 'idle'
+      trait: R.pick(state, VM.CFG.TRAITS), loyalty: 70, owner, loc, role: 'idle', army: null
     };
   }
 
@@ -136,7 +136,7 @@ VM.World = (function () {
     opts = opts || {};
     const C = VM.CFG, E = C.ECON, seed = (opts.seed === undefined ? 1 : opts.seed) >>> 0;
     const nf = Math.max(4, Math.min(6, opts.factions || C.FACTION_COUNT));
-    const state = { version: C.VERSION, seed, rng: seed, time: 0, acc: 0, player: 1, factionCount: nf, events: [] };
+    const state = { version: C.VERSION, seed, rng: seed, time: 0, acc: 0, player: Math.max(1, Math.min(nf, opts.player || 1)), factionCount: nf, events: [], armies: [], nextArmy: 1 };
     state.map = buildMap(state);
     const capitals = placeCapitals(state, state.map, nf);
     const spec = assignSpecialties(state, state.map, capitals);

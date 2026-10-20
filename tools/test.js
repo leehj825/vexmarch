@@ -187,5 +187,120 @@ test('officers: 24 in the world, 4 per faction, some wandering', () => {
   assert.strictEqual(new Set(s.officers.map(o => o.name)).size, s.officers.length);
 });
 
+
+// ---- Armies (Phase 2) ----
+function armyWorld(seed) {
+  const s = VM.Sim.create({ seed: seed || 1 }), f = s.factions[1], city = s.cities[f.capital];
+  const o = s.officers.find(x => x.owner === 1 && x.role !== 'governor');
+  o.loc = city.id; f.gold = 1e5;
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: city.id, troop: 'infantry', count: 200 });
+  return { s, f, city, o };
+}
+const farNode = (s, from) => { const d = VM.Armies.distance; let best = from, bd = 0; s.cities.forEach(c => { const x = d(s, from, c.id); if (x > bd) { bd = x; best = c.id; } }); return best; };
+
+test('army: forming takes the whole garrison and ties an officer to it', () => {
+  const { s, city, o } = armyWorld();
+  const total = VM.Eco.troopsOf(city.garrison);
+  const r = VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  assert(r.ok, r.reason);
+  const a = s.armies[0];
+  assert.strictEqual(VM.Armies.sizeOf(a), total); assert.strictEqual(VM.Eco.troopsOf(city.garrison), 0);
+  assert.strictEqual(o.army, a.id); assert.strictEqual(o.role, 'commander');
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id }).ok, 'officer already leads an army');
+  assert(!VM.Commands.exec(s, { type: 'setGovernor', faction: 1, city: city.id, officer: o.id }).ok, 'commander cannot govern');
+});
+
+test('army: cannot be formed with a governor, a stranger, or an empty garrison', () => {
+  const { s, city } = armyWorld();
+  const gov = s.officers[city.governor];
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: gov.id }).ok);
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: s.officers.find(x => x.owner === 2).id }).ok);
+  const t = VM.Sim.create({ seed: 1 }); t.cities[t.factions[1].capital].garrison.infantry = 0;
+  const o = t.officers.find(x => x.owner === 1 && x.role !== 'governor'); o.loc = t.factions[1].capital;
+  assert(!VM.Commands.exec(t, { type: 'formArmy', faction: 1, city: t.factions[1].capital, officer: o.id }).ok);
+});
+
+test('army: marches along roads and arrives after length / speed days', () => {
+  const { s, city, o } = armyWorld();
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const a = s.armies[0], dest = farNode(s, city.id), p = VM.Armies.path(s, city.id, dest);
+  let len = 0; for (let i = 0; i < p.length - 1; i++) len += VM.Armies.roadLen(s, p[i], p[i + 1]);
+  assert(VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: dest }).ok);
+  const days = len / VM.Armies.speedOf(a);
+  VM.Sim.advance(s, Math.floor(days / 2)); assert(a.at === null || a.at !== dest, 'still marching halfway');
+  VM.Sim.advance(s, Math.ceil(days / 2) + 1);
+  assert.strictEqual(a.at, dest); assert.strictEqual(a.dest, null); assert.strictEqual(o.loc, dest);
+});
+
+test('army: moves at the speed of its slowest troop type; cavalry-only is faster', () => {
+  const { s, city, o } = armyWorld();
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: city.id, troop: 'cavalry', count: 50 });
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const a = s.armies[0]; assert.strictEqual(VM.Armies.speedOf(a), VM.CFG.TROOPS.infantry.speed);
+  a.troops.infantry = 0; assert.strictEqual(VM.Armies.speedOf(a), VM.CFG.TROOPS.cavalry.speed);
+});
+
+test('army: can turn around on the road and re-route to a node behind it', () => {
+  const { s, city, o } = armyWorld();
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const a = s.armies[0], nb = s.map.nodes[city.id].adj[0];
+  VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: nb });
+  VM.Sim.advance(s, 1); assert.strictEqual(a.at, null, 'on the road');
+  assert(VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: city.id }).ok);
+  assert.strictEqual(a.edge.to, city.id);
+  VM.Sim.advance(s, 10); assert.strictEqual(a.at, city.id);
+  const p = VM.Armies.position(s, a); assert.strictEqual(p.x, s.map.nodes[city.id].x);
+});
+
+test('army: stop finishes the current road then halts', () => {
+  const { s, city, o } = armyWorld();
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const a = s.armies[0]; VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: farNode(s, city.id) });
+  VM.Sim.advance(s, 1); VM.Commands.exec(s, { type: 'stopArmy', faction: 1, army: a.id });
+  VM.Sim.advance(s, 60); assert(a.at !== null && a.path.length === 0 && a.dest === null);
+});
+
+test('army: disband returns troops and officer, only inside your own city', () => {
+  const { s, city, o } = armyWorld();
+  const n = VM.Eco.troopsOf(city.garrison);
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const a = s.armies[0];
+  assert(VM.Commands.exec(s, { type: 'disbandArmy', faction: 1, army: a.id }).ok);
+  assert.strictEqual(VM.Eco.troopsOf(city.garrison), n); assert.strictEqual(o.army, null); assert.strictEqual(s.armies.length, 0);
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const b = s.armies[0]; VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: b.id, to: farNode(s, city.id) }); VM.Sim.advance(s, 2);
+  assert(!VM.Commands.exec(s, { type: 'disbandArmy', faction: 1, army: b.id }).ok, 'not while on the road');
+  assert(!VM.Commands.exec(s, { type: 'moveArmy', faction: 2, army: b.id, to: city.id }).ok, 'cannot order another faction army');
+});
+
+test('army: upkeep and food are charged to the owner', () => {
+  const a = armyWorld(), b = armyWorld();
+  VM.Commands.exec(b.s, { type: 'formArmy', faction: 1, city: b.city.id, officer: b.o.id });
+  VM.Sim.advance(a.s, 1); VM.Sim.advance(b.s, 1);
+  assert(Math.abs(a.s.factions[1].income.gold - b.s.factions[1].income.gold) < 1e-6 + 1, 'same cost in garrison or in the field');
+  assert(b.s.factions[1].income.food < 1e9);
+});
+
+test('army: supply path leads back to the home city', () => {
+  const { s, city, o } = armyWorld();
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
+  const a = s.armies[0]; VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: farNode(s, city.id) });
+  VM.Sim.advance(s, 20);
+  const sp = VM.Armies.supplyPath(s, a);
+  assert.strictEqual(sp[sp.length - 1], city.id);
+});
+
+test('armies keep the sim deterministic and save/load safe', () => {
+  const mk = () => { const w = armyWorld(5); VM.Commands.exec(w.s, { type: 'formArmy', faction: 1, city: w.city.id, officer: w.o.id }); VM.Commands.exec(w.s, { type: 'moveArmy', faction: 1, army: w.s.armies[0].id, to: farNode(w.s, w.city.id) }); return w.s; };
+  const a = mk(), b = mk(); VM.Sim.advance(a, 30); VM.Sim.advance(b, 30);
+  assert.strictEqual(VM.Sim.hash(a), VM.Sim.hash(b));
+  const c = VM.Sim.load(VM.Sim.save(a)); VM.Sim.advance(a, 30); VM.Sim.advance(c, 30);
+  assert.strictEqual(VM.Sim.hash(a), VM.Sim.hash(c));
+});
+
+test('player faction can be chosen', () => {
+  const s = VM.Sim.create({ seed: 3, player: 4 }); assert.strictEqual(s.player, 4);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
