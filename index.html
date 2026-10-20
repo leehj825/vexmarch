@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#07060a">
+<title>Vexmarch</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="map"></canvas>
+<div id="hud">
+  <div id="top">
+    <div id="res"><span id="gold">0</span><span id="food">0</span><span id="date"></span></div>
+    <div id="speed"><button data-s="0">II</button><button data-s="1" class="on">1x</button><button data-s="2">2x</button><button data-s="4">4x</button></div>
+  </div>
+  <div id="info"></div>
+</div>
+<script src="js/data/config.js"></script>
+<script src="js/sim/rng.js"></script>
+<script src="js/sim/economy.js"></script>
+<script src="js/sim/world.js"></script>
+<script src="js/sim/commands.js"></script>
+<script src="js/sim/tick.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

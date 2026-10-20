@@ -1,0 +1,8 @@
+{
+  "appId": "com.vexmarch.game",
+  "appName": "Vexmarch",
+  "webDir": "www",
+  "backgroundColor": "#07060a",
+  "android": { "allowMixedContent": false },
+  "server": { "androidScheme": "https" }
+}

@@ -161,7 +161,15 @@ None is required, and the game must fully work without one. Optional, last-phase
 
 Multiplayer; the hero joining wars; free-form building placement; more than 4 troop types; more than two visible resources; naval combat; a Diplomacy system (maybe later: alliances and truces).
 
-## 14. Open questions
+## 14. Implementation notes (as built in Phase 1)
+
+- The map is **generated from the seed** (jittered 6x5 grid, roads thinned but kept connected, never crossing), not hand-authored. Names come from syllables. Same seed, same world.
+- Buildings are **levels per type** (farm, market, barracks, wall, temple, max level 3, one project at a time per city). The 3D slot layout in Phase 7 will be derived from these levels.
+- Food is a faction-wide pool; each city's prosperity uses the faction's food security (runway of 30 days = fully secure). Neutral cities feed themselves.
+- Tax: Low (+0.15 prosperity, x0.6 gold), Normal, High (-0.35 prosperity, x1.5 gold). Population adjusts slowly, so High tax is a short-term cash boost that shrinks the recruit pool; the balance script shows the long-run gold gain is small (about +15%) for about 25% fewer people. Loyalty effects arrive with officers and loyalty in Phase 4.
+- Faction names are placeholders.
+
+## 15. Open questions
 
 - Fictional world name, factions and officer names.
 - Should factions have unique troop bonuses?

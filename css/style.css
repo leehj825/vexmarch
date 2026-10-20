@@ -1,0 +1,13 @@
+/* Vexmarch - palette follows Deepward: ink background, warm cream text, gold accents. */
+html, body { margin: 0; height: 100%; overflow: hidden; background: #07060a; color: #eee6d6; font-family: system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+#map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#hud { position: fixed; inset: 0; pointer-events: none; padding-top: env(safe-area-inset-top); }
+#top { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 10px; }
+body.adLive #top { padding-top: 58px; }          /* leave room for the 320x50 banner at top centre */
+#res span { display: inline-block; margin-right: 10px; padding: 4px 9px; background: rgba(10, 8, 12, 0.7); border: 1px solid rgba(255, 230, 190, 0.25); border-radius: 3px; font-size: 14px; }
+#gold { color: #f2d27a; }
+#food { color: #c8e070; }
+#speed button { pointer-events: auto; width: 38px; height: 30px; margin-left: 4px; border: 1px solid rgba(255, 230, 190, 0.3); border-radius: 4px; background: rgba(10, 8, 12, 0.6); color: #eee6d6; font-weight: 700; font-size: 12px; cursor: pointer; }
+#speed button.on { background: rgba(242, 210, 122, 0.45); }
+#info { position: fixed; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); max-width: min(360px, calc(100vw - 20px)); padding: 8px 12px; background: rgba(12, 10, 14, 0.85); border: 1px solid rgba(242, 210, 122, 0.4); border-radius: 6px; font-size: 13px; line-height: 1.45; white-space: pre-line; }
+@media (max-width: 520px) { #res span { margin-right: 4px; padding: 3px 6px; font-size: 12px; } }
