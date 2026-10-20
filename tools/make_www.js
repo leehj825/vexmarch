@@ -8,7 +8,7 @@ function copy(rel) {
   if (fs.statSync(from).isDirectory()) fs.readdirSync(from).forEach(f => copy(path.join(rel, f)));
   else fs.copyFileSync(from, to);
 }
-['index.html', 'css', 'js'].forEach(copy);
+['index.html', 'css', 'js', 'vendor'].forEach(copy);
 // Release builds: VX_ADS=real VX_BANNER_ID=ca-app-pub-.../... VX_APP_ID=ca-app-pub-...~... npm run www
 if (process.env.VX_ADS === 'real') {
   if (!process.env.VX_BANNER_ID || !process.env.VX_APP_ID) { console.error('VX_ADS=real needs VX_BANNER_ID and VX_APP_ID'); process.exit(1); }

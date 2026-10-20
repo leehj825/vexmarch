@@ -9,6 +9,7 @@
 </head>
 <body class="titlemode">
 <canvas id="map"></canvas>
+<canvas id="city3d"></canvas>
 <div id="hud">
   <div id="top">
     <div id="res">
@@ -17,6 +18,8 @@
     </div>
     <div id="speed"><button id="offBtn" class="wide">Officers</button><button id="alertBtn" class="wide">Alerts</button><button id="setBtn" title="Settings">⚙</button><button data-s="0" title="Pause (space)">II</button><button data-s="1">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button id="menuBtn" title="Menu">☰</button></div>
   </div>
+  <button id="backBtn">← Back to map</button>
+  <div id="hint3d">Drag to look around · scroll or pinch to zoom</div>
   <div id="panel"></div>
   <div id="sheet"></div>
   <div id="lesson"></div>
@@ -46,6 +49,9 @@
 <script src="js/sim/world.js"></script>
 <script src="js/sim/commands.js"></script>
 <script src="js/sim/tick.js"></script>
+<script src="vendor/three.min.js"></script>
+<script src="js/view3d/layout.js"></script>
+<script src="js/view3d/city3d.js"></script>
 <script src="js/ui/prefs.js"></script>
 <script src="js/ui/audio.js"></script>
 <script src="js/lang_ko.js"></script>

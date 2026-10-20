@@ -44,6 +44,7 @@ VM.Panels = (function () {
       case 'depotTarget': { const c = st.cities[+d.city]; cmd({ type: 'setDepot', city: +d.city, target: (c.depot ? c.depot.target : 0) + +d.n }); break; }
       case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
       case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
+      case 'view3d': ui.openCity(+d.city); break;
       case 'goto': ui.centerOn(+d.city); break;
     }
   }
@@ -57,7 +58,7 @@ VM.Panels = (function () {
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
   }
 
-  const officerLine = o => `${o.name} (Cmd ${o.command} Mig ${o.might} Pol ${o.politics} Int ${o.intellect}, ${o.trait})`;
+  const officerLine = o => `${o.name} · Cmd ${o.command} Mig ${o.might} Pol ${o.politics} Int ${o.intellect} · ${o.trait}`;
   const troopList = (t, all) => Object.keys(VM.CFG.TROOPS).filter(k => all || t[k] >= 0.5).map(k => `${VM.CFG.TROOPS[k].label} ${num(t[k])}`).join(' · ') || 'none';
   const bar = (frac, cls) => `<div class="bar ${cls || ''}"><i style="width:${Math.max(0, Math.min(100, frac * 100)).toFixed(0)}%"></i></div>`;
   const POLICY_TIP = { manual: 'You decide everything here.', develop: 'The governor builds, sets taxes and keeps a small garrison, saving a gold reserve.', fortify: 'Walls first, then archers and a larger garrison.', recruit: 'Barracks first, then a large standing garrison to draw armies from.' };
@@ -67,7 +68,7 @@ VM.Panels = (function () {
   function cityHTML(c) {
     const st = ui.state, me = st.player, N = st.map.nodes[c.id], S = VM.CFG.SPEC[c.spec], f = st.factions[c.owner], s = c.stats;
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c);
-    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span><button data-act="close" class="x">✕</button></div>`;
+    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span><button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button></div>`;
     h += `<div class="row"><span class="dot" style="background:${f.color}"></span>${f.name}${mine ? ' (you)' : ''}${c.besieged ? ' · <span class="bad">UNDER SIEGE</span>' : (c.contested ? ' · <span class="bad">CONTESTED</span>' : '')}</div>`;
     h += `<div class="row">Population <b>${num(c.pop)}</b> / ${num(s.cap)}</div>`;
     if (wmax > 0) h += `<div class="row">Wall <b>${num(c.wallHp)}</b> / ${num(wmax)}${bar(c.wallHp / wmax, 'wall')}</div>`;
@@ -128,7 +129,7 @@ VM.Panels = (function () {
     if (s) {
       const days = n > 0 ? a.rations / (n * VM.CFG.ECON.foodPerHead) : 0;
       let line = s.line === 'ok' ? '<span class="good">supply line open</span>' : (s.line === 'cut' ? '<span class="bad"><b>SUPPLY CUT</b></span>' : '<span class="bad">no supply source</span>');
-      if (s.depot !== null) line += ` · fed by depot at ${N[s.depot].name}`;
+      if (s.depot != null) line += ` · fed by depot at ${N[s.depot].name}`;
       else if (s.foreign) line += ` · enemy land: eats ${s.mult}x`;
       h += `<div class="row">${line}</div><div class="row dim">Rations ${days.toFixed(1)} days · supplied from ${N[a.home].name}${s.starving ? ' · <span class="bad">STARVING</span>' : ''}</div>`;
     }

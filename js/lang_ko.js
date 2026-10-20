@@ -28,6 +28,11 @@ var LANG_KO = {
 "Year {0} · Month {1} · Day {2}": "{0}년 {1}월 {2}일",
 "STARVING": "기근", "SUPPLY CUT": "보급 차단",
 
+// ---- 3D city ----
+"View city": "도시 보기", "← Back to map": "← 지도로", "Back to map": "지도로",
+"Drag to look around · scroll or pinch to zoom": "끌어서 둘러보기 · 스크롤 또는 두 손가락으로 확대",
+"The 3D view is not available on this device": "이 기기에서는 3D 보기를 쓸 수 없습니다",
+
 // ---- cities ----
 "Capital": "수도", "Farmland": "농경지", "Market town": "시장 도시", "Mountain pass": "산악 관문", "Port": "항구",
 "Iron hills": "철광 언덕", "Horse plains": "말 평원", "Holy site": "성지", "Town": "마을", "Neutral": "중립",
@@ -72,7 +77,8 @@ var LANG_KO = {
 "Army of {a}": "{a}의 군대", "Morale": "사기",
 "Besieging": "포위 중", "In battle": "교전 중", "ROUTED": "패주", "— fleeing to safety": "— 안전한 곳으로 도망 중",
 "in {a}": "{a}에 있음", "in {a} · heading to": "{a}에 있음 · 목적지",
-"on the road to": "다음 목적지로 이동 중:",
+"on the road to {a}": "{a}(으)로 이동 중", "on the road to {a} · heading to": "{a}(으)로 이동 중 · 목적지",
+"Cmd {0} Mig {1} Pol {2} Int {3}": "지휘 {0} 무력 {1} 정치 {2} 지력 {3}",
 "supply line open": "보급선 연결됨", "· enemy land: eats {0}x": "· 적지: 식량 {0}배 소비", "· fed by depot at {0}": "· {0}의 보급소가 먹여 살림",
 "Rations {0} days · supplied from {a}": "식량 {0}일분 · 보급처 {a}", "Rations {0} days · supplied from {a} ·": "식량 {0}일분 · 보급처 {a} ·",
 "Orders": "명령", "Hold": "대기", "Defend": "방어", "Reinforce": "증원", "Raid": "습격",

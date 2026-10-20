@@ -2,7 +2,7 @@
 
 A real-time grand strategy game: 30 nodes, 4 to 6 factions, officers who run your cities, and supply lines that decide wars. Plain JavaScript (no build step, no modules) so it opens from `file://`; Capacitor wraps it for Android (`com.vexmarch.game`).
 
-See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 6 done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). The 3D city view, 3D armies and walk mode (Phases 7 to 9) are next. See `ANDROID.md` for the phone build.
+See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 7 done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). Phase 7 added the 3D city view (View city in the city panel, or double-tap a node); 3D armies on the road and walk mode (Phases 8 and 9) are next. See `ANDROID.md` for the phone build.
 
 ## Run
 
@@ -14,6 +14,7 @@ Open `index.html` in a browser. Press Tutorial on the title screen for a guided 
 npm test              # tools/test.js (map, determinism, saves, economy, commands, armies) tools/test_war.js (battles, sieges, supply) and tools/test_officers.js (loyalty, governors, orders, proposals)
 npm run tournament   # AI-vs-AI games: node tools/ai_tournament.js [seeds] [years] [levels]
 npm run ui:test       # browser smoke test (needs Playwright: PLAYWRIGHT=/path/to/playwright)
+npm run ui:test3d     # browser test of the 3D city view (needs Playwright)
 npm run i18n:check    # lists texts still in English when the game runs in Korean
 npm run balance       # node tools/balance.js [seed] [years]: yearly economy tables for low/normal/high tax
 ```
@@ -41,6 +42,8 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/ui/tutorial.js` | Guided first scenario |
 | `js/i18n.js`, `js/lang_ko.js` | Language layer and the Korean table |
 | `js/ads.js`, `js/ads_env.js` | AdMob banner (Android) and its settings |
+| `js/view3d/layout.js`, `js/view3d/city3d.js` | The 3D city: layout as data, Three.js renderer |
+| `vendor/three.min.js` | Three.js r128 (MIT) |
 | `js/ui/title.js` | Title screen and faction picker |
 | `js/main.js` | Boot, shared UI state, main loop, autosave |
 | `tools/` | `test.js`, `balance.js`, `econ_bot.js` (economy-only bot), `make_www.js` |
