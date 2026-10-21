@@ -2,7 +2,8 @@
 (function () {
   const ui = {
     state: null, sheet: null, speed: 1, running: false, selectedCity: -1, selectedArmy: null, lastEvent: 0, lastSave: 0,
-    setState(s) { ui.overShown = false; document.getElementById('over').classList.remove('on'); ui.state = s; ui.selectedCity = -1; ui.selectedArmy = null; ui.lastEvent = s.nextEvent || 0; ui.sheet = null; if (VM.Alerts) VM.Alerts.reset(); ui.lastSave = Math.floor(s.time / 30); },
+    draft: null,
+    setState(s) { ui.draft = null; ui.overShown = false; document.getElementById('over').classList.remove('on'); ui.state = s; ui.selectedCity = -1; ui.selectedArmy = null; ui.lastEvent = s.nextEvent || 0; ui.sheet = null; if (VM.Alerts) VM.Alerts.reset(); ui.lastSave = Math.floor(s.time / 30); },
     start() { document.body.classList.remove('titlemode'); document.getElementById('hud').style.visibility = 'visible'; ui.running = true; ui.speed = 1; VM.MapView.centerOn(ui.state.factions[ui.state.player].capital); },
     centerOn(id) { VM.MapView.centerOn(id); },
     cityView: null,

@@ -63,7 +63,7 @@ VM.Armies = (function () {
     return army;
   }
 
-  function form(state, faction, cityId, officerId, keep) {
+  function form(state, faction, cityId, officerId, keep, pick) {
     const city = state.cities[cityId], o = state.officers[officerId];
     if (!city || city.owner !== faction) return { ok: false, reason: 'not your city' };
     if (!o || o.owner !== faction) return { ok: false, reason: 'not your officer' };
@@ -71,9 +71,22 @@ VM.Armies = (function () {
     if (city.governor === o.id) return { ok: false, reason: 'officer is governing; relieve them first' };
     if (o.loc !== cityId) return { ok: false, reason: 'officer is not in this city' };
     if (VM.Eco.troopsOf(city.garrison) <= 0) return { ok: false, reason: 'no troops in the garrison' };
-    const have = VM.Eco.troopsOf(city.garrison), left = Math.max(0, Math.min(have - 1, keep || 0)), take = (have - left) / have, troops = {};
-    if (take <= 0) return { ok: false, reason: 'no troops to spare' };
-    for (const k in city.garrison) { troops[k] = city.garrison[k] * take; city.garrison[k] -= troops[k]; }
+    const troops = {};
+    if (pick) {                                                         // the player chose how many of each kind to take
+      let n = 0;
+      for (const k in pick) {
+        if (!VM.CFG.TROOPS[k]) return { ok: false, reason: 'unknown troop' };
+        const c = Math.floor(+pick[k] || 0); if (c < 0) return { ok: false, reason: 'bad count' };
+        if (c > Math.floor(city.garrison[k] + 1e-9)) return { ok: false, reason: 'not that many in the garrison' };
+        troops[k] = c; n += c;
+      }
+      if (n <= 0) return { ok: false, reason: 'choose some troops' };
+      for (const k in VM.CFG.TROOPS) { troops[k] = troops[k] || 0; city.garrison[k] = Math.max(0, city.garrison[k] - troops[k]); }
+    } else {
+      const have = VM.Eco.troopsOf(city.garrison), left = Math.max(0, Math.min(have - 1, keep || 0)), take = (have - left) / have;
+      if (take <= 0) return { ok: false, reason: 'no troops to spare' };
+      for (const k in city.garrison) { troops[k] = city.garrison[k] * take; city.garrison[k] -= troops[k]; }
+    }
     const army = spawn(state, faction, cityId, troops, o.id);
     return { ok: true, army: army.id };
   }
@@ -109,6 +122,30 @@ VM.Armies = (function () {
     const o = state.officers[army.officer]; o.army = null; o.role = 'idle'; o.loc = city.id;
     state.armies.splice(state.armies.indexOf(army), 1);
     return { ok: true };
+  }
+
+  // Moves troops of one kind between an army standing in its own city and that city's garrison (count > 0 into the army, count < 0 back to the garrison).
+  function transfer(state, a, type, count) {
+    if (!VM.CFG.TROOPS[type]) return { ok: false, reason: 'unknown troop' };
+    if (a.at === null) return { ok: false, reason: 'the army must be in a city' };
+    const city = state.cities[a.at];
+    if (city.owner !== a.owner) return { ok: false, reason: 'only inside your own city' };
+    if (a.fighting.length || a.routed) return { ok: false, reason: 'not while in battle or routed' };
+    const size = sizeOf(a), want = Math.trunc(count || 0);
+    if (!want) return { ok: false, reason: 'bad count' };
+    if (want > 0) {
+      const n = Math.min(want, Math.floor(city.garrison[type] + 1e-9)); if (n < 1) return { ok: false, reason: 'none of that kind in the garrison' };
+      city.garrison[type] -= n; a.troops[type] = (a.troops[type] || 0) + n;
+      a.morale = (a.morale * size + 100 * n) / (size + n);
+      a.rations = Math.min((size + n) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays, a.rations + n * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
+      a.peak = Math.max(a.peak, size + n);
+      return { ok: true, moved: n };
+    }
+    const n = Math.min(-want, Math.floor((a.troops[type] || 0) + 1e-9)); if (n < 1) return { ok: false, reason: 'none of that kind in the army' };
+    if (size - n < 1) return { ok: false, reason: 'the army would be empty: disband it instead' };
+    a.troops[type] -= n; city.garrison[type] += n;
+    a.rations *= (size - n) / size; a.peak = Math.max(1, a.peak * (size - n) / size);
+    return { ok: true, moved: -n };
   }
 
   // Folds the garrison's spare troops (everything above `keep`) into an army standing in one of its own cities.
@@ -176,5 +213,5 @@ VM.Armies = (function () {
     return path(state, o, army.home);
   }
 
-  return { form, spawn, merge, reinforce, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
+  return { form, spawn, merge, reinforce, transfer, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
 })();

@@ -299,6 +299,52 @@ test('armies keep the sim deterministic and save/load safe', () => {
   assert.strictEqual(VM.Sim.hash(a), VM.Sim.hash(c));
 });
 
+
+test('form an army with chosen troops: only what you pick leaves, the rest stays; bad picks are refused', () => {
+  const { s, f, city, o } = armyWorld(); f.gold = 1e6;
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: city.id, troop: 'archer', count: 100 });
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: city.id, troop: 'cavalry', count: 40 });
+  const g = Object.assign({}, city.garrison);
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id, troops: { archer: 9999 } }).ok, 'more than the garrison has');
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id, troops: { archer: 0, spear: 0 } }).ok, 'an empty army');
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id, troops: { archer: -5 } }).ok, 'negative');
+  assert(!VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id, troops: { dragons: 3 } }).ok, 'unknown kind');
+  assert.strictEqual(s.armies.length, 0); assert.deepStrictEqual(city.garrison, g, 'nothing moved on a refused order');
+  const r = VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id, troops: { archer: 60, cavalry: 40, infantry: 50 } });
+  assert(r.ok, r.reason); const a = s.armies[0];
+  assert.strictEqual(a.troops.archer, 60); assert.strictEqual(a.troops.cavalry, 40); assert.strictEqual(a.troops.infantry, 50); assert.strictEqual(a.troops.spear, 0);
+  assert.strictEqual(city.garrison.archer, 40); assert.strictEqual(city.garrison.cavalry, 0); assert(Math.abs(city.garrison.infantry - (g.infantry - 50)) < 1e-9);
+  assert.strictEqual(VM.Armies.speedOf(a), VM.CFG.TROOPS.infantry.speed, 'it marches at the slowest kind it contains');
+});
+
+test('adjust an army in its city: move troops between the garrison and the army, both ways', () => {
+  const { s, f, city, o } = armyWorld(); f.gold = 1e6;
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: city.id, troop: 'spear', count: 100 });
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id, troops: { infantry: 100 } });
+  const a = s.armies[0], gsp = city.garrison.spear, n0 = VM.Armies.sizeOf(a); a.morale = 50;
+  let r = VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'spear', count: 60 }); assert(r.ok && r.moved === 60);
+  assert.strictEqual(a.troops.spear, 60); assert.strictEqual(city.garrison.spear, gsp - 60); assert.strictEqual(VM.Armies.sizeOf(a), n0 + 60);
+  assert(a.morale > 50 && a.morale < 100, 'fresh troops lift the morale a little: ' + a.morale);
+  r = VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'spear', count: 1000 }); assert(r.ok && r.moved === gsp - 60, 'takes what is there');
+  assert(!VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'spear', count: 5 }).ok, 'nothing left to take');
+  r = VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'spear', count: -50 }); assert(r.ok && r.moved === -50);
+  assert.strictEqual(city.garrison.spear, 50); assert.strictEqual(a.troops.spear, gsp - 50);
+  const rat = a.rations, size = VM.Armies.sizeOf(a); VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'infantry', count: -40 });
+  assert(Math.abs(a.rations / (VM.Armies.sizeOf(a)) - rat / size) < 1e-6, 'rations per soldier stay the same');
+  assert(!VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'archer', count: -5 }).ok, 'none of that kind in the army');
+  assert(!VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'infantry', count: -99999 }).ok || VM.Armies.sizeOf(a) >= 1, 'never empties the army');
+  const b = VM.Armies.sizeOf(a); for (const k of ['infantry', 'spear']) VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: k, count: -1e9 }); assert(VM.Armies.sizeOf(a) >= 1);
+});
+
+test('adjusting is refused away from home, in battle, or for another faction', () => {
+  const { s, f, city, o } = armyWorld(); f.gold = 1e6;
+  VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id }); const a = s.armies[0];
+  assert(!VM.Commands.exec(s, { type: 'transferTroops', faction: 2, army: a.id, troop: 'infantry', count: 1 }).ok, 'not their army');
+  a.fighting = [99]; assert(!VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'infantry', count: -1 }).ok, 'in battle'); a.fighting = [];
+  const nb = s.map.nodes[city.id].adj[0]; s.cities[nb].owner = 1; VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: nb }); VM.Sim.advance(s, 1);
+  assert(!VM.Commands.exec(s, { type: 'transferTroops', faction: 1, army: a.id, troop: 'infantry', count: -1 }).ok, 'on the road');
+});
+
 test('player faction can be chosen', () => {
   const s = VM.Sim.create({ seed: 3, player: 4 }); assert.strictEqual(s.player, 4);
 });

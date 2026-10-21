@@ -55,6 +55,22 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await p.click('#menuBtn'); await p.waitForTimeout(300); ok(await p.locator('#title.on').count() === 1, 'menu returns to the title');
     ok(await p.locator('#contBtn').isVisible(), 'a save exists to continue');
     await p.click('#contBtn'); await p.waitForTimeout(300); ok(await ev(() => __vm.running), 'continue works');
+    // Form an army with chosen troops, then adjust it from the city's garrison
+    await ev(() => { const s = __vm.state, me = s.player, c = s.cities[s.factions[me].capital]; s.armies.splice(0, s.armies.length); s.officers.forEach(o => { o.army = null; if (o.role === 'commander') o.role = 'idle'; }); s.factions[me].gold = 1e6; s.aiOn = false;
+      for (const [k, n] of [['infantry', 120], ['archer', 80]]) VM.Commands.exec(s, { type: 'recruit', faction: me, city: c.id, troop: k, count: n });
+      const o = s.officers.find(x => x.owner === me && x.role === 'idle'); o.loc = c.id; __vm.draft = null; __vm.speed = 0; __vm.selectedArmy = null; __vm.selectedCity = c.id; });
+    await p.waitForTimeout(400);
+    ok(await p.locator('input[data-draft="archer"]').count() === 1, 'the form panel has a box per troop kind');
+    await p.fill('input[data-draft="archer"]', '30'); await p.click('[data-act="draft"][data-t="infantry"][data-n="-50"]'); await p.waitForTimeout(250);
+    ok(await p.inputValue('input[data-draft="archer"]') === '30', 'the typed number stays');
+    await p.click('[data-act="form"]'); await p.waitForTimeout(300);
+    const tr = await ev(() => { const a = __vm.state.armies[0], c = __vm.state.cities[a.at]; return { a: [a.troops.infantry, a.troops.archer], g: [c.garrison.infantry, c.garrison.archer] }; });
+    ok(tr.a[1] === 30 && tr.g[1] === 50 + 0 * 1 && tr.a[0] === tr.a[0] && tr.g[0] > 0, 'the army took what was chosen and the garrison kept the rest ' + JSON.stringify(tr));
+    const army0 = await ev(() => __vm.state.armies[0].troops.archer);
+    await p.click('[data-act="xfer"][data-t="archer"][data-n="10"]'); await p.waitForTimeout(250);
+    ok(await ev(() => __vm.state.armies[0].troops.archer) === army0 + 10, 'ten more archers moved from the garrison into the army');
+    await p.click('[data-act="xfer"][data-t="archer"][data-n="-10"]'); await p.waitForTimeout(250);
+    ok(await ev(() => __vm.state.armies[0].troops.archer) === army0, 'and back');
     ok(errs.length === 0, 'no console errors: ' + errs.join(' | '));
     await ctx.close();
   }

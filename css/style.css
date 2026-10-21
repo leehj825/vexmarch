@@ -114,3 +114,6 @@ body.in3d #hint3d { opacity: 0.8; }
 body.in3d.adLive #backBtn { top: calc(108px + env(safe-area-inset-top)); }
 body.in3d #lesson { top: calc(96px + env(safe-area-inset-top)); }
 @media (max-width: 720px) { #backBtn { top: calc(92px + env(safe-area-inset-top)); left: 10px; } body.in3d.adLive #backBtn { top: calc(148px + env(safe-area-inset-top)); } #hint3d { display: none; } body.in3d #panel { max-height: 36vh; } }
+
+.nowrap { white-space: nowrap; }
+input.num { width: 52px; padding: 3px 4px; margin: 0 3px; background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 190, 0.35); border-radius: 4px; font-size: 12px; text-align: center; }
