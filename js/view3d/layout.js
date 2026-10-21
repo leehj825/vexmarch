@@ -74,7 +74,7 @@ VM.CityLayout = (function () {
     // Armies in battle meet: a defender fighting an attacker stands in the attacker's line, facing it
     for (const A of armies) if (A.mode === 'fighting' && !A.hostile) {
       const foe = armies.find(x => x.hostile && x.mode === 'fighting' && (A.engaged.includes(x.id) || x.engaged.includes(A.id)));
-      if (foe) { A.angle = foe.angle; A.d = foe.d - 5; A.clash = true; foe.clash = true; }
+      if (foe) { A.angle = foe.angle; A.d = foe.d - 2.2; A.clash = true; foe.clash = true; }          // the front lines face each other; each army's ranks stand behind its front line
     }
     L.armies = armies;
     const attackers = armies.filter(a => a.hostile).map(a => a.angle);

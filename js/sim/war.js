@@ -219,7 +219,8 @@ VM.War = (function () {
           city.wallHp = Math.max(0, city.wallHp - (sg * W().siegeWall + rest * W().chip) * mods * dd);
         }
         const p = power(a.troops, g) * mods * (city.wallHp > 0 ? W().wallProtect : 1);
-        add(outPow, a.id, p); city._dmg = (city._dmg || 0) + p;
+        add(outPow, a.id, power(a.troops, g) * mods);                  // morale compares the attackers' full strength, not the part the wall lets through
+        city._dmg = (city._dmg || 0) + p;
       }
     }
     // Apply damage and morale

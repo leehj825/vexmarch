@@ -305,7 +305,7 @@ VM.City3D = (function () {
       for (let k = 0; k < A.fallen; k++) E.push({ type: 'infantry', aid: A.id, lat: ((k * 37) % 11 - 5) * 1.2, depth: -2 - (k % 3) * 1.2, color: col.clone().multiplyScalar(0.55), phase: k, mode: 'fallen', fallen: true });
       for (let k = 0; k < A.siege; k++) {
         const grp = new THREE.Group(), base = new THREE.Mesh(m.engineBase, m.mats.fixed), arm = new THREE.Group(); arm.position.set(0, 1.6, 0); arm.add(new THREE.Mesh(m.engineArm, m.mats.fixed)); grp.add(base); grp.add(arm); D.group.add(grp);
-        D.engines.push({ grp, arm, aid: A.id, lat: (k - (A.siege - 1) / 2) * 4.2, depth: -6, phase: k * 1.7 + ai, firing: A.mode === 'besieging', hostile: A.hostile, fired: false, out: A.moving === 'out' });
+        D.engines.push({ grp, arm, aid: A.id, lat: (k - (A.siege - 1) / 2) * 4.2, depth: Math.ceil(A.soldiers / cols) * 1.5 + 3, phase: k * 1.7 + ai, firing: A.mode === 'besieging', hostile: A.hostile, fired: false, out: A.moving === 'out' });
       }
       if (A.assault && !A.breach && L.wall.level > 0) {                      // ladders against the wall where the army attacks
         for (let k = -1; k <= 1; k++) {
@@ -375,10 +375,11 @@ VM.City3D = (function () {
         const dd2 = form.d + (tgtD - form.d) * f, ll = form.lat + (tgtLat - form.lat) * f, p = polarXZ(dd2, an.angle, ll);
         return [p[0], 0, p[1], f > 0.02 && f < 0.98 && !fight ? (u < 0.72 ? toCity : outward) : toCity, 0, fight ? (e.phase % 5 === 4 ? 'block' : 'attack') : 'run'];
       }
-      case 'fighting': st = (e.phase + Math.floor(t * 0.4)) % 5 === 4 ? 'block' : 'attack'; depth += (A && A.hostile ? -1 : 1) * 0.3; break;
+      case 'fighting': st = (e.phase + Math.floor(t * 0.4)) % 5 === 4 ? 'block' : 'attack'; depth -= 0.3; break;
       case 'fallen': st = 'die'; yaw = e.phase; break;
     }
     if (e.routed) { st = 'run'; yaw = outward; }
+    if (A && A.clash && !A.hostile) depth = -depth;                                  // a defender meeting the attacker faces outward: its ranks stand behind the front line, toward the city
     const p = polarXZ(an.d + depth, an.angle, lat);
     return [p[0], 0, p[1], yaw, 0, st];
   }
@@ -416,7 +417,7 @@ VM.City3D = (function () {
     for (const f of dyn.flags) { const a = f.m.geometry.attributes.position, b = f.base; for (let i = 0; i < a.count; i++) a.setZ(i, b[i * 3 + 2] + Math.sin(t * 4 + b[i * 3] * 2.2) * 0.12 * (b[i * 3] / f.w)); a.needsUpdate = true; }
     for (const e of dyn.engines) {
       const an = anchors.get(e.aid); if (!an) continue;
-      const p = polarXZ(an.d + e.depth, an.angle, e.lat); e.grp.position.set(p[0], 0, p[1]); e.x = p[0]; e.z = p[1];
+      const Ae = byId[e.aid], p = polarXZ(an.d + (Ae && Ae.clash && !Ae.hostile ? -e.depth : e.depth), an.angle, e.lat); e.grp.position.set(p[0], 0, p[1]); e.x = p[0]; e.z = p[1];
       e.grp.rotation.y = e.out ? Math.atan2(Math.cos(an.angle), Math.sin(an.angle)) : Math.atan2(-Math.cos(an.angle), -Math.sin(an.angle));
       const cyc = (t * 0.5 + e.phase) % 3.2, pull = cyc < 1.8 ? cyc / 1.8 : Math.max(0, 1 - (cyc - 1.8) / 0.25);
       e.arm.rotation.x = e.firing ? -0.6 + pull * 1.2 : -0.3;
@@ -594,6 +595,7 @@ VM.City3D = (function () {
 
   return {
     init, open, close, frame, refresh, supported: () => ensureRenderer(), isOpen: () => shown, id: () => cityId, layout: () => layout,
+    cam,
     info: () => renderer ? { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, staticTriangles: stats.tris, soldiers: dyn ? dyn.entries.length : 0, frames: dyn ? Object.values(dyn.groups).map(g => Array.from(g.body.geometry.attributes.aAnim.array.slice(0, 12)).filter((v, i) => i % 4 === 2)) : [], conquest: !!conq, assaultRadii: dyn ? dyn.entries.filter(e => e.mode === 'besieging' && e._x !== undefined).map(e => Math.hypot(e._x, e._z)) : [] } : null,
     camera: cam
   };
