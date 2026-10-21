@@ -38,19 +38,19 @@ test('matchups: spear > cavalry > archer > infantry > spear', () => {
 
 test('battle: the bigger army wins, the loser routs or dies, nothing goes NaN', () => {
   const s = world(), x = neutralNode(s);
-  const big = army(s, 1, x, { infantry: 600 }), small = army(s, 2, x, { infantry: 300 });
+  const big = army(s, 1, x, { infantry: 60 }), small = army(s, 2, x, { infantry: 30 });
   run(s, 1); assert(big.fighting.length && small.fighting.length, 'armies lock into battle');
   assert(s.events.some(e => e.type === 'battle'), 'battle event raised');
   run(s, 60);
   assert(alive(s, big), 'the bigger army survives');
   assert(broke(s, 2) && !broke(s, 1), 'the smaller army broke, the bigger did not');
-  assert(size(big) > 300 && Number.isFinite(size(big)), `winner keeps most of its strength (${size(big)})`);
+  assert(size(big) > 30 && Number.isFinite(size(big)), `winner keeps most of its strength (${size(big)})`);
 });
 
 test('battle: counter troops beat equal numbers (spear vs cavalry, archers vs infantry)', () => {
   for (const [good, bad] of [['spear', 'cavalry'], ['cavalry', 'archer'], ['archer', 'infantry'], ['infantry', 'spear']]) {
     const s = world(), x = neutralNode(s);
-    const a = army(s, 1, x, { [good]: 400 }), b = army(s, 2, x, { [bad]: 400 });
+    const a = army(s, 1, x, { [good]: 40 }), b = army(s, 2, x, { [bad]: 40 });
     run(s, 80);
     assert(size(a) > (alive(s, b) ? size(b) : 0), `${good} should beat ${bad}`);
     assert(size(a) > 0);
@@ -59,7 +59,7 @@ test('battle: counter troops beat equal numbers (spear vs cavalry, archers vs in
 
 test('battle: marching armies stop when they meet; breaking off costs morale and lets them leave', () => {
   const s = world(), x = neutralNode(s), nb = s.map.nodes[x].adj[0]; s.cities[nb].garrison = T({});
-  const a = army(s, 1, x, { infantry: 800 }), b = army(s, 2, nb, { infantry: 800 });
+  const a = army(s, 1, x, { infantry: 80 }), b = army(s, 2, nb, { infantry: 80 });
   VM.Armies.move(s, a, nb);
   let guard = 0; while (!a.fighting.length && guard++ < 80) run(s, 0.25);
   assert(a.fighting.length, 'they met on the road'); assert(a.at === null && a.edge.len - a.edge.prog <= W.contact + 12);
@@ -72,17 +72,17 @@ test('battle: marching armies stop when they meet; breaking off costs morale and
 
 test('reinforcements: a second army turns a lost battle into a win', () => {
   const lose = world(), x = neutralNode(lose);
-  const l1 = army(lose, 1, x, { infantry: 400 }); army(lose, 2, x, { infantry: 700 });
+  const l1 = army(lose, 1, x, { infantry: 40 }); army(lose, 2, x, { infantry: 70 });
   run(lose, 60); assert(broke(lose, 1) && !broke(lose, 2), 'alone it loses');
   const win = world();
-  const w1 = army(win, 1, x, { infantry: 400 }), w2 = army(win, 1, x, { infantry: 400 }), e = army(win, 2, x, { infantry: 700 });
+  const w1 = army(win, 1, x, { infantry: 40 }), w2 = army(win, 1, x, { infantry: 40 }), e = army(win, 2, x, { infantry: 70 });
   run(win, 60); assert(broke(win, 2) && !broke(win, 1), 'with help it wins');
   assert(alive(win, w1) && alive(win, w2));
 });
 
 test('rout: a broken army flees to its nearest city, recovers there, and is not chased', () => {
   const s = world(), x = neutralNode(s);
-  const a = army(s, 1, x, { infantry: 800 }), b = army(s, 2, x, { infantry: 150 });
+  const a = army(s, 1, x, { infantry: 80 }), b = army(s, 2, x, { infantry: 15 });
   b.home = s.factions[2].capital;
   run(s, 40);
   if (alive(s, b)) { assert(b.routed || b.morale < 100); }
@@ -94,7 +94,7 @@ test('rout: a broken army flees to its nearest city, recovers there, and is not 
 test('destroyed army: its officer dies, is captured or escapes (deterministic per seed)', () => {
   const outcome = seed => {
     const s = world(seed), x = neutralNode(s);
-    const a = army(s, 1, x, { infantry: 900 }), b = army(s, 2, x, { infantry: 60 }); const o = s.officers[b.officer];
+    const a = army(s, 1, x, { infantry: 90 }), b = army(s, 2, x, { infantry: 6 }); const o = s.officers[b.officer];
     run(s, 60);
     assert(!alive(s, b) || b.routed);
     return [o.owner, o.army].join();
@@ -110,22 +110,22 @@ function siegeWorld(wallLvl, garrison) {
   return { s, x, c };
 }
 function breachDay(wallLvl, troops) {
-  const { s, x, c } = siegeWorld(wallLvl, 100); army(s, 1, x, troops);
+  const { s, x, c } = siegeWorld(wallLvl, 10); army(s, 1, x, troops);
   for (let d = 0; d < 200; d++) { run(s, 1); if (c.wallHp <= 0) return d; }
   return Infinity;
 }
 
 test('siege: walls hold without siege engines far longer than with them', () => {
-  const withEng = breachDay(2, { infantry: 400, siege: 20 }), without = breachDay(2, { infantry: 400 });
+  const withEng = breachDay(2, { infantry: 40, siege: 20 }), without = breachDay(2, { infantry: 40 });
   assert(withEng < without, `siege engines breach faster: ${withEng} vs ${without}`);
   assert(withEng > 3, 'a wall is not instant');
 });
 
 test('siege: a city with no wall falls to a strong army; the capture changes owner, pop, governor, builds', () => {
-  const { s, x, c } = siegeWorld(0, 80);
+  const { s, x, c } = siegeWorld(0, 8);
   c.owner = 2; c.governor = null; c.build = { type: 'farm', left: 5, total: 20 };
   const gov = s.officers.find(o => o.owner === 2 && o.role !== 'governor'); gov.loc = x; c.governor = gov.id; gov.role = 'governor';
-  const pop0 = c.pop; army(s, 1, x, { infantry: 500 });
+  const pop0 = c.pop; army(s, 1, x, { infantry: 50 });
   run(s, 1); assert(c.contested && c.besieged, 'city is contested while the enemy stands in it');
   let g = 0; while (c.owner === 2 && g++ < 400) run(s, 0.25);
   assert.strictEqual(c.owner, 1, 'captured by faction 1');
@@ -136,27 +136,27 @@ test('siege: a city with no wall falls to a strong army; the capture changes own
 });
 
 test('siege: a strong wall plus garrison costs the attacker more than an open town', () => {
-  const lossAt = wall => { const { s, x } = siegeWorld(wall, 300); const a = army(s, 1, x, { infantry: 700, siege: wall ? 25 : 0 }); const n0 = size(a); run(s, 80); return (n0 - size(a)) / n0; };
+  const lossAt = wall => { const { s, x } = siegeWorld(wall, 300); const a = army(s, 1, x, { infantry: 70, siege: wall ? 25 : 0 }); const n0 = size(a); run(s, 80); return (n0 - size(a)) / n0; };
   assert(lossAt(3) > 0 && lossAt(0) >= 0);
 });
 
 test('siege: neutral node with a garrison is taken and becomes the attacker’s', () => {
-  const s = world(), x = neutralNode(s); const a = army(s, 1, x, { infantry: 400 });
+  const s = world(), x = neutralNode(s); const a = army(s, 1, x, { infantry: 40 });
   run(s, 40); assert.strictEqual(s.cities[x].owner, 1);
 });
 
 test('siege: a defending army at the city fights the besiegers first; the city holds while it lives', () => {
-  const { s, x, c } = siegeWorld(1, 40); c.owner = 2;
-  const d = army(s, 2, x, { infantry: 600 }), a = army(s, 1, x, { infantry: 300 });
+  const { s, x, c } = siegeWorld(1, 4); c.owner = 2;
+  const d = army(s, 2, x, { infantry: 60 }), a = army(s, 1, x, { infantry: 30 });
   run(s, 10); assert.strictEqual(c.owner, 2);
   run(s, 40); assert(c.owner === 2 || !alive(s, d));
 });
 
 test('contested: enemy army in the zone halts gold; a friendly army there ends it', () => {
   const s = world(), c = s.cities[s.factions[1].capital], g0 = VM.Eco.cityStats(s, c, 1).gold;
-  const en = army(s, 2, c.id, { infantry: 100 });
+  const en = army(s, 2, c.id, { infantry: 10 });
   run(s, 1); assert(c.contested); assert.strictEqual(VM.Eco.cityStats(s, c, 1).gold, 0);
-  const def = army(s, 1, c.id, { infantry: 100 });
+  const def = army(s, 1, c.id, { infantry: 10 });
   run(s, 0.5); assert(!c.contested, 'a friendly army in the zone repels the contest');
   assert(g0 > 0);
 });
@@ -164,9 +164,9 @@ test('contested: enemy army in the zone halts gold; a friendly army there ends i
 // ---- Supply ----
 test('supply: soldiers eat 3x in enemy land, 1x at home, and the pool pays', () => {
   const s = world(), home = s.factions[1].capital, enemy = s.factions[2].capital;
-  const a = army(s, 1, home, { infantry: 1000 }), b = army(s, 1, enemy, { infantry: 1000 });
+  const a = army(s, 1, home, { infantry: 100 }), b = army(s, 1, enemy, { infantry: 100 });
   run(s, 1);
-  const base = 1000 * VM.CFG.ECON.foodPerHead;
+  const base = 100 * VM.CFG.ECON.foodPerHead;
   assert(Math.abs(a.supply.poolDraw - base) < 1e-6, 'home: ' + a.supply.poolDraw);
   assert(a.supply.line === 'ok' && !a.supply.foreign);
   assert(b.supply.foreign && b.supply.line === 'ok');
@@ -176,13 +176,13 @@ test('supply: soldiers eat 3x in enemy land, 1x at home, and the pool pays', () 
 test('supply: a forward depot feeds an army in enemy land at the normal rate from its own stock', () => {
   const s = world(), home = s.factions[1].capital, x = neutralNode(s);
   const c = s.cities[x]; c.owner = 1;                // a captured forward base
-  const near = s.map.nodes[x].adj[0]; s.cities[near].owner = 2; s.cities[near].garrison = T({ infantry: 3000 });   // strong enough that it does not fall in the test
+  const near = s.map.nodes[x].adj[0]; s.cities[near].owner = 2; s.cities[near].garrison = T({ infantry: 30 });   // strong enough that it does not fall in the test
   assert(VM.Commands.exec(s, { type: 'buildDepot', faction: 1, city: x }).ok);
   assert(!VM.Commands.exec(s, { type: 'buildDepot', faction: 1, city: x }).ok, 'one depot per city');
   VM.Commands.exec(s, { type: 'setDepot', faction: 1, city: x, target: 3000 });
   run(s, 30); assert(c.depot.food > 500, 'the depot fills from the food pool: ' + c.depot.food);
   VM.Commands.exec(s, { type: 'setDepot', faction: 1, city: x, target: 0 });
-  const a = army(s, 1, near, { infantry: 1000 }); const f0 = c.depot.food;
+  const a = army(s, 1, near, { infantry: 100 }); const f0 = c.depot.food;
   run(s, 2);
   assert(a.supply.depot === x, 'army draws on the depot'); assert.strictEqual(a.supply.mult, 1); assert(c.depot.food < f0);
   assert.strictEqual(a.supply.poolDraw, 0);
@@ -194,12 +194,12 @@ test('supply: enemy cavalry on the supply line cuts it; morale falls; rations ru
   const dOwn = id => VM.Armies.distance(s, id, VM.War.nearestOwnCity(s, id, 1));
   const far = s.cities.filter(c => c.owner !== 1).sort((p, q) => dOwn(q.id) - dOwn(p.id))[0].id;
   const src = VM.War.nearestOwnCity(s, far, 1), route = VM.Armies.path(s, src, far); assert(route.length >= 4, 'a route with a middle: ' + route);
-  s.cities.forEach(c => { c.garrison = T({}); }); s.cities[far].garrison = T({ infantry: 5000 });   // the target holds out; the raider's node is empty
-  const a = army(s, 1, far, { infantry: 500 }); a.home = src;
+  s.cities.forEach(c => { c.garrison = T({}); }); s.cities[far].garrison = T({ infantry: 50 });   // the target holds out; the raider's node is empty
+  const a = army(s, 1, far, { infantry: 50 }); a.home = src;
   const prev = route[route.length - 2];                       // stand on the road just outside the target, so nobody sieges anybody
   a.at = null; a.edge = { from: far, to: prev, prog: 20, len: VM.Armies.roadLen(s, far, prev) };
   a.retreat = 1e6;                                             // test-only: never settles into a siege, so the supply rules are isolated
-  const raider = army(s, 2, route[1], { cavalry: 20 });
+  const raider = army(s, 2, route[1], { cavalry: 2 });
   run(s, 1);
   assert.strictEqual(a.supply.line, 'cut', 'line is cut');
   assert(s.events.some(e => e.type === 'cut' && e.owner === 1));
@@ -208,11 +208,11 @@ test('supply: enemy cavalry on the supply line cuts it; morale falls; rations ru
   run(s, 6); assert(size(a) < 500, 'troops desert when starving');
   run(s, 30); assert(s.events.some(e => e.type === 'rout' && e.owner === 1), 'the army collapses and routs');
   VM.Armies.disband; s.armies.splice(s.armies.indexOf(raider), 1); s.officers[raider.officer].army = null;
-  const b = army(s, 1, route[route.length - 1], { infantry: 500 }); run(s, 1); assert.strictEqual(b.supply.line, 'ok', 'line is open again');
+  const b = army(s, 1, route[route.length - 1], { infantry: 50 }); run(s, 1); assert.strictEqual(b.supply.line, 'ok', 'line is open again');
 });
 
 test('supply: morale recovers when supplied and safe', () => {
-  const s = world(), a = army(s, 1, s.factions[1].capital, { infantry: 200 }); a.morale = 40;
+  const s = world(), a = army(s, 1, s.factions[1].capital, { infantry: 20 }); a.morale = 40;
   run(s, 30); assert(a.morale > 65, 'morale ' + a.morale);
 });
 
@@ -220,20 +220,20 @@ test('supply: morale recovers when supplied and safe', () => {
 test('abilities: charge boosts damage, rally restores morale, fire strikes at once; cooldown enforced', () => {
   const duel = useCharge => {
     const s = world(), x = neutralNode(s);
-    const a = army(s, 1, x, { infantry: 500 }, { might: 95, command: 30, intellect: 30 }), b = army(s, 2, x, { infantry: 500 });
+    const a = army(s, 1, x, { infantry: 50 }, { might: 95, command: 30, intellect: 30 }), b = army(s, 2, x, { infantry: 50 });
     run(s, 0.5); if (useCharge) assert(VM.Commands.exec(s, { type: 'ability', faction: 1, army: a.id }).ok);
     run(s, 10); return size(b);
   };
-  assert(duel(true) < duel(false) - 20, 'the charged army deals more damage');
+  assert(duel(true) < duel(false) - 2, 'the charged army deals more damage');
   const s = world(), x = neutralNode(s);
-  const a = army(s, 1, x, { infantry: 500 }, { might: 95, command: 30, intellect: 30 });
+  const a = army(s, 1, x, { infantry: 50 }, { might: 95, command: 30, intellect: 30 });
   assert(!VM.Commands.exec(s, { type: 'ability', faction: 1, army: a.id }).ok, 'charge needs a battle');
-  const r = army(s, 1, s.factions[1].capital, { infantry: 100 }, { command: 95, might: 30, intellect: 30 });
+  const r = army(s, 1, s.factions[1].capital, { infantry: 10 }, { command: 95, might: 30, intellect: 30 });
   r.morale = 20; assert(VM.Commands.exec(s, { type: 'ability', faction: 1, army: r.id }).ok); assert.strictEqual(r.morale, 50);
   assert(!VM.Commands.exec(s, { type: 'ability', faction: 1, army: r.id }).ok, 'recharging');
   run(s, W.abilityCooldown + 1); assert(VM.Commands.exec(s, { type: 'ability', faction: 1, army: r.id }).ok, 'ready again');
   const t = world(), y = neutralNode(t);
-  const f = army(t, 1, y, { infantry: 500 }, { intellect: 95, might: 30, command: 30 }), e = army(t, 2, y, { infantry: 500 });
+  const f = army(t, 1, y, { infantry: 50 }, { intellect: 95, might: 30, command: 30 }), e = army(t, 2, y, { infantry: 50 });
   run(t, 0.5); const e0 = size(e); assert(VM.Commands.exec(t, { type: 'ability', faction: 1, army: f.id }).ok);
   assert(size(e) < e0 * 0.93, 'fire attack hits the enemy army at once');
 });
@@ -259,14 +259,14 @@ function corridor(owner) {
   const far = [...s.cities].sort((a, b) => VM.Armies.distance(s, home, b.id) - VM.Armies.distance(s, home, a.id)).find(c => VM.Armies.path(s, home, c.id).length >= 4).id;
   const path = VM.Armies.path(s, home, far), mid = path[1];
   s.cities.forEach(c => { if (c.id !== home && c.id !== far) { c.garrison = T({}); } });
-  s.cities[mid].owner = owner; s.cities[mid].garrison = T({ infantry: 25 }); s.cities[mid].buildings.wall = 0; s.cities[mid].wallHp = 0;
+  s.cities[mid].owner = owner; s.cities[mid].garrison = T({ infantry: 2 }); s.cities[mid].buildings.wall = 0; s.cities[mid].wallHp = 0;
   return { s, home, far, mid, path };
 }
 
 test('in the way: an army marching through a hostile city stops there and lays siege instead of walking past', () => {
   for (const owner of [2, 0]) {
     const { s, home, far, mid } = corridor(owner);
-    const a = army(s, 1, home, { infantry: 500 }); VM.Armies.move(s, a, far);
+    const a = army(s, 1, home, { infantry: 50 }); VM.Armies.move(s, a, far);
     let guard = 0; while (a.at !== mid && guard++ < 400) run(s, 0.25);
     assert.strictEqual(a.at, mid, 'the army stopped at the city in the way'); assert.strictEqual(a.path.length, 0);
     assert(s.events.some(e => e.type === 'blocked' && e.owner === 1 && e.at === mid), 'the player is told');
@@ -278,19 +278,19 @@ test('in the way: an army marching through a hostile city stops there and lays s
 test('in the way: your own cities, routed armies and retreating armies pass through', () => {
   const { s, home, far, mid, path } = corridor(2);
   path.slice(1, -1).forEach(id => { s.cities[id].owner = 1; });        // every city on the way is yours: no obstacle
-  const a = army(s, 1, home, { infantry: 300 }); VM.Armies.move(s, a, far);
+  const a = army(s, 1, home, { infantry: 30 }); VM.Armies.move(s, a, far);
   let guard = 0; while (a.at !== far && guard++ < 600) run(s, 0.25); assert.strictEqual(a.at, far, 'walks through its own city');
-  const t = corridor(2); t.path.slice(1, -1).forEach(id => { t.s.cities[id].owner = 2; t.s.cities[id].garrison = T({ infantry: 25 }); });
-  const b = army(t.s, 1, t.home, { infantry: 300 }); VM.Armies.move(t.s, b, t.far); b.routed = true;
+  const t = corridor(2); t.path.slice(1, -1).forEach(id => { t.s.cities[id].owner = 2; t.s.cities[id].garrison = T({ infantry: 2 }); });
+  const b = army(t.s, 1, t.home, { infantry: 30 }); VM.Armies.move(t.s, b, t.far); b.routed = true;
   guard = 0; while (b.at !== t.far && guard++ < 600) run(t.s, 0.25); assert.strictEqual(b.at, t.far, 'a routed army just keeps running');
-  const u = corridor(2); u.path.slice(1, -1).forEach(id => { u.s.cities[id].owner = 2; u.s.cities[id].garrison = T({ infantry: 25 }); });
-  const c = army(u.s, 1, u.home, { infantry: 300 }); VM.Armies.move(u.s, c, u.far); c.retreat = 1e6;
+  const u = corridor(2); u.path.slice(1, -1).forEach(id => { u.s.cities[id].owner = 2; u.s.cities[id].garrison = T({ infantry: 2 }); });
+  const c = army(u.s, 1, u.home, { infantry: 30 }); VM.Armies.move(u.s, c, u.far); c.retreat = 1e6;
   guard = 0; while (c.at !== u.far && guard++ < 600) run(u.s, 0.25); assert.strictEqual(c.at, u.far, 'a retreating army passes');
 });
 
 test('in the way: a march order from a city under siege leaves it; the next hostile city stops the army again', () => {
   const { s, home, far, mid } = corridor(2);
-  const a = army(s, 1, mid, { infantry: 500 }); s.cities[mid].garrison = T({ infantry: 400 }); s.cities[mid].buildings.wall = 0;
+  const a = army(s, 1, mid, { infantry: 50 }); s.cities[mid].garrison = T({ infantry: 40 }); s.cities[mid].buildings.wall = 0;
   run(s, 2); assert(s.cities[mid].besieged);
   assert(VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: far }).ok); run(s, 2); assert(a.at === null || a.at !== mid, 'it can break off');
 });
@@ -301,7 +301,7 @@ test('elimination: a faction that loses its last city is out; its officers go fr
   s.cities.forEach(c => { if (c.owner === 2 && c.id !== f2.capital) c.owner = 0; });
   const cap = s.cities[f2.capital]; cap.garrison = T({ infantry: 5 }); cap.governor = null;
   army(s, 2, f2.capital, { infantry: 1 });   // keep an army to see it removed
-  const aa = army(s, 1, f2.capital, { infantry: 600 });
+  const aa = army(s, 1, f2.capital, { infantry: 60 });
   run(s, 30);
   assert.strictEqual(cap.owner === 1 || cap.owner === 2, true);
   VM.War.capture(s, cap, 1);

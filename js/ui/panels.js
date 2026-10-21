@@ -116,8 +116,8 @@ VM.Panels = (function () {
     h += `<div class="sec">Recruit</div>`;
     for (const k of Object.keys(VM.CFG.TROOPS)) {
       const cost = VM.Eco.troopCost(c, k);
-      h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${cost.toFixed(1)}g each</span></span><span>` +
-        [10, 50, 200].map(n => `<button data-act="recruit" data-city="${c.id}" data-t="${k}" data-n="${n}" class="btn sm">+${n}</button>`).join('') + `</span></div>`;
+      h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${Math.round(cost)}g each</span></span><span>` +
+        [1, 5, 10].map(n => `<button data-act="recruit" data-city="${c.id}" data-t="${k}" data-n="${n}" class="btn sm">+${n}</button>`).join('') + `</span></div>`;
     }
     const free = st.officers.filter(o => o.owner === me && o.army === null && o.loc === c.id && c.governor !== o.id);
     h += `<div class="sec">Form an army</div>`;
@@ -130,9 +130,9 @@ VM.Panels = (function () {
         const have = Math.floor(c.garrison[k] + 1e-9); if (have < 1) continue;
         const n = d.take[k] || 0; total += n; if (n > 0) speed = Math.min(speed, VM.CFG.TROOPS[k].speed);
         h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${num(have)} here</span></span><span class="nowrap">` +
-          [-50, -10].map(x => `<button data-act="draft" data-t="${k}" data-n="${x}" class="btn sm">${x < 0 ? '−' + (-x) : '+' + x}</button>`).join('') +
+          [-5, -1].map(x => `<button data-act="draft" data-t="${k}" data-n="${x}" class="btn sm">${x < 0 ? '−' + (-x) : '+' + x}</button>`).join('') +
           `<input type="number" class="num" min="0" max="${have}" value="${n}" data-draft="${k}">` +
-          [10, 50].map(x => `<button data-act="draft" data-t="${k}" data-n="${x}" class="btn sm">+${x}</button>`).join('') +
+          [1, 5].map(x => `<button data-act="draft" data-t="${k}" data-n="${x}" class="btn sm">+${x}</button>`).join('') +
           `<button data-act="draftAll" data-t="${k}" class="btn sm">All</button></span></div>`;
       }
       h += `<div class="row dim">Taking ${num(total)} troops${total > 0 ? ' · speed ' + speed : ''} <button data-act="draftAll" data-t="*" class="btn sm">Take all</button> <button data-act="draftNone" class="btn sm">None</button></div>`;
@@ -170,7 +170,7 @@ VM.Panels = (function () {
       for (const k of Object.keys(VM.CFG.TROOPS)) {
         const inArmy = Math.floor((a.troops[k] || 0) + 1e-9), inCity = Math.floor(home.garrison[k] + 1e-9); if (inArmy < 1 && inCity < 1) continue;
         h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">army ${num(inArmy)} · city ${num(inCity)}</span></span><span class="nowrap">` +
-          [-50, -10, 10, 50].map(x => `<button data-act="xfer" data-army="${a.id}" data-t="${k}" data-n="${x}" class="btn sm"${(x < 0 ? inArmy : inCity) < 1 ? ' disabled' : ''}>${x < 0 ? '−' + (-x) : '+' + x}</button>`).join('') + `</span></div>`;
+          [-5, -1, 1, 5].map(x => `<button data-act="xfer" data-army="${a.id}" data-t="${k}" data-n="${x}" class="btn sm"${(x < 0 ? inArmy : inCity) < 1 ? ' disabled' : ''}>${x < 0 ? '−' + (-x) : '+' + x}</button>`).join('') + `</span></div>`;
       }
       const mates = st.armies.filter(x => x.owner === a.owner && x.id !== a.id && x.at === a.at && !x.fighting.length && !x.routed);
       if (mates.length) h += `<div class="row">Join with <select id="mergeWith"><option value="">(choose)</option>` + mates.map(x => `<option value="${x.id}">${st.officers[x.officer].name} · ${num(VM.Armies.sizeOf(x))}</option>`).join('') + `</select> <button data-act="merge" data-army="${a.id}" class="btn">Merge</button></div>`;

@@ -13,7 +13,7 @@ VM.City3D = (function () {
   let renderer, scene, camera, canvas, ui, ok = false, layout = null, sig = '', cityId = -1, t = 0, shown = false;
   let staticMesh = null, ground = null, water = null, dyn = null, texMeshes = [];
   const cam = { yaw: 0.8, pitch: 0.82, dist: 40, minD: 20, maxD: 120, auto: true, tx: 0, tz: 0 };
-  const pointers = new Map(); let pinch = 0;
+  const pointers = new Map(); let pinch = 0, mid = null, panning = false;
 
   // ---------------- geometry helpers ----------------
   function Merger() { this.pos = []; this.nor = []; this.col = []; this.tris = 0; }
@@ -555,7 +555,7 @@ VM.City3D = (function () {
     water = null;
     if (L.water) { const g = new THREE.CircleGeometry(L.water.radius, 28); g.rotateX(-Math.PI / 2); const p = polar(L.water.r, L.water.angle); g.translate(p[0], 0.08, p[1]); water = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: COL.water, transparent: true, opacity: 0.88 })); scene.add(water); }
     const ext = Math.max(L.radius + 14, 36, ...L.armies.map(a => a.d + 8));                   // wide enough to see the armies outside the walls
-    cam.minD = L.radius * 1.2; cam.maxD = Math.max(L.radius * 5.5, ext * 4.5); cam.dist = Math.min(cam.maxD, Math.max(cam.minD, cam.dist || ext * (innerWidth < innerHeight ? 3.0 : 2.0)));
+    cam.minD = 7; cam.maxD = Math.max(L.radius * 5.5, ext * 4.5); cam.dist = Math.min(cam.maxD, Math.max(cam.minD, cam.dist || ext * (innerWidth < innerHeight ? 3.0 : 2.0)));
     stats.tris = M.tris + tx.tris;
   }
   function rebuildDynamic(L) {
@@ -577,7 +577,7 @@ VM.City3D = (function () {
       camera = new THREE.PerspectiveCamera(42, 1, 0.5, 400);
       scene.add(new THREE.HemisphereLight('#dfe6ff', '#4a3f30', 0.62));
       const sun = new THREE.DirectionalLight('#fff0d0', 0.62); sun.position.set(30, 50, 22); scene.add(sun);
-      canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+      canvas.addEventListener('contextmenu', e => e.preventDefault()); canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
       canvas.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.001)); cam.auto = false; }, { passive: false });
       addEventListener('resize', resize); resize(); ok = true;
     } catch (e) { ok = false; renderer = null; }
@@ -591,18 +591,27 @@ VM.City3D = (function () {
     camera.updateProjectionMatrix();
   }
   const zoom = k => { cam.dist = Math.max(cam.minD, Math.min(cam.maxD, cam.dist * k)); };
-  function down(e) { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); cam.auto = false; if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); } }
+  // Two fingers pinch to zoom and, moving together, pan the view over the ground (the right mouse button or shift-drag pans on a desktop)
+  const pan = (dx, dy) => {
+    const k = cam.dist * 0.0016, lim = (layout ? layout.radius : 30) + 70;
+    cam.tx = Math.max(-lim, Math.min(lim, cam.tx - Math.cos(cam.yaw) * dx * k - Math.sin(cam.yaw) * dy * k));
+    cam.tz = Math.max(-lim, Math.min(lim, cam.tz + Math.sin(cam.yaw) * dx * k - Math.cos(cam.yaw) * dy * k));
+  };
+  function down(e) { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); cam.auto = false; panning = e.button === 2 || e.shiftKey; if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; } }
   function move(e) {
     const p = pointers.get(e.pointerId); if (!p) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
-    if (pointers.size >= 2) { const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (pinch) zoom(pinch / d); pinch = d; }
-    else { cam.yaw -= dx * 0.008; cam.pitch = Math.max(0.3, Math.min(1.3, cam.pitch + dy * 0.005)); }
+    if (pointers.size >= 2) {
+      const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      if (pinch) zoom(pinch / d); pinch = d; if (mid) pan(m.x - mid.x, m.y - mid.y); mid = m;
+    } else if (panning) pan(dx, dy);
+    else { cam.yaw -= dx * 0.008; cam.pitch = Math.max(0.12, Math.min(1.35, cam.pitch + dy * 0.005)); }
   }
-  function up(e) { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = 0; }
+  function up(e) { pointers.delete(e.pointerId); if (pointers.size < 2) { pinch = 0; mid = null; } if (!pointers.size) panning = false; }
 
   function open(id) {
     if (!ensureRenderer()) return false;
-    cityId = id; sig = ''; sigA = ''; anchors.clear(); conq = null; fleeing = []; layout = null; prevAssaultAngle = null; shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
+    cityId = id; sig = ''; sigA = ''; anchors.clear(); conq = null; fleeing = []; layout = null; prevAssaultAngle = null; shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0; cam.tx = 0; cam.tz = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
     canvas.classList.add('on'); resize(); refresh(true);
     const foe = layout.armies.find(a => a.hostile) || layout.armies[0];                  // start by looking at the action
     if (foe) { cam.yaw = Math.atan2(-Math.cos(foe.angle), -Math.sin(foe.angle)) + 0.3; cam.auto = false; }

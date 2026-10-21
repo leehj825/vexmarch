@@ -2,7 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.CFG = {
-  VERSION: 5,
+  VERSION: 6,                // 6: people and soldiers are counted one by one (a tenth of the old numbers)
 
   // ---- Time ----
   DAY_SECONDS: 2,          // real seconds per in-game day at 1x
@@ -43,15 +43,15 @@ VM.CFG = {
 
   // ---- Economy ----
   ECON: {
-    baseCap: 6000,         // population cap of a plain town, before specialty and buildings
+    baseCap: 600,          // population cap of a plain town, before specialty and buildings
     startPopFrac: 0.55,    // starting population as a fraction of cap
     popGrow: 0.02,         // per day, fraction of the gap to target closed while growing
     popShrink: 0.03,       // ... while shrinking
     starveLoss: 0.02,      // per day, extra population loss while the faction has no food
-    tax: 0.004,            // gold per head per day at Normal tax
-    foodPerHead: 0.01,     // food per head (population and troops) per day
-    foodBase: 0.0075,      // food produced per cap point per day with no farms
-    foodFarm: 0.0025,      // ... added per farm level
+    tax: 0.04,             // gold per head per day at Normal tax (a head is about ten of the old ones: the game counts people, not crowds)
+    foodPerHead: 0.1,      // food per head (population and troops) per day
+    foodBase: 0.075,      // food produced per cap point per day with no farms
+    foodFarm: 0.025,      // ... added per farm level
     prosBase: 0.35, prosFood: 0.25, prosSec: 0.15, prosGov: 0.15,
     garrisonRatio: 0.03,   // garrison / population needed for full security
     minPopFrac: 0.3,       // recruiting never takes a city below this fraction of its cap
@@ -80,10 +80,10 @@ VM.CFG = {
 
   // ---- Troops (speed = map units per day; an army moves at its slowest troop type) ----
   TROOPS: {
-    infantry: { label: 'Infantry', cost: 20, upkeep: 0.05, speed: 45 },
-    spear:    { label: 'Spearmen', cost: 22, upkeep: 0.05, speed: 45 },
-    cavalry:  { label: 'Cavalry',  cost: 40, upkeep: 0.10, speed: 80 },
-    archer:   { label: 'Archers',  cost: 30, upkeep: 0.07, speed: 45 },
+    infantry: { label: 'Infantry', cost: 200, upkeep: 0.5, speed: 45 },
+    spear:    { label: 'Spearmen', cost: 220, upkeep: 0.5, speed: 45 },
+    cavalry:  { label: 'Cavalry',  cost: 400, upkeep: 1.0, speed: 80 },
+    archer:   { label: 'Archers',  cost: 300, upkeep: 0.7, speed: 45 },
     siege:    { label: 'Siege engines', cost: 90, upkeep: 0.25, speed: 30, siege: true }   // weak in the field, breaks walls
   },
 
@@ -101,9 +101,9 @@ VM.CFG = {
     wallBonus: 1.5,         // garrison strength behind an unbroken wall
     wallProtect: 0.35,      // share of normal damage the garrison takes while the wall stands
     siegeWall: 4,           // wall hit points per siege engine per day
-    chip: 0.15,             // wall hit points per other soldier per day
+    chip: 1.5,              // wall hit points per other soldier per day
     wallRepair: 0.01,       // fraction of max per day when nobody threatens the city
-    captureMin: 1,          // garrison at or below this falls
+    captureMin: 0,          // garrison at or below this falls
     captureLoss: 0.15,      // population lost when a city is taken
     foreignFood: 3,         // food eaten per soldier in enemy or neutral land
     rationDays: 12,         // days of food an army carries
@@ -122,7 +122,7 @@ VM.CFG = {
     // Measured over 80 games each against four 'normal' rivals: easy wins about 13% of games, normal 25%, hard 33% (fair share is 20%).
     easy:   { think: 20, odds: 2.75, armiesMax: 2, guards: 1, mil: 0.04, spend: 0.35, reach: 520, search: false, abilities: false, depots: false },
     normal: { think: 10, odds: 1.8,  armiesMax: 3, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false },
-    hard:   { think: 5,  odds: 1.8,  armiesMax: 5, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false }
+    hard:   { think: 5,  odds: 2.1,  armiesMax: 5, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false }
   },
   AI_RESERVE: 800,          // gold an AI keeps back when recruiting, so its governors can still afford to build
   AI_KEEP: 0.03,            // share of a city's people left as garrison when an army is formed there
@@ -146,7 +146,7 @@ VM.CFG = {
     odds: { Rash: 0.8, Brave: 0.9, Cautious: 1.6, other: 1.15 },
     raidOdds: { Rash: 1.0, Brave: 1.2, Cautious: 2.2, other: 1.5 },
     garrisonTarget: { develop: 0.03, fortify: 0.06, recruit: 0.10 },
-    recruitBatch: 60
+    recruitBatch: 6
   },
 
   // ---- Officers ----

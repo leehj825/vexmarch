@@ -30,7 +30,7 @@ var LANG_KO = {
 
 // ---- 3D city ----
 "View city": "도시 보기", "← Back to map": "← 지도로", "Back to map": "지도로",
-"Drag to look around · scroll or pinch to zoom": "끌어서 둘러보기 · 스크롤 또는 두 손가락으로 확대",
+"Drag to look around · two fingers to pan and zoom": "끌어서 둘러보기 · 두 손가락으로 이동 및 확대",
 "The 3D view is not available on this device": "이 기기에서는 3D 보기를 쓸 수 없습니다",
 
 // ---- cities ----

@@ -123,12 +123,19 @@ VM.War = (function () {
   }
 
   // ---- Damage helpers ----
-  function hurt(t, amount) {
-    const n = total(t); if (n <= 0) return 0;
-    const f = Math.max(0, 1 - amount / n);
-    for (const k in t) t[k] *= f;
-    return Math.min(n, amount);
+  // Soldiers are counted one by one: the damage of every step adds to a fraction carried on the army (or garrison), and each whole point kills one
+  // soldier, picked at random (by the game's own seeded numbers) among the kinds present, so a run still repeats exactly.
+  function hurt(state, t, carry, amount) {
+    const n = total(t); if (n <= 0 || !(amount > 0)) return 0;
+    amount = Math.min(n, amount); carry.x = (carry.x || 0) + amount;
+    const k = Math.min(Math.floor(carry.x + 1e-9), n); carry.x -= k;
+    for (let i = 0; i < k; i++) {
+      const left = total(t); let r = VM.RNG.next(state) * left;
+      for (const kind in t) { if (t[kind] <= 0) continue; r -= t[kind]; if (r < 0) { t[kind] -= 1; break; } }
+    }
+    return amount;
   }
+  const carryOf = o => o.carry || (o.carry = {});
 
   function fate(state, o, victor, from) {
     const r = VM.RNG.next(state);
@@ -228,7 +235,7 @@ VM.War = (function () {
     for (const a of armies) {
       const inc = incoming.get(a.id) || 0;
       if (inc > 0) {
-        hurt(a.troops, inc * K * dd);
+        hurt(state, a.troops, carryOf(a), inc * K * dd);
         const own = Math.max(1, outPow.get(a.id) || 0), ratio = clamp(inc / own, 0.3, 3);
         a.morale = Math.max(0, a.morale - W().moraleRate * ratio * dd);
       }
@@ -236,7 +243,7 @@ VM.War = (function () {
     }
     for (const cid in sieges) {
       const city = state.cities[cid];
-      if (city._dmg) hurt(city.garrison, city._dmg * K * dd);
+      if (city._dmg) hurt(state, city.garrison, carryOf(city), city._dmg * K * dd);
       delete city._dmg;
     }
     return { byId, dead };
@@ -277,7 +284,7 @@ VM.War = (function () {
       if (a.retreat > 0) a.retreat = Math.max(0, a.retreat - dd);
       if (a.fighting.length || a.routed) continue;
       const s = a.supply;
-      if (s && s.starving) { a.morale = Math.max(0, a.morale - W().starveDrain * dd); for (const k in a.troops) a.troops[k] *= 1 - W().desert * dd; }
+      if (s && s.starving) { a.morale = Math.max(0, a.morale - W().starveDrain * dd); hurt(state, a.troops, carryOf(a), VM.Armies.sizeOf(a) * W().desert * dd); }
       else if (s && s.line !== 'ok' && !s.depot) a.morale = Math.max(0, a.morale - W().cutDrain * dd);
       else if (!sieging(a) || !state.cities[a.at].besieged || state.cities[a.at].owner === a.owner) a.morale = Math.min(100, a.morale + W().recover * dd);
     }
@@ -329,8 +336,8 @@ VM.War = (function () {
       if (kind === 'charge') a.buff = { kind: 'charge', until: state.time + W().chargeDays, mult: W().chargeMult };
       else {
         const pct = 0.06 + 0.08 * o.intellect / 100;
-        if (a.fighting.length) for (const e of state.armies) { if (a.fighting.includes(e.id)) { hurt(e.troops, VM.Armies.sizeOf(e) * pct); e.morale = Math.max(0, e.morale - 15); } }
-        else { const c = state.cities[a.at]; hurt(c.garrison, total(c.garrison) * pct); c.wallHp = Math.max(0, c.wallHp - wallMax(c) * pct); }
+        if (a.fighting.length) for (const e of state.armies) { if (a.fighting.includes(e.id)) { hurt(state, e.troops, carryOf(e), VM.Armies.sizeOf(e) * pct); e.morale = Math.max(0, e.morale - 15); } }
+        else { const c = state.cities[a.at]; hurt(state, c.garrison, carryOf(c), total(c.garrison) * pct); c.wallHp = Math.max(0, c.wallHp - wallMax(c) * pct); }
       }
     }
     a.abilityReady = state.time + W().abilityCooldown;
@@ -346,5 +353,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
+  return { step, hurt, carryOf, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
 })();

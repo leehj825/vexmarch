@@ -19,27 +19,27 @@ const army = (s, owner, at, troops, stats) => VM.Armies.spawn(s, owner, at, T(tr
 // ---------- Merge, reinforce, keep ----------
 test('merge: two armies in one place become one; the better commander leads; the other officer is freed', () => {
   const s = VM.Sim.create({ seed: 1 }), at = s.factions[1].capital;
-  const a = army(s, 1, at, { infantry: 300 }, { command: 40 }), b = army(s, 1, at, { archer: 200, siege: 5 }, { command: 90 }); a.morale = 60; b.morale = 100;
+  const a = army(s, 1, at, { infantry: 30 }, { command: 40 }), b = army(s, 1, at, { archer: 20, siege: 5 }, { command: 90 }); a.morale = 60; b.morale = 100;
   const oa = s.officers[a.officer], ob = s.officers[b.officer];
   assert(VM.Commands.exec(s, { type: 'mergeArmies', faction: 1, army: a.id, with: b.id }).ok);
-  assert.strictEqual(s.armies.length, 1); assert.strictEqual(size(a), 505); assert.strictEqual(a.officer, ob.id);
+  assert.strictEqual(s.armies.length, 1); assert.strictEqual(size(a), 55); assert.strictEqual(a.officer, ob.id);
   assert.strictEqual(oa.army, null); assert.strictEqual(oa.role, 'idle'); assert.strictEqual(oa.loc, at);
   assert(a.morale > 60 && a.morale < 100, 'morale is the weighted mean');
-  const c = army(s, 1, at, { infantry: 10 }), d = army(s, 2, at, { infantry: 10 });
+  const c = army(s, 1, at, { infantry: 1 }), d = army(s, 2, at, { infantry: 1 });
   assert(!VM.Commands.exec(s, { type: 'mergeArmies', faction: 1, army: c.id, with: d.id }).ok, 'not an enemy army');
-  const e = army(s, 1, s.cities.find(x => x.owner === 1 && x.id !== at).id, { infantry: 10 });
+  const e = army(s, 1, s.cities.find(x => x.owner === 1 && x.id !== at).id, { infantry: 1 });
   assert(!VM.Commands.exec(s, { type: 'mergeArmies', faction: 1, army: c.id, with: e.id }).ok, 'not in different places');
 });
 
 test('form with keep leaves a garrison behind; reinforce tops an army up from it', () => {
   const s = VM.Sim.create({ seed: 1 }), f = s.factions[1], c = s.cities[f.capital]; f.gold = 1e5;
-  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: c.id, troop: 'spear', count: 400 });
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: c.id, troop: 'spear', count: 40 });
   const have = VM.Eco.troopsOf(c.garrison), o = officer(s, 1, {}); o.loc = c.id;
-  const r = VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: c.id, officer: o.id, keep: 100 });
-  assert(r.ok); assert(Math.abs(VM.Eco.troopsOf(c.garrison) - 100) < 1e-6, 'kept 100'); assert(Math.abs(size(s.armies[0]) - (have - 100)) < 1e-6);
-  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: c.id, troop: 'archer', count: 200 });
-  const n0 = size(s.armies[0]), rr = VM.Commands.exec(s, { type: 'reinforceArmy', faction: 1, army: s.armies[0].id, keep: 100 });
-  assert(rr.ok && Math.abs(size(s.armies[0]) - n0 - 200) < 1e-6 && s.armies[0].troops.archer > 0);
+  const r = VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: c.id, officer: o.id, keep: 10 });
+  assert(r.ok); assert(Math.abs(VM.Eco.troopsOf(c.garrison) - 10) < 1e-6, 'kept 10'); assert(Math.abs(size(s.armies[0]) - (have - 10)) < 1e-6);
+  VM.Commands.exec(s, { type: 'recruit', faction: 1, city: c.id, troop: 'archer', count: 20 });
+  const n0 = size(s.armies[0]), rr = VM.Commands.exec(s, { type: 'reinforceArmy', faction: 1, army: s.armies[0].id, keep: 10 });
+  assert(rr.ok && Math.abs(size(s.armies[0]) - n0 - 20) < 1e-6 && s.armies[0].troops.archer > 0);
   assert(!VM.Commands.exec(s, { type: 'reinforceArmy', faction: 1, army: s.armies[0].id, keep: 1e9 }).ok, 'nothing spare');
 });
 
@@ -84,7 +84,7 @@ test('defence: a small human raid on an AI city does not walk in', () => {
   for (const seed of [1, 2, 3]) {
     const s = VM.Sim.create({ seed, ai: true, difficulty: 'normal' }); run(s, Y * 2);
     const c = s.cities.find(x => x.owner === 2 && x.spec !== 'capital') || s.cities.find(x => x.owner === 2);
-    const nb = s.map.nodes[c.id].adj[0], raider = army(s, 1, nb, { infantry: 200 }); VM.Armies.move(s, raider, c.id);
+    const nb = s.map.nodes[c.id].adj[0], raider = army(s, 1, nb, { infantry: 20 }); VM.Armies.move(s, raider, c.id);
     run(s, 80); if (s.cities[c.id].owner === 2) held++;
   }
   assert(held >= 2, `the AI held ${held}/3`);

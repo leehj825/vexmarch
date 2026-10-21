@@ -21,11 +21,11 @@ VM.CityLayout = (function () {
 
   // The size of a place depends only on what it is (its specialty), never on its buildings or people, so the picture does not jump as the game goes on.
   const baseCapOf = city => VM.CFG.ECON.baseCap * VM.CFG.SPEC[city.spec].cap;
-  function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 6000 ? 'city' : (c >= 4800 ? 'town' : 'hamlet')); }
+  function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 600 ? 'city' : (c >= 480 ? 'town' : 'hamlet')); }
 
   // How far a place has grown, from its people: 1 a village of tents and huts, 2 a town of timber houses around a plaza, 3 a city with stone houses and
   // a suburb along the roads, 4 a great city with a monument and a wide suburb.
-  const stageOf = city => city.pop < 2500 ? 1 : city.pop < 4000 ? 2 : city.pop < 6500 ? 3 : 4;
+  const stageOf = city => city.pop < 250 ? 1 : city.pop < 400 ? 2 : city.pop < 650 ? 3 : 4;
 
   // One gate and one road for every road on the map, each facing the neighbouring node it leads to, so the city agrees with the map.
   function gatesOf(state, id) {
@@ -70,9 +70,9 @@ VM.CityLayout = (function () {
         ang = bearing(state, id, incoming ? e.from : e.to); moving = incoming ? 'in' : 'out';
         d = R + 14 + remaining * SCALE;
       }
-      const foot = size - (a.troops.siege || 0), soldiers = foot < 1 ? 0 : clamp(Math.round(foot / 12), 3, 60);
+      const foot = size - (a.troops.siege || 0), soldiers = foot < 0.5 ? 0 : Math.min(120, Math.round(foot));                  // one figure for every soldier
       armies.push({ id: a.id, owner: a.owner, color: state.factions[a.owner].color, hostile, angle: ang, d, size, soldiers, mix: mixOf(a, soldiers), siege: Math.min(6, Math.round(a.troops.siege || 0)),
-        fallen: Math.min(24, Math.round(Math.max(0, (a.peak || size) - size) / 15)), moving,
+        fallen: Math.min(30, Math.round(Math.max(0, (a.peak || size) - size))), moving,
         mode: a.fighting.length ? 'fighting' : (moving ? 'march' : (hostile && W.sieging(a) ? 'besieging' : 'camp')), routed: a.routed, engaged: a.fighting.slice() });
     }
     // Armies in battle meet: a defender fighting an attacker stands in the attacker's line, facing it
@@ -141,7 +141,7 @@ VM.CityLayout = (function () {
     // adds houses without moving the old ones.
     if (city.spec === 'port') { const a = main + Math.PI * 0.9; L.water = { angle: a, r: R + 38, radius: 26 }; }
     const dry = a => !L.water || angDiff(a, L.water.angle) > 0.85;
-    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 220), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
+    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 22), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
     L.stage = stage; L.paved = stage >= 3;
     const onRoad = (p, half) => dirs.some(d => { const t = p.x * d.x + p.z * d.z; return t > -2 && Math.abs(p.x * d.z - p.z * d.x) < half; });            // inside the strip of street that runs from a gate to the keep
     // The plaza round the keep, with a well and, in a great city, a monument; the sites of the works outside the walls and the suburb along the roads are reserved too
@@ -212,7 +212,7 @@ VM.CityLayout = (function () {
 
     // Garrison on the wall (or around the keep without one)
     const gtotal = E.troopsOf(city.garrison);
-    L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal / 14), gtotal > 0 ? 1 : 0, 36), onWall: wlvl > 0 };
+    L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal - (city.garrison.siege || 0)), 0, 60), onWall: wlvl > 0 };
     L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0, L.smith.on ? 1 : 0, stage, L.suburb.length, L.works.map(w => w.kind[0]).join(''),
       L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', city.besieged ? 1 : 0].join('/');
     L.sigArmies = [L.garrison.visible, L.assault ? 1 : 0, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10), a.breach ? 1 : 0].join(':')).join('|')].join('/');

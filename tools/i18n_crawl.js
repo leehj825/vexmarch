@@ -70,7 +70,7 @@ const seen = new Set();
   await run(ids => {
     const s = __vm.state, T = window.__T, me = ids.me;
     const off = s.officers.filter(o => o.owner === me && o.role === 'idle'), mk = (o, at, t) => VM.Armies.spawn(s, me, at, T(t), o.id);
-    window.__a1 = mk(off[0], ids.cap, { infantry: 300, archer: 100 }).id;
+    window.__a1 = mk(off[0], ids.cap, { infantry: 30, archer: 10 }).id;
     window.__off = off.map(o => o.id);
     __vm.selectedCity = -1; __vm.selectedArmy = window.__a1;
   }, ids);
@@ -81,9 +81,9 @@ const seen = new Set();
   await run(() => { const a = __vm.state.armies.find(x => x.id === window.__a1); a.routed = true; }); await step(200);
   await run(() => { const a = __vm.state.armies.find(x => x.id === window.__a1); a.routed = false; a.fighting = []; });
   // a battle and a siege
-  await run(ids => { const s = __vm.state, T = window.__T; const foe = s.cities.find(c => c.owner > 0 && c.owner !== ids.me); const e = VM.Armies.spawn(s, foe.owner, ids.nb, T({ infantry: 400 }), s.officers.find(o => o.owner === foe.owner && o.army === null && o.role === 'idle').id); const a = s.armies.find(x => x.id === window.__a1); a.at = ids.nb; a.edge = null; a.path = []; a.dest = null; a.troops = T({ infantry: 500, siege: 10 }); a.morale = 100; a.supply = null; s.aiOn = false; __vm.speed = 1; }, ids);
+  await run(ids => { const s = __vm.state, T = window.__T; const foe = s.cities.find(c => c.owner > 0 && c.owner !== ids.me); const e = VM.Armies.spawn(s, foe.owner, ids.nb, T({ infantry: 40 }), s.officers.find(o => o.owner === foe.owner && o.army === null && o.role === 'idle').id); const a = s.armies.find(x => x.id === window.__a1); a.at = ids.nb; a.edge = null; a.path = []; a.dest = null; a.troops = T({ infantry: 50, siege: 10 }); a.morale = 100; a.supply = null; s.aiOn = false; __vm.speed = 1; }, ids);
   await step(1500); await run(() => { __vm.speed = 0; });
-  await run(ids => { const s = __vm.state; s.armies = s.armies.filter(a => a.id === window.__a1); const a = s.armies[0]; a.fighting = []; a.abilityReady = 0; s.cities[ids.nb].garrison = window.__T({ infantry: 200 }); }, ids); await step(1200);
+  await run(ids => { const s = __vm.state; s.armies = s.armies.filter(a => a.id === window.__a1); const a = s.armies[0]; a.fighting = []; a.abilityReady = 0; s.cities[ids.nb].garrison = window.__T({ infantry: 20 }); }, ids); await step(1200);
   await run(() => { __vm.selectedArmy = window.__a1; }); await step(300);
 
   // ---- sheets ----

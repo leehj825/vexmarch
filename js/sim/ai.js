@@ -80,11 +80,11 @@ VM.AI = (function () {
     const plan = f.ai.plan, goal = plan ? plan.target : f.ai.goal, tgt = goal !== null && goal !== undefined ? state.cities[goal] : null;
     const share = D.mil * (1 + Math.min(2, Math.max(0, f.gold - 3000) / 5000));
     for (const c of military) {
-      if (have >= pop * share || budget < 60) break;
+      if (have >= pop * share || budget < 150) break;
       let type = wantedType(state, f, c);
       const siegeHave = (c.garrison.siege || 0) + armiesOf(state, f).reduce((a, x) => a + (x.troops.siege || 0), 0);
       if (tgt && tgt.wallHp > 400 && siegeHave < (tgt.wallHp >= 1500 ? 12 : 6) && D.armiesMax >= 3) type = 'siege';
-      const count = type === 'siege' ? 4 : Math.min(80, Math.floor(budget / Math.max(1, VM.Eco.troopCost(c, type))));
+      const count = type === 'siege' ? 4 : Math.min(8, Math.floor(budget / Math.max(1, VM.Eco.troopCost(c, type))));
       if (count < 1) continue;
       const r = exec(state, f, { type: 'recruit', city: c.id, troop: type, count });
       if (r.ok) { budget -= r.cost; have += count; }
@@ -97,8 +97,8 @@ VM.AI = (function () {
     if (my.length >= cap) return;
     for (const c of mine.sort((a, b) => total(b.garrison) - total(a.garrison))) {
       if (my.length >= cap) break;
-      const keep = Math.max(25, c.pop * VM.CFG.AI_KEEP);
-      if (total(c.garrison) - keep < 130) continue;
+      const keep = Math.max(3, c.pop * VM.CFG.AI_KEEP);
+      if (total(c.garrison) - keep < 13) continue;
       let off = idleOfficers(state, f).filter(o => o.loc === c.id && c.governor !== o.id).sort((a, b) => b.command - a.command)[0];
       if (!off) {                                                      // bring a free officer here for next time
         const far = idleOfficers(state, f).filter(o => c.governor !== o.id && state.cities[o.loc].owner === f.id).sort((a, b) => b.command - a.command)[0];
@@ -118,8 +118,8 @@ VM.AI = (function () {
   function topUp(state, f) {
     for (const a of armiesOf(state, f)) {
       if (a.at === null || a.rest || a.fighting.length || a.routed || state.cities[a.at].owner !== f.id) continue;
-      const c = state.cities[a.at], keep = Math.max(25, c.pop * VM.CFG.AI_KEEP);
-      if (total(c.garrison) - keep >= 60) exec(state, f, { type: 'reinforceArmy', army: a.id, keep });
+      const c = state.cities[a.at], keep = Math.max(3, c.pop * VM.CFG.AI_KEEP);
+      if (total(c.garrison) - keep >= 6) exec(state, f, { type: 'reinforceArmy', army: a.id, keep });
     }
   }
 
@@ -217,7 +217,7 @@ VM.AI = (function () {
       const g = c.garrison, mine = VM.War.power(probe.troops, g), theirs = Math.max(1, VM.War.power(g, probe.troops) * VM.War.garrisonMods(state, c)) + (c.wallHp > 0 ? c.wallHp * ((probe.troops.siege || 0) > 0 ? 0.02 : 0.08) : 0);
       let help = 0; for (const e of state.armies) if (e.owner === c.owner && !e.routed && dist(state, VM.Armies.zoneOf(e), c.id) <= 220) help += VM.War.power(e.troops, probe.troops);
       const r = mine * (1 + VM.CFG.WAR.cmdBonus * 0.6) / (theirs + help);
-      let value = 100 + c.pop / 100 + (c.spec === 'capital' ? 160 : 0) + (c.owner === 0 ? 0 : 25);
+      let value = 100 + c.pop / 10 + (c.spec === 'capital' ? 160 : 0) + (c.owner === 0 ? 0 : 25);
       if (c.owner > 0 && rivals[c.owner] <= 2) value += 90;                           // finish a weak rival
       const gscore = value / (1 + d / 150);
       if (gscore > gs) { gs = gscore; goal = c.id; }                                     // what the AI is building toward, even if it cannot take it yet

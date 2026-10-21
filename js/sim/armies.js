@@ -63,6 +63,15 @@ VM.Armies = (function () {
     return army;
   }
 
+  // Takes `count` whole soldiers out of a garrison, each kind in proportion to what is there (the rounding leftovers come from the largest kinds); returns what was taken.
+  function takeFrom(g, count) {
+    const have = VM.Eco.troopsOf(g), out = {}; let want = Math.min(count, Math.floor(have + 1e-9));
+    if (want <= 0) return out;
+    for (const k in g) { out[k] = Math.min(Math.floor(g[k] + 1e-9), Math.floor(g[k] * want / have + 1e-9)); g[k] -= out[k]; want -= out[k]; }
+    for (const k of Object.keys(g).sort((p, q) => g[q] - g[p])) { if (want <= 0) break; const n = Math.min(want, Math.floor(g[k] + 1e-9)); g[k] -= n; out[k] += n; want -= n; }
+    return out;
+  }
+
   function form(state, faction, cityId, officerId, keep, pick) {
     const city = state.cities[cityId], o = state.officers[officerId];
     if (!city || city.owner !== faction) return { ok: false, reason: 'not your city' };
@@ -83,9 +92,9 @@ VM.Armies = (function () {
       if (n <= 0) return { ok: false, reason: 'choose some troops' };
       for (const k in VM.CFG.TROOPS) { troops[k] = troops[k] || 0; city.garrison[k] = Math.max(0, city.garrison[k] - troops[k]); }
     } else {
-      const have = VM.Eco.troopsOf(city.garrison), left = Math.max(0, Math.min(have - 1, keep || 0)), take = (have - left) / have;
+      const have = VM.Eco.troopsOf(city.garrison), left = Math.max(0, Math.min(have - 1, Math.ceil(keep || 0))), take = (have - left) / have;
       if (take <= 0) return { ok: false, reason: 'no troops to spare' };
-      for (const k in city.garrison) { troops[k] = city.garrison[k] * take; city.garrison[k] -= troops[k]; }
+      Object.assign(troops, takeFrom(city.garrison, have - left));
     }
     const army = spawn(state, faction, cityId, troops, o.id);
     return { ok: true, army: army.id };
@@ -154,10 +163,9 @@ VM.Armies = (function () {
     const city = state.cities[a.at];
     if (city.owner !== a.owner) return { ok: false, reason: 'only inside your own city' };
     if (a.fighting.length || a.routed) return { ok: false, reason: 'not while in battle or routed' };
-    const have = VM.Eco.troopsOf(city.garrison), take = have - Math.max(0, keep || 0);
+    const have = VM.Eco.troopsOf(city.garrison), take = Math.floor(have - Math.max(0, Math.ceil(keep || 0)) + 1e-9);
     if (take < 1) return { ok: false, reason: 'no spare troops' };
-    const f = take / have, n0 = sizeOf(a);
-    for (const k in city.garrison) { const t = city.garrison[k] * f; city.garrison[k] -= t; a.troops[k] = (a.troops[k] || 0) + t; }
+    const n0 = sizeOf(a), got = takeFrom(city.garrison, take); for (const k in got) a.troops[k] = (a.troops[k] || 0) + got[k];
     a.morale = (a.morale * n0 + 100 * take) / (n0 + take);
     a.rations = Math.min(sizeOf(a) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays, a.rations + take * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
     a.peak = Math.max(a.peak, sizeOf(a));
