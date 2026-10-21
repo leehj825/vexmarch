@@ -67,12 +67,22 @@
   document.getElementById('overBtn').addEventListener('click', () => { document.getElementById('over').classList.remove('on'); ui.closeCity(); ui.running = false; document.getElementById('hud').style.visibility = 'hidden'; document.body.classList.add('titlemode'); try { localStorage.removeItem('vexmarch.save'); } catch (e) { /* ignore */ } VM.Title.roll(false); VM.Title.show(); });
   document.querySelectorAll('#speed button[data-s]').forEach(b => b.addEventListener('click', () => { ui.speed = +b.dataset.s; VM.Audio.play('click'); }));
   const $menu = document.getElementById('menuBtn');
-  $menu.addEventListener('click', () => { save(); ui.closeCity(); ui.running = false; ui.sheet = null; document.getElementById('sheet').classList.remove('open'); ui.selectedArmy = null; ui.selectedCity = -1; document.getElementById('panel').classList.remove('open'); document.getElementById('hud').style.visibility = 'hidden'; document.body.classList.add('titlemode'); VM.Tutorial.finish(false); VM.Title.show(); });
+  const exitToMenu = () => { save(); ui.closeCity(); ui.running = false; ui.sheet = null; document.getElementById('sheet').classList.remove('open'); ui.selectedArmy = null; ui.selectedCity = -1; document.getElementById('panel').classList.remove('open'); document.getElementById('hud').style.visibility = 'hidden'; document.body.classList.add('titlemode'); VM.Tutorial.finish(false); VM.Title.show(); };
+  // The menu button pauses the game and offers Resume, Settings and Save and exit (the exit used to be the button itself)
+  const $pm = document.getElementById('pauseMenu');
+  const closePause = () => { if (!$pm.classList.contains('on')) return; $pm.classList.remove('on'); ui.speed = ui.prevSpeed === undefined ? 1 : ui.prevSpeed; };
+  $menu.addEventListener('click', () => { if (!ui.running || $pm.classList.contains('on')) return; ui.prevSpeed = ui.speed; ui.speed = 0; $pm.classList.add('on'); });
+  $pm.addEventListener('click', e => {
+    const b = e.target.closest('[data-pm]'); if (!b) { if (e.target === $pm) closePause(); return; }
+    if (b.dataset.pm === 'resume') closePause();
+    else if (b.dataset.pm === 'settings') { closePause(); document.getElementById('setBtn').click(); }
+    else { $pm.classList.remove('on'); exitToMenu(); }
+  });
   addEventListener('keydown', e => {
     if (!ui.running) return;
     if (e.key === ' ') { ui.speed = ui.speed === 0 ? 1 : 0; e.preventDefault(); }
     else if (e.key === '1') ui.speed = 1; else if (e.key === '2') ui.speed = 2; else if (e.key === '3') ui.speed = 4;
-    else if (e.key === 'Escape') { if (ui.cityView !== null) ui.closeCity(); else { ui.selectedArmy = null; ui.selectedCity = -1; } }
+    else if (e.key === 'Escape') { if ($pm.classList.contains('on')) closePause(); else if (ui.cityView !== null) ui.closeCity(); else { ui.selectedArmy = null; ui.selectedCity = -1; } }
   });
 
   VM.MapView.init(document.getElementById('map'), ui, document.getElementById('map3d'));

@@ -72,6 +72,10 @@ select { background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 1
 
 #over { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4, 3, 6, 0.8); pointer-events: auto; text-align: center; padding: 16px; }
 #over.on { display: flex; }
+#pauseMenu { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4, 3, 6, 0.7); pointer-events: auto; text-align: center; padding: 16px; z-index: 30; }
+#pauseMenu.on { display: flex; }
+#pauseMenu h2 { margin: 0 0 14px; font-size: 30px; letter-spacing: 0.1em; color: #f2d27a; }
+#pauseMenu .btn { display: block; width: min(300px, 80vw); margin: 8px auto; padding: 10px 14px; font-size: 16px; }
 #over h2 { margin: 0 0 8px; font-size: 40px; letter-spacing: 0.12em; color: #f2d27a; } #over.lose h2 { color: #e0483a; }
 #over p { margin: 0 0 18px; opacity: 0.8; }
 #over button { padding: 11px 26px; font-size: 14px; font-weight: 700; letter-spacing: 0.06em; border: none; border-radius: 4px; color: #1a1008; background: linear-gradient(#f2d27a, #c9963a); cursor: pointer; }

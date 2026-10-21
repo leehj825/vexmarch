@@ -52,7 +52,9 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await p.click('[data-act="lang"][data-l="en"]'); await p.waitForTimeout(300);
     ok((await p.textContent('#gold')).includes('Gold'), 'back to English');
     await ev(() => VM.Audio.set('music', 0.3)); ok(await ev(() => VM.Audio.get('music')) === 0.3, 'volume setting');
-    await p.click('#menuBtn'); await p.waitForTimeout(300); ok(await p.locator('#title.on').count() === 1, 'menu returns to the title');
+    await ev(() => { __vm.speed = 2; }); await p.click('#menuBtn'); await p.waitForTimeout(200); ok(await p.locator('#pauseMenu.on').count() === 1 && await ev(() => __vm.speed) === 0, 'the menu button pauses and offers a menu');
+    await p.click('[data-pm="resume"]'); await p.waitForTimeout(150); ok(await p.locator('#pauseMenu.on').count() === 0 && await ev(() => __vm.speed) === 2, 'resume carries on at the speed it was');
+    await p.click('#menuBtn'); await p.waitForTimeout(150); await p.click('[data-pm="exit"]'); await p.waitForTimeout(300); ok(await p.locator('#title.on').count() === 1, 'save and exit returns to the title');
     ok(await p.locator('#contBtn').isVisible(), 'a save exists to continue');
     await p.click('#contBtn'); await p.waitForTimeout(300); ok(await ev(() => __vm.running), 'continue works');
     // Form an army with chosen troops, then adjust it from the city's garrison
