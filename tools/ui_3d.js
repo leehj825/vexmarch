@@ -67,7 +67,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 
     // A column marching in on the road, a battle at the gate, soldiers of every kind
     await ev(c => { const s = __vm.state, T = o => Object.assign({ infantry: 0, spear: 0, cavalry: 0, archer: 0, siege: 0 }, o), foe = s.factions.find(f => !f.neutral && f.id !== s.player).id;
-      s.armies.splice(0, s.armies.length); s.officers.forEach(o => { o.army = null; if (o.role === 'commander') o.role = 'idle'; });
+      s.armies.splice(0, s.armies.length); s.officers.forEach(o => { o.army = null; if (o.role === 'commander') o.role = 'idle'; }); s.cities[c].buildings.wall = 0; s.cities[c].wallHp = 0;      // no wall: the armies fight in the open
       const nb = s.map.nodes[c].adj[0], mk = (own, at, t) => VM.Armies.spawn(s, own, at, T(t), s.officers.find(o => o.owner === own && o.role === 'idle' && o.army === null).id);
       const d = mk(s.player, c, { infantry: 30, spear: 12, archer: 12, cavalry: 6 }), e = mk(foe, c, { infantry: 30, spear: 12, archer: 12, cavalry: 6, siege: 3 }), m = mk(foe, nb, { infantry: 40, cavalry: 10 }); d.order = e.order = m.order = 'hold';
       VM.Armies.move(s, m, c); VM.Sim.advance(s, 1); m.edge.prog = Math.max(m.edge.prog, m.edge.len - 100); VM.War.updateZones(s); }, cap);

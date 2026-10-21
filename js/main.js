@@ -11,7 +11,7 @@
       if (!VM.City3D.open(id)) { VM.Panels.toast('The 3D view is not available on this device'); VM.Audio.play('error'); return; }
       ui.cityView = id; ui.speed = 1; document.body.classList.add('in3d'); VM.Audio.play('pick');      // the 2x and 4x speeds are for testing: inside a city time runs at normal speed
     },
-    closeCity() { if (ui.cityView === null) return; VM.City3D.close(); ui.cityView = null; document.body.classList.remove('in3d'); },
+    closeCity() { if (ui.cityView === null) return; VM.City3D.close(); ui.cityView = null; document.body.classList.remove('in3d'); if (VM.MapTerrain) VM.MapTerrain.markDirty(); },
     onTap(h) {
       if (!ui.running) return;
       if (h && h.kind === 'army') { ui.selectedArmy = h.id; ui.selectedCity = -1; return; }
@@ -51,8 +51,8 @@
   }
 
   let last = performance.now();
-  function frame(now) {
-    const dt = (now - last) / 1000; last = now;
+  function step(now) {
+    const dt = Math.min(1, (now - last) / 1000); last = now;
     if (ui.running) {
       VM.Sim.update(ui.state, dt, ui.speed);
       VM.Alerts.process(); overlay(); VM.Tutorial.update(); moodTick(dt);
@@ -61,6 +61,11 @@
     if (ui.cityView !== null) { VM.City3D.frame(dt); const tb = document.getElementById('top').getBoundingClientRect().bottom; if (tb !== ui.topBottom) { ui.topBottom = tb; document.documentElement.style.setProperty('--topb', tb + 'px'); } }      // the Back button sits under the top bar, however many rows it wraps to
     else VM.MapView.render();
     if (ui.running) { VM.Panels.update(); VM.Sheets.update(); }
+  }
+  // One broken frame must never stop the game: the next frame is always scheduled, and an error is reported once instead of freezing everything
+  let errShown = false;
+  function frame(now) {
+    try { step(now); } catch (e) { if (!errShown) { errShown = true; console.error('frame error', e); } }
     requestAnimationFrame(frame);
   }
 

@@ -596,7 +596,7 @@ VM.City3D = (function () {
       camera = new THREE.PerspectiveCamera(42, 1, 0.5, 400);
       scene.add(new THREE.HemisphereLight('#dfe6ff', '#4a3f30', 0.62));
       const sun = new THREE.DirectionalLight('#fff0d0', 0.62); sun.position.set(30, 50, 22); scene.add(sun);
-      canvas.addEventListener('contextmenu', e => e.preventDefault()); canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+      canvas.addEventListener('webglcontextlost', e => e.preventDefault()); canvas.addEventListener('contextmenu', e => e.preventDefault()); canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
       canvas.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(e.deltaY * 0.001)); cam.auto = false; }, { passive: false });
       addEventListener('resize', resize); resize(); ok = true;
     } catch (e) { ok = false; renderer = null; }

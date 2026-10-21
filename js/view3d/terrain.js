@@ -8,7 +8,7 @@ VM.MapTerrain = (function () {
   const MX = 300, GW = 140, GH = 108, SEA = 1.2, BG = '#0b0a10';
   const cam = { tx: 500, tz: 350, yaw: 0, pitch: 0.9, dist: 900, fit: 900 };
   let canvas = null, renderer = null, scene = null, camera = null, mesh = null, water = null, roads = null, trees = null, tex = null, sizeKey = '', key = '';
-  const extras = []; let H = null, area = null, dirty = true, W3 = 1, H3 = 1, refPpu = 1, panelShift = 0;
+  let beat = 0; const extras = []; let H = null, area = null, dirty = true, W3 = 1, H3 = 1, refPpu = 1, panelShift = 0;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
@@ -83,6 +83,8 @@ VM.MapTerrain = (function () {
   function supported() { try { return !!window.THREE && !!(window.WebGLRenderingContext); } catch (e) { return false; } }
   function init(c) {
     canvas = c; try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'low-power' }); } catch (e) { renderer = null; return false; }
+    canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); });                     // a phone may take the GPU back while the city view is open; the picture is redrawn when it returns
+    canvas.addEventListener('webglcontextrestored', () => { dirty = true; if (tex) tex.needsUpdate = true; });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); renderer.setClearColor(BG, 1);
     camera = new THREE.PerspectiveCamera(38, 1, 8, 9000);
     scene = new THREE.Scene(); scene.fog = new THREE.Fog(BG, 1700, 4200);
@@ -188,7 +190,8 @@ VM.MapTerrain = (function () {
   const bounds = st => { const m = st.map; cam.tx = clamp(cam.tx, -60, m.w + 60); cam.tz = clamp(cam.tz, -60, m.h + 60); };
 
   function render() {
-    if (!renderer || !dirty || !mesh) return;
+    if (!renderer || !mesh) return;
+    if (!dirty && ++beat % 20) return;                                                          // drawn when something changed, and now and then anyway (cheap insurance against a lost buffer)
     dirty = false; renderer.render(scene, camera);
   }
 
