@@ -320,6 +320,7 @@ VM.City3D = (function () {
   }
   const TYPES = ['infantry', 'spear', 'archer', 'cavalry'], ROLE = { infantry: 'sword', spear: 'spear', archer: 'archer', cavalry: 'rider' };
   let conq = null, prevOwner = null, fleeing = [];
+  const assaultSince = new Map();                                         // army id -> when its assault began (kept across rebuilds, so the waves never restart)
   const anchors = new Map();                                              // army id -> { d, angle }: where the army is drawn, eased toward where it should be
   const polarXZ = (d, a, lat) => [Math.cos(a) * d - Math.sin(a) * lat, Math.sin(a) * d + Math.cos(a) * lat];
 
@@ -406,16 +407,11 @@ VM.City3D = (function () {
       case 'camp': st = 'idle'; break;
       case 'besieging': {
         if (!A || !A.assault) { st = 'idle'; break; }
-        // Waves: each soldier runs at the wall (or through the breach), fights there, and falls back. Three waves, ten seconds a round.
-        const R = layout.radius, wave = (e.rank || 0) % 3, u = ((t + wave * 3.3 + (e.phase % 7) * 0.12) % 10) / 10;
-        const form = { d: an.d + depth, lat }, tgtD = A.breach ? R * 0.55 + (e.rank % 5) * 0.6 : R + 1.4 + (e.rank % 3) * 0.5, tgtLat = lat * 0.45;
-        const run = A.breach && wave === 0 ? 0.35 : 0.3;
-        let f, fight = false;
-        if (A.breach && wave === 0) { f = Math.min(1, u / run); fight = u > run; }                       // the first wave goes in and stays
-        else if (u < run) f = u / run; else if (u < 0.72) { f = 1; fight = true; } else f = 1 - (u - 0.72) / 0.28;
-        f = f * f * (3 - 2 * f);
-        const dd2 = form.d + (tgtD - form.d) * f, ll = form.lat + (tgtLat - form.lat) * f, p = polarXZ(dd2, an.angle, ll);
-        return [p[0], 0, p[1], f > 0.02 && f < 0.98 && !fight ? (u < 0.72 ? toCity : outward) : toCity, 0, fight ? (e.phase % 5 === 4 ? 'block' : 'attack') : 'run'];
+        // Waves: the soldiers go in three waves, a few seconds apart; each runs at the wall (or through the breach) and keeps fighting there until the city falls or the assault ends
+        const R = layout.radius, wave = (e.rank || 0) % 3, u = Math.max(0, t - (assaultSince.get(A.id) || t) - wave * 2.5 - (e.phase % 7) * 0.12) / 3.2;
+        const tgtD = A.breach ? R * 0.55 + (e.rank % 5) * 0.6 : R + 1.4 + (e.rank % 3) * 0.5, tgtLat = lat * 0.45, f = Math.min(1, u), fight = u >= 1, k = f * f * (3 - 2 * f);
+        const dd2 = (an.d + depth) + (tgtD - (an.d + depth)) * k, ll = lat + (tgtLat - lat) * k, p = polarXZ(dd2, an.angle, ll);
+        return [p[0], 0, p[1], toCity, 0, u <= 0 ? 'idle' : fight ? (e.phase % 5 === 4 ? 'block' : 'attack') : 'run'];
       }
       case 'fighting': st = (e.phase + Math.floor(t * 0.4)) % 5 === 4 ? 'block' : 'attack'; depth -= 0.3; break;
       case 'fallen': st = 'die'; yaw = e.phase; break;
@@ -439,6 +435,7 @@ VM.City3D = (function () {
   function animate(dt) {
     if (!dyn) return;
     const o = o3(), byId = {}; for (const A of dyn.armies) byId[A.id] = A;
+    for (const A of layout.armies) { if (A.assault) { if (!assaultSince.has(A.id)) assaultSince.set(A.id, t); } else assaultSince.delete(A.id); }
     for (const A of layout.armies) {
       const an = anchors.get(A.id); if (!an) continue;
       let tgt = A.d, ang = A.angle;
@@ -611,7 +608,7 @@ VM.City3D = (function () {
 
   function open(id) {
     if (!ensureRenderer()) return false;
-    cityId = id; sig = ''; sigA = ''; anchors.clear(); conq = null; fleeing = []; layout = null; prevAssaultAngle = null; shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0; cam.tx = 0; cam.tz = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
+    cityId = id; sig = ''; sigA = ''; anchors.clear(); assaultSince.clear(); conq = null; fleeing = []; layout = null; prevAssaultAngle = null; shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0; cam.tx = 0; cam.tz = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
     canvas.classList.add('on'); resize(); refresh(true);
     const foe = layout.armies.find(a => a.hostile) || layout.armies[0];                  // start by looking at the action
     if (foe) { cam.yaw = Math.atan2(-Math.cos(foe.angle), -Math.sin(foe.angle)) + 0.3; cam.auto = false; }
