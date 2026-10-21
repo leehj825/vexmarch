@@ -71,7 +71,7 @@ VM.MapView = (function () {
       zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d); pinch.d = d;
       if (use3d) {                                                            // two fingers also turn the map (twist) and tilt it (move up or down together)
         const ang = Math.atan2(b.y - a.y, b.x - a.x); let da = ang - pinch.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
-        T.cam.yaw -= da; pinch.a = ang; const my = (a.y + b.y) / 2; T.cam.pitch += (my - pinch.my) * 0.004; pinch.my = my; T.place();
+        T.cam.yaw += da; pinch.a = ang; const my = (a.y + b.y) / 2; T.cam.pitch += (my - pinch.my) * 0.004; pinch.my = my; T.place();
       }
     } else if (drag) {
       if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
