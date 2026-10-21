@@ -1,13 +1,18 @@
 # Builds an installable Android *debug* APK of Vexmarch (a Capacitor wrapper around the web game).
-# Run it from GitHub: Actions -> "Android debug APK" -> Run workflow. When it finishes, open the run and download the
-# "vexmarch-debug-apk" artifact (a zip holding the .apk), then install it on a phone. The debug build shows Google's TEST ad banner.
+# It runs on every push to ANY branch (and on tags) that changes the game, so each branch gets its own APK; the manual "Run workflow"
+# button (Actions -> "Android debug APK") appears once this file is on the default branch, and lets you pick any branch.
+# When a run finishes, open it and download the "vexmarch-debug-apk-<branch>" artifact (a zip holding the .apk), then install it on a phone.
+# The debug build shows Google's TEST ad banner.
 name: Android debug APK
 on:
   workflow_dispatch:
   push:
+    branches: ['**']
     tags: ['v*']
-    branches: ['main']
     paths: ['js/**', 'css/**', 'index.html', 'tools/make_www.js', 'tools/android_patch.js', 'package.json', 'package-lock.json', 'capacitor.config.json', 'resources/**', 'icons/**', '.github/workflows/android-debug.yml']
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,10 +39,14 @@ jobs:
       - name: Build debug APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
-      - name: Name the APK after the commit
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "vexmarch-debug-${GITHUB_SHA::7}.apk"
+      - name: Name the APK after the branch and commit
+        id: name
+        run: |
+          BRANCH="${GITHUB_REF_NAME//[^A-Za-z0-9._-]/-}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "vexmarch-debug-${BRANCH}-${GITHUB_SHA::7}.apk"
       - uses: actions/upload-artifact@v6
         with:
-          name: vexmarch-debug-apk
+          name: vexmarch-debug-apk-${{ steps.name.outputs.branch }}
           path: vexmarch-debug-*.apk
           if-no-files-found: error

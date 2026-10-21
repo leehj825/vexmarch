@@ -2,7 +2,7 @@
 
 A real-time grand strategy game: 30 nodes, 4 to 6 factions, officers who run your cities, and supply lines that decide wars. Plain JavaScript (no build step, no modules) so it opens from `file://`; Capacitor wraps it for Android (`com.vexmarch.game`).
 
-See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 7 done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). Phase 7 added the 3D city view (View city in the city panel, or double-tap a node); 3D armies on the road and walk mode (Phases 8 and 9) are next. See `ANDROID.md` for the phone build.
+See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 8 done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). The 3D city view (View city in the city panel, or double-tap a node) shows buildings, walls, soldiers of every kind and armies marching and fighting outside the gates; walk mode (Phase 9) is next. See `ANDROID.md` for the phone build.
 
 ## Run
 

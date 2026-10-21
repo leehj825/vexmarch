@@ -208,7 +208,8 @@ Multiplayer; the hero joining wars; free-form building placement; more than 4 tr
 
 - The layout is a pure function of the city state (`VM.CityLayout.build`): tier by capacity (hamlet, town, city, capital) sets the wall radius; one gate on each of up to three roads (facing the road's neighbour node on the map, so the 3D city agrees with the map); wall segments with damage (cracked, then breached near the attackers, a broken gate at 0 hit points); towers from wall level 2; houses are decorative (4 to 48, one per 220 people, never limited by buildings); market stalls (2 per level + 1), barracks (hall, then tents and dummies from level 2), temple (shrine, tower, spire with a glowing gem), depot crates by stock, fields and farmhouses by farm level, scaffolding on the site of whatever is being built, specialty scenery (rocks for passes, ore for iron hills, paddocks, standing stones, water and a pier for ports), garrison on the wall, and armies at the node with siege engines that fire at the wall while besieging.
 - The renderer is one merged, vertex-coloured mesh for everything static, instanced soldiers, a few animated flags and engines, and cosmetic stone shots. It rebuilds only when the layout's signature changes (checked twice a second).
-- Not in this phase: armies on the road between nodes, hero walk mode, day and night.
+- **Armies (Phase 8):** each army is drawn with up to 60 soldiers in the mix of its troops (infantry with shields, spearmen, archers, cavalry; siege engines separate), cavalry on the flanks and archers behind. Armies on a road within 140 map units of the city march in or out along that road. A defender and an attacker that are fighting stand in one line, face to face, with sparks between them and arrows flying; fallen soldiers lie behind a line in proportion to the army's losses. The camera opens facing the action.
+- Not in these phases: hero walk mode, day and night.
 
 ## 15. Open questions
 

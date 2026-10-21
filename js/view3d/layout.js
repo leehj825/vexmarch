@@ -43,21 +43,44 @@ VM.CityLayout = (function () {
       gates, roads: gates.map(g => ({ angle: g.angle, toward: g.toward })), mainGate: main
     };
 
-    // Armies at this node, and which way hostile ones came from
-    const armies = [];
+    // Armies at this node, and armies marching on the roads into or out of it
+    const armies = [], ROAD = 140, SCALE = 0.35;
+    const mixOf = (a, soldiers) => {                               // visible soldiers by type, by the largest remainder
+      const keys = ['infantry', 'spear', 'cavalry', 'archer'], tot = keys.reduce((n, k) => n + (a.troops[k] || 0), 0) || 1, out = {};
+      let left = soldiers; const rem = [];
+      keys.forEach(k => { const x = (a.troops[k] || 0) / tot * soldiers; out[k] = Math.floor(x); left -= out[k]; rem.push([x - out[k], k]); });
+      rem.sort((p, q) => q[0] - p[0]).slice(0, left).forEach(([, k]) => { out[k]++; });
+      return out;
+    };
     for (const a of state.armies) {
-      if (a.at !== id) continue;
+      const atNode = a.at === id, onRoad = !atNode && a.edge && (a.edge.to === id || a.edge.from === id);
+      if (!atNode && !onRoad) continue;
       const hostile = a.owner !== city.owner, size = VM.Armies.sizeOf(a);
-      let ang = main;
-      if (hostile) {
-        const home = W.nearestOwnCity(state, id, a.owner, id), path = home >= 0 ? VM.Armies.path(state, id, home) : null;
-        if (path && path.length > 1) ang = bearing(state, id, path[1]);
+      let ang = main, d, moving = null;
+      if (atNode) {
+        if (hostile) {
+          const home = W.nearestOwnCity(state, id, a.owner, id), path = home >= 0 ? VM.Armies.path(state, id, home) : null;
+          if (path && path.length > 1) ang = bearing(state, id, path[1]);
+        } else {
+          const home = a.home !== id ? a.home : -1, path = home >= 0 ? VM.Armies.path(state, id, home) : null;
+          if (path && path.length > 1) ang = bearing(state, id, path[1]);
+        }
+        d = hostile ? R + 17 : R + 10;
       } else {
-        const home = a.home !== id ? a.home : -1, path = home >= 0 ? VM.Armies.path(state, id, home) : null;
-        if (path && path.length > 1) ang = bearing(state, id, path[1]);
+        const e = a.edge, incoming = e.to === id, remaining = incoming ? e.len - e.prog : e.prog;
+        if (remaining > ROAD) continue;
+        ang = bearing(state, id, incoming ? e.from : e.to); moving = incoming ? 'in' : 'out';
+        d = R + 14 + remaining * SCALE;
       }
-      armies.push({ id: a.id, owner: a.owner, color: state.factions[a.owner].color, hostile, angle: ang, size, soldiers: clamp(Math.round(size / 12), 3, 60), siege: Math.min(6, Math.round(a.troops.siege || 0)),
-        mode: a.fighting.length ? 'fighting' : (hostile && W.sieging(a) ? 'besieging' : 'camp'), routed: a.routed });
+      const foot = size - (a.troops.siege || 0), soldiers = foot < 1 ? 0 : clamp(Math.round(foot / 12), 3, 60);
+      armies.push({ id: a.id, owner: a.owner, color: state.factions[a.owner].color, hostile, angle: ang, d, size, soldiers, mix: mixOf(a, soldiers), siege: Math.min(6, Math.round(a.troops.siege || 0)),
+        fallen: Math.min(24, Math.round(Math.max(0, (a.peak || size) - size) / 15)), moving,
+        mode: a.fighting.length ? 'fighting' : (moving ? 'march' : (hostile && W.sieging(a) ? 'besieging' : 'camp')), routed: a.routed, engaged: a.fighting.slice() });
+    }
+    // Armies in battle meet: a defender fighting an attacker stands in the attacker's line, facing it
+    for (const A of armies) if (A.mode === 'fighting' && !A.hostile) {
+      const foe = armies.find(x => x.hostile && x.mode === 'fighting' && (A.engaged.includes(x.id) || x.engaged.includes(A.id)));
+      if (foe) { A.angle = foe.angle; A.d = foe.d - 5; A.clash = true; foe.clash = true; }
     }
     L.armies = armies;
     const attackers = armies.filter(a => a.hostile).map(a => a.angle);
@@ -162,8 +185,10 @@ VM.CityLayout = (function () {
     // Garrison on the wall (or around the keep without one)
     const gtotal = E.troopsOf(city.garrison);
     L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal / 14), gtotal > 0 ? 1 : 0, 36), onWall: wlvl > 0 };
-    L.sig = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0,
-      L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', L.garrison.visible, armies.map(a => [a.id, a.soldiers, a.siege, a.mode, Math.round(a.angle * 10)].join(':')).join('|'), city.besieged ? 1 : 0].join('/');
+    L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0,
+      L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', city.besieged ? 1 : 0].join('/');
+    L.sigArmies = [L.garrison.visible, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10)].join(':')).join('|')].join('/');
+    L.sig = L.sigStatic + '#' + L.sigArmies;
     return L;
   }
 

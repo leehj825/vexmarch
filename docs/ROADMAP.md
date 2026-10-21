@@ -57,8 +57,10 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 - Transition from the map; one city loaded at a time; low-end Android budget.
 - Delivered: `js/view3d/layout.js` (the city as pure data, 10 tests in `tools/test_layout.js`), `js/view3d/city3d.js` (Three.js r128 renderer: the whole static city is one merged vertex-coloured mesh, soldiers are instanced; worst case 16 draw calls and about 18k triangles), a View city button in the city panel and a double tap on a node to enter, Back to map button and Escape to leave, a browser test (`tools/ui_3d.js`, 50 checks on desktop and phone). The sim keeps running in the city view and the picture follows it (building scaffolds, wall damage, sieges, garrison).
 
-## Phase 8 — Armies in 3D (partly done in Phase 7)
+## Phase 8 — Armies in 3D (DONE)
 - Instanced soldier formations scaled to troop count, siege gear, siege animations driven by sim events. Cosmetic only.
+
+- Delivered: four soldier types with their own silhouettes (shield and sword, long spear, bow and quiver, riders on horses) in the proportions of the army's troops, siege engines, armies marching on the roads into and out of the city (seen from 140 map units away, easing along the road as the sim moves them), armies in battle meeting in one line with defenders facing attackers, arrow volleys, clash sparks, stone shots from engines, and fallen soldiers that follow the army's casualties. Still cosmetic: the sim decides every outcome. 13 layout tests and 62 browser checks (worst case 23 draw calls, about 25k triangles).
 
 ## Phase 9 — Walk mode (optional extra)
 - Third-person hero walking the city, clock paused while active. No combat and no war participation.

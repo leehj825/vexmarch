@@ -108,5 +108,46 @@ test('the signature changes when the picture should, and not otherwise', () => {
   c.buildings.farm++; assert.notStrictEqual(CL.build(s, c.id).sig, a);
 });
 
+
+test('armies on the road: they appear when near, approach along the road they are on, and leave the picture when far', () => {
+  const s = world(), id = s.factions[1].capital, nb = s.map.nodes[id].adj[0], foe = s.officers.find(o => o.owner === 2 && o.role === 'idle');
+  const a = VM.Armies.spawn(s, 2, nb, T({ infantry: 300 }), foe.id); a.order = 'hold';
+  VM.Armies.move(s, a, id);
+  VM.Sim.advance(s, 1); assert(a.at === null && a.edge.to === id);
+  const len = a.edge.len, far = CL.build(s, id);
+  if (len - a.edge.prog > 140) assert.strictEqual(far.armies.length, 0, 'too far to see'); else assert.strictEqual(far.armies.length, 1, 'close enough to see');
+  a.edge.prog = len - 120; const mid = CL.build(s, id).armies[0];
+  assert(mid && mid.moving === 'in' && mid.mode === 'march' && mid.hostile, 'marching in');
+  assert(CL.angDiff(mid.angle, CL.bearing(s, id, nb)) < 1e-9, 'comes along its own road');
+  a.edge.prog = len - 40; const near = CL.build(s, id).armies[0]; assert(near.d < mid.d, 'closer to the walls');
+  a.edge.prog = len - 1; assert(CL.build(s, id).armies[0].d < near.d);
+  const leaving = VM.Armies.spawn(s, 1, id, T({ infantry: 100 }), s.officers.find(o => o.owner === 1 && o.role === 'idle').id); VM.Armies.move(s, leaving, nb);
+  VM.Sim.advance(s, 2); const out = CL.build(s, id).armies.find(x => x.id === leaving.id); assert(out && out.moving === 'out' && !out.hostile, 'leaving');
+});
+
+test('soldier mix follows the troops and always adds up; fallen follow the casualties', () => {
+  const s = world(), id = s.factions[1].capital;
+  const a = VM.Armies.spawn(s, 1, id, T({ infantry: 300, spear: 120, cavalry: 60, archer: 120 }), s.officers.find(o => o.owner === 1 && o.role === 'idle').id);
+  let m = CL.build(s, id).armies[0]; assert.strictEqual(m.soldiers, 50);
+  assert.strictEqual(m.mix.infantry + m.mix.spear + m.mix.cavalry + m.mix.archer, m.soldiers, 'the mix adds up');
+  assert(m.mix.infantry > m.mix.spear && m.mix.spear === m.mix.archer && m.mix.cavalry < m.mix.spear, JSON.stringify(m.mix));
+  for (const k of ['infantry', 'spear', 'cavalry', 'archer']) a.troops[k] = Math.round(a.troops[k] * 0.4);
+  m = CL.build(s, id).armies[0]; assert(m.fallen >= 6 && m.fallen <= 24, 'fallen ' + m.fallen);
+  assert.strictEqual(m.mix.infantry + m.mix.spear + m.mix.cavalry + m.mix.archer, m.soldiers);
+  a.troops = T({ siege: 5 }); assert.strictEqual(CL.build(s, id).armies[0].mix.infantry + CL.build(s, id).armies[0].mix.archer, CL.build(s, id).armies[0].soldiers, 'only siege engines left: soldiers still add up');
+});
+
+test('armies in battle meet in one line, defender facing attacker; the signatures split static from armies', () => {
+  const s = world(), id = s.factions[1].capital;
+  const d = VM.Armies.spawn(s, 1, id, T({ infantry: 400 }), s.officers.find(o => o.owner === 1 && o.role === 'idle').id);
+  const e = VM.Armies.spawn(s, 2, id, T({ infantry: 400 }), s.officers.find(o => o.owner === 2 && o.role === 'idle').id);
+  const before = CL.build(s, id); VM.Sim.advance(s, 0.5);
+  const L = CL.build(s, id), A = L.armies.find(x => x.id === d.id), B = L.armies.find(x => x.id === e.id);
+  assert(A.mode === 'fighting' && B.mode === 'fighting' && A.clash && B.clash);
+  assert(CL.angDiff(A.angle, B.angle) < 1e-9 && A.d < B.d && B.d - A.d < 8, 'one line');
+  assert.strictEqual(before.sigStatic.split('/').slice(0, 5).join('/'), L.sigStatic.split('/').slice(0, 5).join('/'));
+  assert.notStrictEqual(before.sigArmies, L.sigArmies);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

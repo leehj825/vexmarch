@@ -196,103 +196,188 @@ VM.City3D = (function () {
     return new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
   }
 
-  // ---------------- dynamic parts: soldiers, engines, flags, shots ----------------
-  function makeSoldierGeometry() {
-    const M = new Merger(); cyl(M, 0, 0, 0, 0.26, 0.32, 0.95, '#ffffff', 6); box(M, 0.3, 0.1, 0, 0.06, 1.6, 0.06, '#c9c2b0', 0);     // body and a spear
-    return M.mesh().geometry;
+  // ---------------- dynamic parts: soldiers by type, engines, flags, shots ----------------
+  // Four kinds of soldier with their own silhouette (infantry with a shield, spearmen with a long spear, archers with a bow and quiver, cavalry
+  // on horses). Each kind is two instanced meshes: the body, tinted with the faction colour, and its gear in fixed colours; heads are shared.
+  let models = null;
+  const shared = o => { o.userData.shared = true; return o; };
+  function soldierModels() {
+    if (models) return models;
+    const mk = fn => { const M = new Merger(); fn(M); return shared(M.mesh().geometry); };
+    const WH = '#ffffff';
+    const m = {
+      infantry: { tint: mk(M => cyl(M, 0, 0, 0, 0.26, 0.32, 0.95, WH, 6)), gear: mk(M => { box(M, -0.36, 0.3, 0.05, 0.08, 0.62, 0.5, '#7a5a38'); box(M, 0.32, 0.45, 0.12, 0.05, 0.05, 0.75, '#d0ccd8'); }), head: 1.15 },
+      spear: { tint: mk(M => cyl(M, 0, 0, 0, 0.25, 0.3, 0.95, WH, 6)), gear: mk(M => { cyl(M, 0.34, 0, 0.1, 0.035, 0.035, 2.4, '#8a6040', 4); cone(M, 0.34, 2.4, 0.1, 0.08, 0.3, '#d0ccd8', 4); }), head: 1.15 },
+      archer: { tint: mk(M => cyl(M, 0, 0, 0, 0.23, 0.28, 0.95, WH, 6)), gear: mk(M => { box(M, -0.34, 0.25, 0.1, 0.04, 0.95, 0.04, '#8a6040'); box(M, -0.34, 0.2, 0.0, 0.03, 0.03, 0.4, '#d9d2b8'); box(M, 0.0, 0.4, -0.27, 0.13, 0.5, 0.13, '#5e4129'); }), head: 1.15 },
+      cavalry: { tint: mk(M => cyl(M, 0, 0.72, 0, 0.25, 0.3, 0.7, WH, 6)), gear: mk(M => { cyl(M, 0.36, 0.5, 0.2, 0.035, 0.035, 2.6, '#8a6040', 4); cone(M, 0.36, 3.1, 0.2, 0.08, 0.3, '#d0ccd8', 4); }), head: 1.85,
+        horse: mk(M => { box(M, 0, 0.55, 0, 0.55, 0.62, 1.5, '#7a5238'); for (const [x, z] of [[-0.2, 0.55], [0.2, 0.55], [-0.2, -0.55], [0.2, -0.55]]) cyl(M, x, 0, z, 0.07, 0.06, 0.6, '#5e3f2a', 4); box(M, 0, 0.9, 0.85, 0.28, 0.6, 0.35, '#7a5238'); box(M, 0, 1.25, 1.1, 0.26, 0.28, 0.55, '#6b4630'); box(M, 0, 0.6, -0.8, 0.1, 0.5, 0.1, '#3e2a1d'); }) }
+    };
+    m.headGeo = shared(new THREE.SphereGeometry(0.24, 6, 5));
+    m.mats = { tint: shared(new THREE.MeshLambertMaterial({ vertexColors: true })), fixed: shared(new THREE.MeshLambertMaterial({ vertexColors: true })), head: shared(new THREE.MeshLambertMaterial({ color: '#e8c9a0' })) };
+    m.engineBase = mk(M => { box(M, 0, 0.35, 0, 1.6, 0.35, 2.6, COL.woodDark); for (const [wx, wz] of [[-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]]) cyl(M, wx, 0, wz, 0.4, 0.4, 0.2, COL.wood, 8); box(M, 0, 0.6, 0, 0.2, 1.4, 0.2, COL.wood); });
+    m.engineArm = mk(M => { box(M, 0, 0, 0.1, 0.2, 0.2, 3.0, COL.wood); box(M, 0, -0.1, 1.5, 0.7, 0.4, 0.7, COL.woodDark); });
+    models = m; return m;
   }
+  const TYPES = ['infantry', 'spear', 'archer', 'cavalry'];
+  const anchors = new Map();                                              // army id -> { d, angle }: where the army is drawn, eased toward where it should be
+  const polarXZ = (d, a, lat) => [Math.cos(a) * d - Math.sin(a) * lat, Math.sin(a) * d + Math.cos(a) * lat];
 
   function buildDynamic(L) {
-    const D = { soldiers: [], engines: [], shots: [], puffs: [], flags: [], group: new THREE.Group() };
-    const list = [];                                                         // { x, z, yaw, y, color, phase, mode, hostile }
-    const wallH = wallHeight(L.wall.level);
+    const m = soldierModels(), D = { group: new THREE.Group(), entries: [], engines: [], flags: [], shots: [], puffs: [], armies: L.armies };
+    const wallH = wallHeight(L.wall.level), gc = new THREE.Color(L.color), E = D.entries;
     // Garrison
-    const gc = new THREE.Color(L.color);
     for (let i = 0; i < L.garrison.visible; i++) {
-      if (L.garrison.onWall) { const a = (i + 0.5) / L.garrison.visible * TAU, p = polar(L.radius, a); list.push({ x: p[0], z: p[1], y: wallH, yaw: a + Math.PI / 2, color: gc, phase: i, mode: 'guard' }); }
-      else { const a = i * 2.4, r = 9 + (i % 4) * 1.8, p = polar(r, a); list.push({ x: p[0], z: p[1], y: 0, yaw: a + Math.PI / 2, color: gc, phase: i, mode: 'guard' }); }
+      const type = ['infantry', 'archer', 'spear'][i % 3];
+      if (L.garrison.onWall) { const a = (i + 0.5) / L.garrison.visible * TAU, p = polar(L.radius, a); E.push({ type, fx: p[0], fz: p[1], fy: wallH, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
+      else { const a = i * 2.4, p = polar(9 + (i % 4) * 1.8, a); E.push({ type, fx: p[0], fz: p[1], fy: 0, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
     }
-    // Armies and their siege engines
+    // Armies
     L.armies.forEach((A, ai) => {
-      const col = new THREE.Color(A.color), d = A.hostile ? L.radius + 17 : L.radius + 10, cols = Math.max(2, Math.ceil(Math.sqrt(A.soldiers * 1.6)));
-      const dirx = Math.cos(A.angle), dirz = Math.sin(A.angle), px = -dirz, pz = dirx;
-      for (let i = 0; i < A.soldiers; i++) {
-        const r = Math.floor(i / cols), c = i % cols, off = (c - (cols - 1) / 2) * 1.3, depth = d + r * 1.4;
-        list.push({ x: dirx * depth + px * off, z: dirz * depth + pz * off, y: 0, yaw: Math.atan2(-dirz, -dirx) * -1 + 0, color: col, phase: i + ai * 7, mode: A.mode, hostile: A.hostile, face: Math.atan2(-dirz, -dirx), routed: A.routed });
-      }
+      const col = new THREE.Color(A.color), keys = ['infantry', 'spear', 'archer', 'cavalry'];
+      let order = []; for (const k of keys) for (let n = 0; n < A.mix[k]; n++) order.push(k);
+      const cols = Math.max(2, Math.ceil(Math.sqrt(A.soldiers * 1.6)));
+      // cavalry on the flanks, archers behind, foot in front
+      const rank = { infantry: 0, spear: 1, archer: 2, cavalry: 0 };
+      order = order.map((type, i) => ({ type, i })).sort((p, q) => rank[p.type] - rank[q.type] || p.i - q.i);
+      order.forEach(({ type }, i) => {
+        const r = Math.floor(i / cols), c = i % cols, lat = (c - (cols - 1) / 2) * (type === 'cavalry' ? 1.8 : 1.3);
+        E.push({ type, aid: A.id, lat, depth: r * 1.5, color: col, phase: i + ai * 7, mode: A.mode, hostile: A.hostile, routed: A.routed, out: A.moving === 'out' });
+      });
+      for (let k = 0; k < A.fallen; k++) E.push({ type: 'infantry', aid: A.id, lat: ((k * 37) % 11 - 5) * 1.2, depth: -2 - (k % 3) * 1.2, color: col.clone().multiplyScalar(0.55), phase: k, mode: 'fallen', fallen: true });
       for (let k = 0; k < A.siege; k++) {
-        const off = (k - (A.siege - 1) / 2) * 4.2, dist = d - 6, cx = dirx * dist + px * off, cz = dirz * dist + pz * off;
-        const grp = new THREE.Group(); grp.position.set(cx, 0, cz); grp.rotation.y = -Math.atan2(-dirz, -dirx) - Math.PI / 2 + Math.PI;
-        const MM = new Merger(); box(MM, 0, 0.35, 0, 1.6, 0.35, 2.6, COL.woodDark); for (const [wx, wz] of [[-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]]) cyl(MM, wx, 0, wz, 0.4, 0.4, 0.2, COL.wood, 8); box(MM, 0, 0.6, 0, 0.2, 1.4, 0.2, COL.wood); const base = MM.mesh();
-        const arm = new THREE.Group(); arm.position.set(0, 1.6, 0); const AM = new Merger(); box(AM, 0, 0, 0.1, 0.2, 0.2, 3.0, COL.wood); box(AM, 0, -0.1, 1.5, 0.7, 0.4, 0.7, COL.woodDark); const armMesh = AM.mesh(); armMesh.position.set(0, 0, 0); arm.add(armMesh);
-        grp.add(base); grp.add(arm); D.group.add(grp);
-        D.engines.push({ grp, arm, phase: k * 1.7 + ai, hostile: A.hostile, firing: A.mode === 'besieging', x: cx, z: cz, angle: A.angle });
+        const grp = new THREE.Group(), base = new THREE.Mesh(m.engineBase, m.mats.fixed), arm = new THREE.Group(); arm.position.set(0, 1.6, 0); arm.add(new THREE.Mesh(m.engineArm, m.mats.fixed)); grp.add(base); grp.add(arm); D.group.add(grp);
+        D.engines.push({ grp, arm, aid: A.id, lat: (k - (A.siege - 1) / 2) * 4.2, depth: -6, phase: k * 1.7 + ai, firing: A.mode === 'besieging', hostile: A.hostile, fired: false, out: A.moving === 'out' });
       }
+      if (!anchors.has(A.id)) anchors.set(A.id, { d: A.d, angle: A.angle });
     });
-    const geo = makeSoldierGeometry();
-    const bodies = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }), Math.max(1, list.length));
-    const heads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.24, 6, 5), new THREE.MeshLambertMaterial({ color: '#e8c9a0' }), Math.max(1, list.length));
-    list.forEach((s, i) => bodies.setColorAt(i, s.color));
-    bodies.count = heads.count = list.length;
-    if (bodies.instanceColor) bodies.instanceColor.needsUpdate = true;
-    D.list = list; D.bodies = bodies; D.heads = heads; D.group.add(bodies); D.group.add(heads);
-    // Flags (waving): the keep's, plus one on each gate tower
-    const fl = (x, y, z, w, h, color) => { const g = new THREE.PlaneGeometry(w, h, 6, 1); g.translate(w / 2, 0, 0); const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })); m.position.set(x, y, z); D.group.add(m); D.flags.push({ m, base: g.attributes.position.array.slice(), w }); };
-    const kw = { capital: 10, city: 8, town: 7, hamlet: 6 }[L.tier], kh = { capital: 4.4, city: 3.8, town: 3.4, hamlet: 3 }[L.tier] + (L.tier === 'capital' ? 6.5 : 4.6) + 3.2 + 1.7;
+    // Instanced meshes: per type a tinted body and its gear, plus heads for everyone and horses for the cavalry
+    D.groups = {};
+    for (const type of TYPES) {
+      const list = E.filter(e => e.type === type); if (!list.length) continue;
+      const body = new THREE.InstancedMesh(m[type].tint, m.mats.tint, list.length), gear = new THREE.InstancedMesh(m[type].gear, m.mats.fixed, list.length);
+      list.forEach((e, i) => body.setColorAt(i, e.color));
+      D.group.add(body); D.group.add(gear);
+      let horse = null; if (type === 'cavalry') { horse = new THREE.InstancedMesh(m.cavalry.horse, m.mats.fixed, list.length); D.group.add(horse); }
+      D.groups[type] = { list, body, gear, horse };
+    }
+    D.heads = new THREE.InstancedMesh(m.headGeo, m.mats.head, Math.max(1, E.length)); D.heads.count = E.length; D.group.add(D.heads);
+    // Waving flags
+    const fl = (x, y, z, w, h, color) => { const g = new THREE.PlaneGeometry(w, h, 6, 1); g.translate(w / 2, 0, 0); const mm = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide })); mm.position.set(x, y, z); D.group.add(mm); D.flags.push({ m: mm, base: g.attributes.position.array.slice(), w }); };
+    const kh = { capital: 4.4, city: 3.8, town: 3.4, hamlet: 3 }[L.tier] + (L.tier === 'capital' ? 6.5 : 4.6) + 3.2 + 1.7;
     fl(0.05, kh, 0, 2.4, 1.2, L.color);
     return D;
   }
 
-  const dummy = () => dummy.o || (dummy.o = new THREE.Object3D());
+  const o3 = () => o3.o || (o3.o = new THREE.Object3D());
+  function pose(e, A, dt) {
+    // where one soldier stands this frame: [x, y, z, yaw, tilt]
+    const ph = t * 2.2 + e.phase;
+    if (e.fx !== undefined) return [e.fx, e.fy + Math.abs(Math.sin(ph * 0.5)) * 0.03, e.fz, e.yaw, 0];
+    const an = anchors.get(e.aid); if (!an) return [0, -50, 0, 0, 0];
+    let depth = e.depth, lat = e.lat, y = 0, tilt = 0;
+    const toCity = Math.atan2(-Math.cos(an.angle), -Math.sin(an.angle)), outward = Math.atan2(Math.cos(an.angle), Math.sin(an.angle));
+    let yaw = e.hostile || !A || A.moving === 'in' || A.mode === 'camp' ? toCity : outward;
+    if (e.out) yaw = outward;
+    if (A && A.clash && !A.hostile) yaw = outward;
+    switch (e.mode) {
+      case 'march': y = Math.abs(Math.sin(ph * 2.0)) * 0.1; lat += Math.sin(ph * 0.7) * 0.06; break;
+      case 'camp': y = Math.max(0, Math.sin(ph * 0.4)) * 0.04; break;
+      case 'besieging': y = Math.abs(Math.sin(ph)) * 0.07; depth -= Math.sin(t * 0.8 + e.phase * 0.3) * 0.5; break;
+      case 'fighting': y = Math.abs(Math.sin(ph * 2.6)) * 0.14; depth += (A && A.hostile ? -1 : 1) * Math.max(0, Math.sin(ph * 2.1)) * 0.5; lat += Math.sin(ph * 3) * 0.15; break;
+      case 'fallen': y = 0.18; tilt = -1.5; yaw = e.phase; break;
+    }
+    if (e.routed) tilt = 0.8;
+    const p = polarXZ(an.d + depth, an.angle, lat);
+    return [p[0], y, p[1], yaw, tilt];
+  }
+
   function animate(dt) {
     if (!dyn) return;
-    const o = dummy(), L = layout;
-    dyn.list.forEach((s, i) => {
-      let x = s.x, z = s.z, y = s.y || 0, yaw = s.face !== undefined ? s.face : s.yaw;
-      const ph = t * 2.2 + s.phase;
-      if (s.mode === 'camp') y += Math.max(0, Math.sin(ph * 0.4)) * 0.04;
-      else if (s.mode === 'besieging') { y += Math.abs(Math.sin(ph)) * 0.07; const k = Math.sin(t * 0.8 + s.phase * 0.3) * 0.5; x -= Math.cos(Math.atan2(z, x)) * k; z -= Math.sin(Math.atan2(z, x)) * k; }
-      else if (s.mode === 'fighting') { y += Math.abs(Math.sin(ph * 2.6)) * 0.14; x += Math.sin(ph * 3) * 0.15; z += Math.cos(ph * 2.7) * 0.15; }
-      else if (s.mode === 'guard') y += Math.abs(Math.sin(ph * 0.5)) * 0.03;
-      o.position.set(x, y, z); o.rotation.set(s.routed ? 0.9 : 0, -yaw + Math.PI / 2, 0); o.updateMatrix(); dyn.bodies.setMatrixAt(i, o.matrix);
-      o.position.set(x, y + 1.15, z); o.rotation.set(0, 0, 0); o.updateMatrix(); dyn.heads.setMatrixAt(i, o.matrix);
-    });
-    dyn.bodies.instanceMatrix.needsUpdate = true; dyn.heads.instanceMatrix.needsUpdate = true;
+    const o = o3(), m = soldierModels(), byId = {}; for (const A of dyn.armies) byId[A.id] = A;
+    for (const A of layout.armies) { const an = anchors.get(A.id); if (an) { an.d += (A.d - an.d) * Math.min(1, dt * 3); an.angle = A.angle; } }
+    for (const type of TYPES) {
+      const g = dyn.groups[type]; if (!g) continue;
+      g.list.forEach((e, i) => {
+        const [x, y, z, yaw, tilt] = pose(e, byId[e.aid], dt);
+        o.position.set(x, y, z); o.rotation.set(tilt, yaw, 0); o.updateMatrix();
+        g.body.setMatrixAt(i, o.matrix); g.gear.setMatrixAt(i, o.matrix); if (g.horse) g.horse.setMatrixAt(i, o.matrix);
+        e._m = o.matrix.elements.slice(); e._x = x; e._y = y; e._z = z;
+      });
+      g.body.instanceMatrix.needsUpdate = true; g.gear.instanceMatrix.needsUpdate = true; if (g.horse) g.horse.instanceMatrix.needsUpdate = true;
+    }
+    dyn.entries.forEach((e, i) => { if (e._x === undefined) return; o.position.set(e._x, e._y + (e.fallen ? 0.25 : (m[e.type] ? m[e.type].head : 1.15)), e._z); o.rotation.set(0, 0, 0); o.updateMatrix(); dyn.heads.setMatrixAt(i, o.matrix); });
+    dyn.heads.instanceMatrix.needsUpdate = true;
     for (const f of dyn.flags) { const a = f.m.geometry.attributes.position, b = f.base; for (let i = 0; i < a.count; i++) a.setZ(i, b[i * 3 + 2] + Math.sin(t * 4 + b[i * 3] * 2.2) * 0.12 * (b[i * 3] / f.w)); a.needsUpdate = true; }
     for (const e of dyn.engines) {
+      const an = anchors.get(e.aid); if (!an) continue;
+      const p = polarXZ(an.d + e.depth, an.angle, e.lat); e.grp.position.set(p[0], 0, p[1]); e.x = p[0]; e.z = p[1];
+      e.grp.rotation.y = e.out ? Math.atan2(Math.cos(an.angle), Math.sin(an.angle)) : Math.atan2(-Math.cos(an.angle), -Math.sin(an.angle));
       const cyc = (t * 0.5 + e.phase) % 3.2, pull = cyc < 1.8 ? cyc / 1.8 : Math.max(0, 1 - (cyc - 1.8) / 0.25);
       e.arm.rotation.x = e.firing ? -0.6 + pull * 1.2 : -0.3;
-      if (e.firing && cyc >= 1.8 && !e.fired) { e.fired = true; shoot(e); } if (cyc < 1.8) e.fired = false;
+      if (e.firing && cyc >= 1.8 && !e.fired) { e.fired = true; shoot(e, an.angle); } if (cyc < 1.8) e.fired = false;
     }
-    for (const sh of dyn.shots) { sh.u += dt / 1.1; if (sh.u >= 1) { sh.done = true; puff(sh.tx, sh.ty, sh.tz); continue; } sh.m.position.set(sh.x0 + (sh.tx - sh.x0) * sh.u, sh.y0 + (sh.ty - sh.y0) * sh.u + Math.sin(sh.u * Math.PI) * 9, sh.z0 + (sh.tz - sh.z0) * sh.u); }
+    // Battle effects: arrows from archers, sparks where lines meet
+    shotTimer -= dt; sparkTimer -= dt;
+    if (shotTimer <= 0) { shotTimer = 0.9; volley(byId); }
+    if (sparkTimer <= 0) { sparkTimer = 0.3; sparks(); }
+    for (const sh of dyn.shots) { sh.u += dt / sh.dur; if (sh.u >= 1) { sh.done = true; if (sh.puff) puff(sh.tx, sh.ty, sh.tz, sh.puff); continue; } sh.m.position.set(sh.x0 + (sh.tx - sh.x0) * sh.u, sh.y0 + (sh.ty - sh.y0) * sh.u + Math.sin(sh.u * Math.PI) * sh.arc, sh.z0 + (sh.tz - sh.z0) * sh.u); if (sh.arrow) sh.m.rotation.y = Math.atan2(sh.tx - sh.x0, sh.tz - sh.z0); }
     dyn.shots = dyn.shots.filter(s => { if (s.done) dyn.group.remove(s.m); return !s.done; });
-    for (const p of dyn.puffs) { p.u += dt * 1.6; p.m.scale.setScalar(0.6 + p.u * 2.2); p.m.material.opacity = Math.max(0, 0.7 - p.u * 0.7); if (p.u >= 1) p.done = true; }
-    dyn.puffs = dyn.puffs.filter(p => { if (p.done) dyn.group.remove(p.m); return !p.done; });
+    for (const p of dyn.puffs) { p.u += dt * p.speed; p.m.scale.setScalar(p.s0 + p.u * p.grow); p.m.material.opacity = Math.max(0, 0.75 - p.u * 0.75); if (p.u >= 1) p.done = true; }
+    dyn.puffs = dyn.puffs.filter(p => { if (p.done) { dyn.group.remove(p.m); p.m.material.dispose(); } return !p.done; });
   }
-  let shotMat = null;
-  function shoot(e) {
-    if (!layout || dyn.shots.length > 6) return;
-    const R = layout.radius, a = e.angle + (Math.random() - 0.5) * 0.5, tx = Math.cos(a) * R, tz = Math.sin(a) * R;
-    if (!shotMat) shotMat = new THREE.MeshLambertMaterial({ color: '#4a4650' });
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.35, 6, 5), shotMat); dyn.group.add(m);
-    dyn.shots.push({ m, u: 0, x0: e.x, y0: 1.8, z0: e.z, tx, ty: 2, tz });
+  let shotMat = null, arrowMat = null, shotTimer = 0, sparkTimer = 0;
+  function shoot(e, angle) {                                                // a stone from a siege engine toward the wall
+    if (!layout || dyn.shots.length > 12) return;
+    const R = layout.radius, a = angle + (Math.random() - 0.5) * 0.5, tx = Math.cos(a) * R, tz = Math.sin(a) * R;
+    if (!shotMat) shotMat = shared(new THREE.MeshLambertMaterial({ color: '#4a4650' }));
+    const mm = new THREE.Mesh(sharedGeo('stone', () => new THREE.SphereGeometry(0.35, 6, 5)), shotMat); dyn.group.add(mm);
+    dyn.shots.push({ m: mm, u: 0, dur: 1.1, arc: 9, x0: e.x, y0: 1.8, z0: e.z, tx, ty: 2, tz, puff: '#d8d0c0' });
   }
-  function puff(x, y, z) {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.7, 6, 5), new THREE.MeshBasicMaterial({ color: '#d8d0c0', transparent: true, opacity: 0.7 })); m.position.set(x, y, z); dyn.group.add(m); dyn.puffs.push({ m, u: 0 });
+  const geos = {}; const sharedGeo = (k, f) => geos[k] || (geos[k] = shared(f()));
+  function volley(byId) {                                                    // archers of armies in battle or besieging shoot at the other side
+    if (dyn.shots.length > 14) return;
+    const g = dyn.groups.archer; if (!g) return;
+    if (!arrowMat) arrowMat = shared(new THREE.MeshLambertMaterial({ color: '#e8e0c8' }));
+    const picks = g.list.filter(e => e._x !== undefined && !e.fallen && (e.mode === 'fighting' || e.mode === 'besieging') && Math.random() < 0.25).slice(0, 3);
+    for (const e of picks) {
+      const A = byId[e.aid]; if (!A) continue;
+      let tx, tz;
+      if (A.mode === 'fighting') { const foe = dyn.armies.find(x => x.hostile !== A.hostile && x.mode === 'fighting' && (x.engaged.includes(A.id) || A.engaged.includes(x.id))); const an = foe && anchors.get(foe.id); if (!an) continue; const p = polarXZ(an.d, an.angle, (Math.random() - 0.5) * 8); tx = p[0]; tz = p[1]; }
+      else { const R = layout.radius, a = A.angle + (Math.random() - 0.5) * 0.4; tx = Math.cos(a) * R; tz = Math.sin(a) * R; }
+      const mm = new THREE.Mesh(sharedGeo('arrow', () => new THREE.BoxGeometry(0.05, 0.05, 0.8)), arrowMat); dyn.group.add(mm);
+      dyn.shots.push({ m: mm, arrow: true, u: 0, dur: 0.8, arc: 5, x0: e._x, y0: 1.4, z0: e._z, tx, ty: 1.2, tz, puff: null });
+    }
+  }
+  function sparks() {
+    for (const A of dyn.armies) {
+      if (!A.clash || A.hostile) continue;
+      const an = anchors.get(A.id); if (!an) continue;
+      const p = polarXZ(an.d + 2.5, an.angle, (Math.random() - 0.5) * 10); puff(p[0], 1.2 + Math.random(), p[1], '#ffd070', 0.25, 1.1, 3.2);
+    }
+  }
+  function puff(x, y, z, color, s0, grow, speed) {
+    if (dyn.puffs.length > 40) return;
+    const mm = new THREE.Mesh(sharedGeo('puff', () => new THREE.SphereGeometry(0.7, 6, 5)), new THREE.MeshBasicMaterial({ color: color || '#d8d0c0', transparent: true, opacity: 0.75 })); mm.position.set(x, y, z); dyn.group.add(mm);
+    dyn.puffs.push({ m: mm, u: 0, s0: s0 || 0.6, grow: grow || 2.2, speed: speed || 1.6 });
   }
 
   // ---------------- scene lifecycle ----------------
-  function dispose(obj) { obj.traverse(n => { if (n.geometry) n.geometry.dispose(); if (n.material) { (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => m.dispose()); } }); }
+  function dispose(obj) { obj.traverse(n => { if (n.geometry && !n.geometry.userData.shared) n.geometry.dispose(); if (n.material) { (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => { if (!m.userData.shared) m.dispose(); }); } }); }
 
-  function rebuild(L) {
-    for (const o of [staticMesh, ground, water, dyn && dyn.group]) if (o) { scene.remove(o); dispose(o); }
+  function rebuildStatic(L) {
+    for (const o of [staticMesh, ground, water]) if (o) { scene.remove(o); dispose(o); }
     const M = new Merger(); buildCity(M, L); staticMesh = M.mesh(); scene.add(staticMesh);
     ground = buildGround(L); scene.add(ground);
     water = null;
     if (L.water) { const g = new THREE.CircleGeometry(L.water.radius, 28); g.rotateX(-Math.PI / 2); const p = polar(L.water.r, L.water.angle); g.translate(p[0], 0.08, p[1]); water = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: COL.water, transparent: true, opacity: 0.88 })); scene.add(water); }
-    dyn = buildDynamic(L); scene.add(dyn.group);
-    cam.minD = L.radius * 1.2; cam.maxD = L.radius * 5.5; cam.dist = Math.min(cam.maxD, Math.max(cam.minD, cam.dist || L.radius * (innerWidth < innerHeight ? 4.4 : 3.1)));
+    const ext = Math.max(L.radius + 14, 36, ...L.armies.map(a => a.d + 8));                   // wide enough to see the armies outside the walls
+    cam.minD = L.radius * 1.2; cam.maxD = Math.max(L.radius * 5.5, ext * 4.5); cam.dist = Math.min(cam.maxD, Math.max(cam.minD, cam.dist || ext * (innerWidth < innerHeight ? 3.0 : 2.0)));
     stats.tris = M.tris;
+  }
+  function rebuildDynamic(L) {
+    if (dyn) { scene.remove(dyn.group); dispose(dyn.group); }
+    dyn = buildDynamic(L); scene.add(dyn.group);
+    const live = new Set(L.armies.map(a => a.id)); for (const k of [...anchors.keys()]) if (!live.has(k)) anchors.delete(k);
   }
   const stats = { tris: 0 };
 
@@ -333,23 +418,26 @@ VM.City3D = (function () {
 
   function open(id) {
     if (!ensureRenderer()) return false;
-    cityId = id; sig = ''; shown = true; cam.auto = true; cam.dist = 0;
+    cityId = id; sig = ''; sigA = ''; anchors.clear(); shown = true; cam.auto = true; cam.dist = 0;
     canvas.classList.add('on'); resize(); refresh(true);
+    const foe = layout.armies.find(a => a.hostile) || layout.armies[0];                  // start by looking at the action
+    if (foe) { cam.yaw = Math.atan2(-Math.cos(foe.angle), -Math.sin(foe.angle)) + 0.3; cam.auto = false; }
     return true;
   }
   function close() { shown = false; cityId = -1; canvas.classList.remove('on'); }
 
+  let sigA = '';
   function refresh(force) {
     if (cityId < 0) return;
-    const L = VM.CityLayout.build(ui.state, cityId);
-    if (force || L.sig !== sig) { sig = L.sig; layout = L; rebuild(L); }
-    else layout = L;
+    const L = VM.CityLayout.build(ui.state, cityId); layout = L;
+    if (force || L.sigStatic !== sig) { sig = L.sigStatic; rebuildStatic(L); sigA = null; }
+    if (force || L.sigArmies !== sigA) { sigA = L.sigArmies; rebuildDynamic(L); }
   }
 
   let acc = 0;
   function frame(dt) {
     if (!shown || !renderer) return;
-    t += dt; acc += dt; if (acc > 0.5) { acc = 0; refresh(false); }
+    t += dt; acc += dt; if (acc > 0.3) { acc = 0; refresh(false); }
     if (cam.auto) cam.yaw += dt * 0.05;
     const cp = Math.cos(cam.pitch);
     camera.position.set(cam.tx + Math.sin(cam.yaw) * cp * cam.dist, Math.sin(cam.pitch) * cam.dist, cam.tz + Math.cos(cam.yaw) * cp * cam.dist);
@@ -360,7 +448,7 @@ VM.City3D = (function () {
 
   return {
     init, open, close, frame, refresh, supported: () => ensureRenderer(), isOpen: () => shown, id: () => cityId, layout: () => layout,
-    info: () => renderer ? { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, staticTriangles: stats.tris, soldiers: dyn ? dyn.list.length : 0 } : null,
+    info: () => renderer ? { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, staticTriangles: stats.tris, soldiers: dyn ? dyn.entries.length : 0, calls3d: 0 } : null,
     camera: cam
   };
 })();
