@@ -168,6 +168,23 @@ test('the picture is stable: buildings, people, depots and armies never move wha
   assert(grown.fields.length > a.fields.length && grown.farmhouses.length > a.farmhouses.length, 'and the fields too');
 });
 
+test('growth: the stage follows the people; stone and the suburb come with size, the works with the buildings', () => {
+  const s = world(7), id = own(s).id, c = s.cities[id];
+  c.buildings = { farm: 1, market: 1, barracks: 1, wall: 0, temple: 0 }; c.spec = 'farmland';
+  const at = pop => { c.pop = pop; return CL.build(s, id); };
+  const v = at(1800), t = at(3300), k = at(5200), g = at(9500);
+  assert.deepStrictEqual([v.stage, t.stage, k.stage, g.stage], [1, 2, 3, 4]);
+  assert(v.houses.some(h => h.style === 0) && !v.houses.some(h => h.style === 2), 'a village is tents and huts');
+  assert(k.houses.some(h => h.style === 2) && g.houses.filter(h => h.style === 2).length > k.houses.filter(h => h.style === 2).length / 2, 'stone comes with size');
+  assert(v.suburb.length === 0 && t.suburb.length === 0 && k.suburb.length > 0 && g.suburb.length > k.suburb.length, 'the suburb grows along the roads');
+  assert(!v.plaza && t.plaza && g.monument && !k.monument, 'a plaza from the second stage, a monument in a great city');
+  assert(!v.paved && k.paved, 'streets are paved from the third stage');
+  assert(!g.works.some(w => w.kind === 'windmill'), 'no windmill before farm level 3'); c.buildings.farm = 3;
+  assert(at(9500).works.some(w => w.kind === 'windmill'), 'a windmill with farm level 3');
+  c.spec = 'iron'; assert(at(9500).works.some(w => w.kind === 'quarry'), 'a quarry where iron is dug');
+  for (const L of [v, t, k, g]) for (const h of L.suburb) assert(Math.hypot(h.x, h.z) > L.radius + 2, 'the suburb is outside the walls');
+});
+
 test('the same city looks the same after a save and load, and on opening it again', () => {
   const s = world(7), id = own(s).id, before = JSON.stringify(CL.build(s, id));
   const t = VM.Sim.load(VM.Sim.save(s)); assert.strictEqual(JSON.stringify(CL.build(t, id)), before);

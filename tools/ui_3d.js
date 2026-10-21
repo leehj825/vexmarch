@@ -22,7 +22,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await ev(c => { __vm.selectedCity = c; __vm.speed = 4; }, cap); await p.waitForTimeout(300);
     await p.click('[data-act="view3d"]'); await p.waitForTimeout(900);
     ok(await ev(() => __vm.cityView) === cap, 'the view button opens the city'); ok(await ev(() => __vm.speed) === 1, 'entering a city slows 4x down to normal speed'); ok(await ev(() => document.body.classList.contains('in3d')), 'in3d class');
-    let info = await ev(() => VM.City3D.info()); ok(info && info.calls > 0 && info.calls <= 40, 'draw calls ' + info.calls); ok(info.triangles < 90000, 'triangles ' + info.triangles);
+    let info = await ev(() => VM.City3D.info()); ok(info && info.calls > 0 && info.calls <= 40, 'draw calls ' + info.calls); ok(info.triangles < 120000, 'triangles ' + info.triangles);
     const shot = await p.screenshot(); ok(shot.length > 20000, 'the canvas is not blank (' + shot.length + ' bytes)');
     await p.click('#backBtn'); await p.waitForTimeout(500);
     ok(await ev(() => __vm.cityView === null), 'back to the map'); ok(await ev(() => !document.body.classList.contains('in3d')), 'in3d cleared');
@@ -51,7 +51,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
       VM.War.updateZones(s);
     }, cap);
     await p.waitForTimeout(1200);
-    info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'worst-case draw calls ' + info.calls); ok(info.triangles < 90000, 'worst-case triangles ' + info.triangles); ok(info.soldiers <= 200, 'soldiers ' + info.soldiers);
+    info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'worst-case draw calls ' + info.calls); ok(info.triangles < 120000, 'worst-case triangles ' + info.triangles); ok(info.soldiers <= 200, 'soldiers ' + info.soldiers);
     ok((await ev(() => VM.City3D.layout().armies.length)) === 2, 'both armies are in the scene');
     // Opening the city again does not rearrange it: fields, houses and scenery stay where they were while the game goes on
     const pic = () => ev(() => { const L = VM.City3D.layout(); return JSON.stringify({ f: L.fields.map(x => [x.x, x.z]), h: L.houses.map(x => [x.x, x.z]), s: L.features.map(x => [x.kind, x.x, x.z]) }); });
@@ -75,7 +75,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     ok(lay.some(a => a.moving === 'in'), 'a column is marching in'); ok(lay.filter(a => a.mode === 'fighting' && a.clash).length === 2, 'the two armies meet at the gate');
     ok(lay.some(a => a.mix.cavalry > 0 && a.mix.archer > 0 && a.mix.spear > 0), 'every kind of soldier is in the picture');
     { const f1 = await ev(() => JSON.stringify(VM.City3D.info().frames)); await p.waitForTimeout(450); const f2 = await ev(() => JSON.stringify(VM.City3D.info().frames)); ok(f1 !== f2 && f1.length > 4, 'the soldiers are animated: ' + f1 + ' then ' + f2); }
-    info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'battle draw calls ' + info.calls); ok(info.triangles < 90000, 'battle triangles ' + info.triangles);
+    info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'battle draw calls ' + info.calls); ok(info.triangles < 120000, 'battle triangles ' + info.triangles);
     await ev(() => { __vm.speed = 1; }); await p.waitForTimeout(2500); await ev(() => { __vm.speed = 0; });
     ok(errs.length === 0, 'no errors while the battle plays: ' + errs.join(' | '));
     // An assault: the attackers run at the wall and back; when the city falls the scene changes hands with a conquest

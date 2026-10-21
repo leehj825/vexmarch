@@ -92,17 +92,20 @@ VM.City3D = (function () {
 
   // A house in Nightfall's village style: plaster walls in a timber frame, a gabled roof, a door with a lintel, shuttered windows with flower boxes, a
   // chimney with a cap, and now and then a lean-to shed. In hamlets some of the homes are tents.
-  function house(M, h, ci, accent, tier) {
-    if (tier === 'hamlet' && ci % 3 === 0 && VM.StructModels) { tx.add('tent', h.x, 0, h.z, facing(h.x, h.z) + (ci % 2 ? 0.3 : -0.3), 0.62); return; }
-    const base = [COL.plaster, COL.plaster2, COL.plaster3][ci % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);
+  // h.style: 0 a tent, 1 a timber house, 2 a stone house with a slate roof (the stage of the place decides, see CityLayout)
+  const STONE = ['#bdb7aa', '#aeab9f', '#c8bfae'], SLATE = ['#5f6777', '#6d5c52', '#52706a'];
+  function house(M, h, ci, accent) {
+    if (h.style === 0 && VM.StructModels) { tx.add('tent', h.x, 0, h.z, facing(h.x, h.z) + (ci % 2 ? 0.3 : -0.3), 0.85); if (ci % 2) box(M, h.x + 1.6, 0, h.z + 0.9, 0.5, 0.45, 0.5, COL.wood, ci); return; }
+    const stone = h.style === 2, post = stone ? '#d6d1c4' : COL.woodDark;
+    const base = stone ? STONE[ci % 3] : [COL.plaster, COL.plaster2, COL.plaster3][ci % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);
     const lb = (lx, yb, lz, w, hh, d, color, shade) => M.add(place(new THREE.BoxGeometry(w, hh, d).translate(lx, yb + hh / 2, lz), h.x, 0, h.z, h.rot), color, shade);
     box(M, h.x, 0, h.z, h.w + 0.12, 0.2, h.d + 0.12, COL.stoneDark, h.rot);                                    // stone footing
     box(M, h.x, 0.2, h.z, h.w, h.h - 0.2, h.d, base, h.rot, 0.96 + (ci % 3) * 0.02);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) lb(sx * h.w / 2, 0.2, sz * h.d / 2, 0.14, h.h - 0.2, 0.14, COL.woodDark);   // corner posts
-    for (const sz of [-1, 1]) lb(0, h.h - 0.14, sz * h.d / 2, h.w + 0.08, 0.1, 0.1, COL.woodDark);                // beams under the roof
-    for (const sx of [-1, 1]) lb(sx * h.w / 2, h.h - 0.14, 0, 0.1, 0.1, h.d + 0.08, COL.woodDark);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) lb(sx * h.w / 2, 0.2, sz * h.d / 2, 0.14, h.h - 0.2, 0.14, post);   // corner posts
+    for (const sz of [-1, 1]) lb(0, h.h - 0.14, sz * h.d / 2, h.w + 0.08, 0.1, 0.1, post);                // beams under the roof
+    for (const sx of [-1, 1]) lb(sx * h.w / 2, h.h - 0.14, 0, 0.1, 0.1, h.d + 0.08, post);
     if (ci % 2 === 0) for (const sx of [-1, 1]) lb(sx * h.w * 0.28, 0.35, h.d / 2 + 0.03, 0.08, h.h - 0.6, 0.06, COL.woodDark);   // a brace pair on the front
-    gable(M, h.x, h.h, h.z, h.w, h.d, 0.9, h.rot, h.roof === 2 ? accent : COL.roofs[h.roof]);
+    gable(M, h.x, h.h, h.z, h.w, h.d, 0.9, h.rot, stone ? SLATE[h.roof % 3] : h.roof === 2 ? accent : COL.roofs[h.roof]);
     lb(0, h.h + 0.88, 0, h.w + 0.5, 0.08, 0.1, COL.woodDark);                                                      // ridge beam
     const dOff = ((ci * 7) % 3 - 1) * h.w * 0.18;
     lb(dOff, 0.2, h.d / 2 + 0.03, 0.42, 0.85, 0.06, COL.door); lb(dOff, 1.05, h.d / 2 + 0.05, 0.56, 0.08, 0.1, COL.woodDark);   // door and lintel
@@ -136,7 +139,7 @@ VM.City3D = (function () {
     for (const g of L.gates) {                                              // roads into each gate, and gate posts when there is no wall
       const dx = Math.cos(g.angle), dz = Math.sin(g.angle), len = 70, cx = dx * (R + len / 2 - 4), cz = dz * (R + len / 2 - 4);
       box(M, cx, 0, cz, len, 0.05, 2.8, COL.dirt, yawFor(dx, dz), 0.95);
-      box(M, dx * R * 0.5, 0, dz * R * 0.5, R, 0.05, 2.4, COL.dirt, yawFor(dx, dz), 0.9);
+      box(M, dx * R * 0.5, 0, dz * R * 0.5, R, 0.05, L.paved ? 3.2 : 2.4, L.paved ? '#a39d8e' : COL.dirt, yawFor(dx, dz), L.paved ? 1 : 0.9);
     }
     if (lvl === 0) {
       for (const g of L.gates) for (const side of [-1, 1]) { const a = g.angle + side * 0.11, p = polar(R, a); cyl(M, p[0], 0, p[1], 0.22, 0.25, 3, COL.woodDark, 6); box(M, p[0], 2.8, p[1], 0.1, 0.7, 0.5, L.color, 0); }
@@ -166,11 +169,50 @@ VM.City3D = (function () {
     }
   }
 
+  // The plaza round the keep (paved from the second stage), the well, and the monument of a great city
+  function buildSquare(M, L) {
+    if (L.plaza) { cyl(M, 0, 0, 0, L.plaza.r, L.plaza.r, 0.07, '#b3ad9d', 28, 1); cyl(M, 0, 0.07, 0, L.plaza.r - 1.2, L.plaza.r - 1.2, 0.02, '#a49e8f', 28, 1); }
+    if (VM.StructModels) tx.add('well', L.well.x, 0, L.well.z, 0, 0.8);
+    else { cyl(M, L.well.x, 0, L.well.z, 0.8, 0.9, 0.8, COL.stone, 8); }
+    if (L.monument) {
+      const m = L.monument;
+      box(M, m.x, 0, m.z, 2.6, 0.5, 2.6, COL.stoneLight); box(M, m.x, 0.5, m.z, 1.9, 0.5, 1.9, COL.stone); cyl(M, m.x, 1.0, m.z, 0.5, 0.75, 4.2, COL.stoneLight, 4); ball(M, m.x, 5.4, m.z, 0.42, COL.gold, 6);
+      box(M, m.x, 3.6, m.z + 0.52, 0.8, 1.1, 0.06, L.color, 0);
+    }
+  }
+
+  // Works outside the walls that a city's buildings and trade bring: a windmill, a lumber camp and a quarry
+  function buildWork(M, w) {
+    const rot = facing(w.x, w.z), lg = (g, color, shade) => { g.rotateY(rot); g.translate(w.x, 0, w.z); M.add(g, color, shade); };
+    const lbx = (lx, yb, lz, bw, bh, bd, color, rz) => { const g = new THREE.BoxGeometry(bw, bh, bd); if (rz) g.rotateZ(rz); g.translate(lx, yb + bh / 2, lz); lg(g, color); };
+    if (w.kind === 'windmill') {
+      M.add(place(new THREE.CylinderGeometry(1.15, 1.9, 5.4, 8).translate(0, 2.7, 0), w.x, 0, w.z, 0), COL.plaster3);
+      M.add(place(new THREE.ConeGeometry(1.6, 1.8, 8).translate(0, 0.9, 0), w.x, 5.4, w.z, 0), COL.woodDark);
+      lbx(0, 0, 1.75, 0.8, 1.5, 0.12, COL.door); lbx(0, 4.3, 1.2, 0.4, 0.4, 0.8, COL.woodDark);
+      for (let k = 0; k < 4; k++) { const g = new THREE.BoxGeometry(0.75, 3.6, 0.07); g.translate(0, 1.8, 0); g.rotateZ(k * Math.PI / 2 + 0.5); g.translate(0, 4.5, 1.7); lg(g, k % 2 ? '#d8cfae' : '#c8bd94'); }
+      for (let k = 0; k < 3; k++) cyl(M, w.x + Math.cos(k * 2.1) * 2.6, 0, w.z + Math.sin(k * 2.1) * 2.6, 0.38, 0.38, 0.6, COL.hay, 6);
+    } else if (w.kind === 'lumber') {
+      lbx(0, 0, 0, 3.2, 1.9, 2.5, COL.wood); lbx(0, 1.9, 0, 3.6, 0.2, 2.9, COL.woodDark, 0.0);
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-1.9, 0, -1.5, 1.9, 0, -1.5, 1.9, 0, 1.5, -1.9, 0, -1.5, 1.9, 0, 1.5, -1.9, 0, 1.5, -1.9, 0, -1.5, -1.9, 0, 1.5, 0, 1.1, 0, 1.9, 0, 1.5, 1.9, 0, -1.5, 0, 1.1, 0, -1.9, 0, -1.5, 1.9, 0, -1.5, 0, 1.1, 0, -1.9, 0, -1.5, 0, 1.1, 0, -1.9, 0, 1.5, 1.9, 0, 1.5, -1.9, 0, 1.5, 0, 1.1, 0, 1.9, 0, 1.5, 0, 1.1, 0, 1.9, 0, -1.5], 3)); g.translate(0, 2.0, 0); lg(g, COL.roofs[1]);
+      for (let k = 0; k < 6; k++) { const lg2 = new THREE.CylinderGeometry(0.28, 0.28, 3.0, 6); lg2.rotateZ(Math.PI / 2); lg2.translate(0.2, 0.28 + Math.floor(k / 3) * 0.5, 3.0 + (k % 3) * 0.56 - (k > 2 ? 0.28 : 0)); lg(lg2, k % 2 ? '#8a6040' : '#79532f'); }
+      for (const k of [-1, 1]) { const st = new THREE.CylinderGeometry(0.4, 0.45, 0.5, 7); st.translate(k * 3.4, 0.25, -1.4); lg(st, '#9a7650'); }
+      lbx(3.4, 0.5, -1.4, 0.08, 0.7, 0.08, COL.woodDark); lbx(3.0, 1.0, -1.4, 0.6, 0.08, 0.1, COL.stoneDark);
+    } else if (w.kind === 'quarry') {
+      for (let k = 0; k < 4; k++) { const c = new THREE.ConeGeometry(1.2 - k * 0.15, 1.7 + (k % 2), 5); c.translate(-1.6 + k * 1.2, 0.9, -1.1 + (k % 2) * 0.9); lg(c, k % 2 ? COL.rock : COL.rockDark); }
+      for (let k = 0; k < 5; k++) lbx(-2.3 + (k % 3) * 1.15, Math.floor(k / 3) * 0.55, 1.6, 1.0, 0.55, 0.8, k % 2 ? COL.stoneLight : COL.stone);
+      for (const k of [-1, 1]) lbx(2.6 + k * 0.8, 0, -0.2, 0.18, 2.6, 0.18, COL.woodDark); lbx(2.6, 2.5, -0.2, 2.1, 0.16, 0.16, COL.woodDark); lbx(2.6, 1.0, -0.2, 0.05, 1.5, 0.05, COL.stoneDark);
+      lbx(2.7, 0.0, 1.7, 1.4, 0.7, 1.0, COL.wood); for (const k of [-1, 1]) { const wh = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 8); wh.rotateX(Math.PI / 2); wh.translate(2.7 + k * 0.5, 0.3, 2.2); lg(wh, COL.woodDark); wh.dispose; }
+    }
+  }
+
   function buildCity(M, L) {
     const accent = L.color, R = L.radius, rnd = mulberry(L.id * 7919 + 5);
     buildKeep(M, L);
     buildWalls(M, L, accent);
-    L.houses.forEach((h, i) => house(M, h, i, accent, L.tier));
+    buildSquare(M, L);
+    L.works.forEach(w => buildWork(M, w));
+    L.houses.forEach((h, i) => house(M, h, i, accent));
+    L.suburb.forEach((h, i) => house(M, h, i + 3, accent));
     // Market stalls
     for (const s of L.stalls) {
       for (const [ox, oz] of [[-0.9, -0.7], [0.9, -0.7], [0.9, 0.7], [-0.9, 0.7]]) { const c = Math.cos(s.rot), sn = Math.sin(s.rot); cyl(M, s.x + ox * c - oz * sn, 0, s.z + ox * sn + oz * c, 0.06, 0.06, 1.8, COL.woodDark, 4); }
