@@ -119,10 +119,10 @@ VM.CFG = {
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
   AI: {
     // odds = how many times stronger than a target's defence the AI wants to be before it attacks (it relaxes 10% a year without gains).
-    // Measured over 80 games each against four 'normal' rivals: easy wins about 13% of games, normal 25%, hard 33% (fair share is 20%).
+    // Measured over 20 to 30 games after the version 6 rescale (mixed levels): easy wins about 5 to 7% of games, normal and hard about 23 to 30% each (fair share is 20%).
     easy:   { think: 20, odds: 2.75, armiesMax: 2, guards: 1, mil: 0.04, spend: 0.35, reach: 520, search: false, abilities: false, depots: false },
     normal: { think: 10, odds: 1.8,  armiesMax: 3, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false },
-    hard:   { think: 5,  odds: 2.1,  armiesMax: 5, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false }
+    hard:   { think: 5,  odds: 1.8,  armiesMax: 5, guards: 1, mil: 0.06, spend: 0.5,  reach: 700, search: true,  abilities: true,  depots: false }
   },
   AI_RESERVE: 800,          // gold an AI keeps back when recruiting, so its governors can still afford to build
   AI_KEEP: 0.03,            // share of a city's people left as garrison when an army is formed there
