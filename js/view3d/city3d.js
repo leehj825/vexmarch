@@ -418,7 +418,7 @@ VM.City3D = (function () {
 
   function open(id) {
     if (!ensureRenderer()) return false;
-    cityId = id; sig = ''; sigA = ''; anchors.clear(); shown = true; cam.auto = true; cam.dist = 0;
+    cityId = id; sig = ''; sigA = ''; anchors.clear(); shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
     canvas.classList.add('on'); resize(); refresh(true);
     const foe = layout.armies.find(a => a.hostile) || layout.armies[0];                  // start by looking at the action
     if (foe) { cam.yaw = Math.atan2(-Math.cos(foe.angle), -Math.sin(foe.angle)) + 0.3; cam.auto = false; }

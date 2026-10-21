@@ -23,17 +23,9 @@ VM.CityLayout = (function () {
   const baseCapOf = city => VM.CFG.ECON.baseCap * VM.CFG.SPEC[city.spec].cap;
   function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 6000 ? 'city' : (c >= 4800 ? 'town' : 'hamlet')); }
 
-  // Up to three gates, one toward each of the most spread-out roads.
+  // One gate and one road for every road on the map, each facing the neighbouring node it leads to, so the city agrees with the map.
   function gatesOf(state, id) {
-    const adj = state.map.nodes[id].adj.map(n => ({ toward: n, angle: bearing(state, id, n) }));
-    if (adj.length <= 3) return adj.sort((a, b) => a.angle - b.angle);
-    const pick = [adj.reduce((a, b) => (b.toward < a.toward ? b : a), adj[0])];
-    while (pick.length < 3) {
-      let best = null, bd = -1;
-      for (const g of adj) { if (pick.includes(g)) continue; const d = Math.min(...pick.map(p => angDiff(p.angle, g.angle))); if (d > bd) { bd = d; best = g; } }
-      pick.push(best);
-    }
-    return pick.sort((a, b) => a.angle - b.angle);
+    return state.map.nodes[id].adj.map(n => ({ toward: n, angle: bearing(state, id, n) })).sort((a, b) => a.angle - b.angle);
   }
 
   function build(state, id) {
@@ -141,7 +133,7 @@ VM.CityLayout = (function () {
     for (let tries = 0; tries < 1500 && spots.length < 48; tries++) {
       const a = rH() * TAU, rr = 7.5 + Math.sqrt(rH()) * (R - 9.5), p = pol(rr, a);
       const rot = a + (rH() - 0.5) * 0.6, w = 1.6 + rH() * 0.8, d = 1.6 + rH() * 0.8, h = 1.1 + rH() * 0.7, roof = Math.floor(rH() * 3), chimney = rH() < 0.4;
-      if (gates.some(g => angDiff(g.angle, a) < 0.2 && rr > 5)) continue;           // leave the road into each gate clear
+      if (gates.some(g => angDiff(g.angle, a) < (gates.length > 4 ? 0.15 : 0.2) && rr > 5)) continue;           // leave the road into each gate clear
       if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 1.3)) continue;
       if (spots.some(h2 => Math.hypot(h2.x - p.x, h2.z - p.z) < 2.6)) continue;
       spots.push({ x: p.x, z: p.z, rot, w, d, h, roof, chimney });

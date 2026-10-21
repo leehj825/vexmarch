@@ -24,7 +24,7 @@ test('every city of every seed lays out without overlaps or NaN', () => {
       for (const o of all) assert(Number.isFinite(o.x) && Number.isFinite(o.z), `${seed}/${c.id} finite`);
       for (let i = 0; i < L.houses.length; i++) for (let j = i + 1; j < L.houses.length; j++) assert(Math.hypot(L.houses[i].x - L.houses[j].x, L.houses[i].z - L.houses[j].z) >= 2.6 - 1e-9, 'houses do not overlap');
       for (const h of L.houses) assert(Math.hypot(h.x, h.z) < L.radius, 'houses inside the walls');
-      assert(L.gates.length === Math.min(3, s.map.nodes[c.id].adj.length), 'one gate per road, at most three');
+      assert.strictEqual(L.gates.length, s.map.nodes[c.id].adj.length, 'one gate per road on the map');
       assert(L.housesWanted >= 4 && L.houses.length >= Math.min(L.housesWanted, 7), `houses ${L.houses.length}/${L.housesWanted}`);
     }
   }
@@ -172,6 +172,19 @@ test('the same city looks the same after a save and load, and on opening it agai
   const s = world(7), id = own(s).id, before = JSON.stringify(CL.build(s, id));
   const t = VM.Sim.load(VM.Sim.save(s)); assert.strictEqual(JSON.stringify(CL.build(t, id)), before);
   assert.strictEqual(JSON.stringify(CL.build(s, id)), before, 'building it twice gives the same picture');
+});
+
+
+test('the roads of the city are the roads of the map: one per neighbour, facing it', () => {
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const s = world(seed);
+    for (const n of s.map.nodes) {
+      const L = CL.build(s, n.id);
+      assert.strictEqual(L.roads.length, n.adj.length, `node ${n.id} of seed ${seed}`);
+      for (const nb of n.adj) assert(L.roads.some(r => r.toward === nb && CL.angDiff(r.angle, CL.bearing(s, n.id, nb)) < 1e-9), 'a road toward ' + nb);
+      assert.strictEqual(L.wall.segments.filter(g => g.gate).length >= n.adj.length, true, 'a gate in the wall for each road');
+    }
+  }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
