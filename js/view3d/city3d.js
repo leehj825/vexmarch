@@ -41,7 +41,7 @@ VM.City3D = (function () {
   function TexMerger() { this.by = {}; this.tris = 0; }
   TexMerger.prototype.add = function (key, x, y, z, rot, sx, sy, sz) {            // model with its front toward +z, scaled, turned about Y by rot, set down at (x, y, z)
     if (!VM.StructModels) return;
-    const g = structGeo(key), B = this.by[g.t] || (this.by[g.t] = { pos: [], nor: [], uv: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
+    const g = structGeo(key), gk = key === 'wall' ? 'wall' : g.t, B = this.by[gk] || (this.by[gk] = { pos: [], nor: [], uv: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
     sx = sx || 1; sy = sy || sx; sz = sz || sx;
     for (let i = 0; i < g.p.length; i += 3) {
       const px = g.p[i] * sx, py = g.p[i + 1] * sy, pz = g.p[i + 2] * sz, nx = g.n[i], ny = g.n[i + 1], nz = g.n[i + 2];
@@ -56,7 +56,13 @@ VM.City3D = (function () {
       const B = this.by[t], geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(B.nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
       geo.setIndex(B.idx);
-      if (!structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
+      if (t === 'wall' && !structMats.wall) {                                      // the brick wall, turned into grey castle stone: the texture's light and dark, none of its red
+        const tex = new THREE.TextureLoader().load(VM.StructModels.tex.t3); tex.flipY = true;
+        const m = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x2c2c30), side: THREE.DoubleSide });
+        m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = vec3(l * 0.95, l * 0.95, l) * 0.8; }'); };
+        m.customProgramCacheKey = () => 'vmwall'; m.userData.shared = true; structMats.wall = m;
+      }
+      if (t !== 'wall' && !structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
       return new THREE.Mesh(geo, structMats[t]);
     });
   };
