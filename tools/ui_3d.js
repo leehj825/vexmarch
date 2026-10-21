@@ -53,6 +53,17 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await p.waitForTimeout(1200);
     info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'worst-case draw calls ' + info.calls); ok(info.triangles < 60000, 'worst-case triangles ' + info.triangles); ok(info.soldiers <= 200, 'soldiers ' + info.soldiers);
     ok((await ev(() => VM.City3D.layout().armies.length)) === 2, 'both armies are in the scene');
+    // Opening the city again does not rearrange it: fields, houses and scenery stay where they were while the game goes on
+    const pic = () => ev(() => { const L = VM.City3D.layout(); return JSON.stringify({ f: L.fields.map(x => [x.x, x.z]), h: L.houses.map(x => [x.x, x.z]), s: L.features.map(x => [x.kind, x.x, x.z]) }); });
+    await ev(c => { __vm.closeCity(); __vm.openCity(c); __vm.speed = 0; }, cap); await p.waitForTimeout(400);
+    const pic0 = JSON.parse(await pic());
+    await ev(c => { const s = __vm.state, city = s.cities[c]; city.buildings.farm = Math.min(3, city.buildings.farm + 1); city.pop = Math.min(VM.Eco.cap(city), city.pop + 900); }, cap);
+    for (let i = 0; i < 3; i++) { await ev(c => { __vm.closeCity(); __vm.openCity(c); __vm.speed = 0; }, cap); await p.waitForTimeout(300); }
+    const pic1 = JSON.parse(await pic());
+    ok(JSON.stringify(pic1.s) === JSON.stringify(pic0.s), 'scenery did not move when the city was opened again');
+    ok(pic0.f.every((f, i) => pic1.f[i] && pic1.f[i][0] === f[0] && pic1.f[i][1] === f[1]), 'the old fields did not move');
+    ok(pic0.h.every((h, i) => pic1.h[i] && pic1.h[i][0] === h[0] && pic1.h[i][1] === h[1]), 'the old houses did not move');
+
     // A column marching in on the road, a battle at the gate, soldiers of every kind
     await ev(c => { const s = __vm.state, T = o => Object.assign({ infantry: 0, spear: 0, cavalry: 0, archer: 0, siege: 0 }, o), foe = s.factions.find(f => !f.neutral && f.id !== s.player).id;
       s.armies.splice(0, s.armies.length); s.officers.forEach(o => { o.army = null; if (o.role === 'commander') o.role = 'idle'; });
