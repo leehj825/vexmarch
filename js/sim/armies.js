@@ -57,7 +57,7 @@ VM.Armies = (function () {
     const army = { id: state.nextArmy++, owner: faction, officer: o.id, troops, home: at, at, edge: null, path: [], dest: null,
       morale: 100, rations: 0, fighting: [], routed: false, retreat: 0, buff: null, abilityReady: 0, supply: null,
       order: 'hold', station: null, nextThink: 0, rest: false, peak: 0 };
-    army.rations = sizeOf(army) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays; army.peak = sizeOf(army);
+    army.rationDays = VM.CFG.WAR.rationDays; army.rations = sizeOf(army) * VM.CFG.ECON.foodPerHead * army.rationDays; army.peak = sizeOf(army);
     o.army = army.id; o.role = 'commander'; o.loc = at;
     state.armies.push(army);
     return army;
@@ -100,8 +100,17 @@ VM.Armies = (function () {
     return { ok: true, army: army.id };
   }
 
+  // An army marching out from one of its own cities to attack takes extra food along, up to a campaign's worth, out of the faction's stock
+  function provision(state, a, to) {
+    if (a.at === null || state.cities[a.at].owner !== a.owner || state.cities[to].owner === a.owner) return;
+    const W = VM.CFG.WAR, E = VM.CFG.ECON, f = state.factions[a.owner], per = sizeOf(a) * E.foodPerHead, want = per * W.campaignDays - a.rations;
+    const take = Math.min(want, Math.max(0, f.food * 0.5)); if (take <= 0) return;
+    f.food -= take; a.rations += take; a.rationDays = Math.max(a.rationDays || W.rationDays, a.rations / per);
+  }
+
   function move(state, army, to) {
     if (!state.cities[to]) return { ok: false, reason: 'no such place' };
+    if (army.at !== null && !army.routed) provision(state, army, to);
     if (army.routed) return { ok: false, reason: 'the army is routed and fleeing' };
     if (army.fighting.length) { army.morale = Math.max(1, army.morale - 10); army.fighting = []; army.retreat = 2; }   // breaking off a battle costs morale
     if (army.at !== null) {
@@ -146,7 +155,7 @@ VM.Armies = (function () {
       const n = Math.min(want, Math.floor(city.garrison[type] + 1e-9)); if (n < 1) return { ok: false, reason: 'none of that kind in the garrison' };
       city.garrison[type] -= n; a.troops[type] = (a.troops[type] || 0) + n;
       a.morale = (a.morale * size + 100 * n) / (size + n);
-      a.rations = Math.min((size + n) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays, a.rations + n * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
+      a.rations = Math.min((size + n) * VM.CFG.ECON.foodPerHead * (a.rationDays || VM.CFG.WAR.rationDays), a.rations + n * VM.CFG.ECON.foodPerHead * (a.rationDays || VM.CFG.WAR.rationDays));
       a.peak = Math.max(a.peak, size + n);
       return { ok: true, moved: n };
     }
@@ -167,7 +176,7 @@ VM.Armies = (function () {
     if (take < 1) return { ok: false, reason: 'no spare troops' };
     const n0 = sizeOf(a), got = takeFrom(city.garrison, take); for (const k in got) a.troops[k] = (a.troops[k] || 0) + got[k];
     a.morale = (a.morale * n0 + 100 * take) / (n0 + take);
-    a.rations = Math.min(sizeOf(a) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays, a.rations + take * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
+    a.rations = Math.min(sizeOf(a) * VM.CFG.ECON.foodPerHead * (a.rationDays || VM.CFG.WAR.rationDays), a.rations + take * VM.CFG.ECON.foodPerHead * (a.rationDays || VM.CFG.WAR.rationDays));
     a.peak = Math.max(a.peak, sizeOf(a));
     return { ok: true, added: take };
   }
@@ -180,7 +189,7 @@ VM.Armies = (function () {
     const na = sizeOf(a), nb = sizeOf(b), oa = state.officers[a.officer], ob = state.officers[b.officer];
     for (const k in b.troops) a.troops[k] = (a.troops[k] || 0) + b.troops[k];
     a.morale = (a.morale * na + b.morale * nb) / (na + nb);
-    a.rations = Math.min(a.rations + b.rations, sizeOf(a) * VM.CFG.ECON.foodPerHead * VM.CFG.WAR.rationDays);
+    a.rationDays = Math.max(a.rationDays || 0, b.rationDays || 0); a.rations = Math.min(a.rations + b.rations, sizeOf(a) * VM.CFG.ECON.foodPerHead * a.rationDays);
     a.peak = Math.max(a.peak, sizeOf(a));
     if (ob.command > oa.command) { oa.army = null; oa.role = 'idle'; oa.loc = a.at; ob.army = a.id; a.officer = ob.id; } else { ob.army = null; ob.role = 'idle'; ob.loc = a.at; }
     state.armies.splice(state.armies.indexOf(b), 1);

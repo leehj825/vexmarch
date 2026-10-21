@@ -332,5 +332,65 @@ test('war is deterministic and survives save/load mid-battle', () => {
   const c = VM.Sim.load(VM.Sim.save(a)); bot.run(a, 300); bot.run(c, 300); assert.strictEqual(VM.Sim.hash(a), VM.Sim.hash(c));
 });
 
+// ---- Roles, walls, sorties, food and retreat (version 6 tactics) ----
+test('roles: archers behind a firm line are hit less than the infantry in front; engines do not fight in the field', () => {
+  let inf = 0, arc = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const s = world(seed), x = neutralNode(s), a = army(s, 1, x, { infantry: 30, archer: 30 }), b = army(s, 2, x, { infantry: 60 });
+    run(s, 4); if (!alive(s, a)) continue; inf += 30 - a.troops.infantry; arc += 30 - a.troops.archer;
+  }
+  assert(inf > arc * 1.5, `the line takes the blows (infantry lost ${inf}, archers ${arc})`);
+  assert.strictEqual(VM.War.power(T({ siege: 10 }), T({ infantry: 10 })), 0, 'siege engines add nothing in a field fight');
+  const s = world(), x = neutralNode(s), e = army(s, 1, x, { infantry: 20, siege: 6 }), f = army(s, 2, x, { infantry: 20 }); run(s, 3);
+  assert(e.troops.siege >= 5, 'engines stay behind the fighting: ' + e.troops.siege);
+});
+
+test('roles: cavalry charge, fall back and swing round (their strength comes and goes), and a flanking officer hits harder', () => {
+  const s = world(), x = neutralNode(s), a = army(s, 1, x, { cavalry: 10 }, { trait: 'Rash' }), vals = [];
+  for (let i = 0; i < 64; i++) { vals.push(VM.War.cavMult(s, a)); s.time += 0.125; }
+  assert(Math.max(...vals) >= 2 && Math.min(...vals) <= 0.3, 'they surge and fall back: ' + Math.min(...vals) + ' to ' + Math.max(...vals));
+  const b = army(s, 1, x, { cavalry: 10 }, { trait: 'Cautious', command: 30 }); assert(VM.War.flanker(s, a) && !VM.War.flanker(s, b), 'Rash flanks, Cautious does not');
+});
+
+test('walls: archers on the wall make a siege costly; when the gate falls the defenders fight in the open and a breach is announced', () => {
+  const lost = wall => { const { s, x, c } = siegeWorld(wall, 10); c.garrison = T({ infantry: 5, archer: 10 }); const a = army(s, 1, x, { infantry: 40 }); const n0 = size(a); run(s, 6); return n0 - size(a); };
+  assert(lost(2) > lost(0) * 1.3, `the wall costs the attacker more (${lost(2)} vs ${lost(0)})`);
+  const { s, x, c } = siegeWorld(1, 20); c.wallHp = 5; army(s, 1, x, { infantry: 60 }); run(s, 3);
+  assert(s.events.some(e => e.type === 'breach' && e.city === x), 'the breach is an event'); assert(c.wallHp === 0);
+});
+
+test('walls: an army inside stays behind them with the garrison unless its officer sorties; a sortie fights in the open', () => {
+  const { s, x, c } = siegeWorld(2, 10); c.owner = 2; c.garrison = T({ infantry: 5, archer: 8 }); c.governor = null;
+  const d = army(s, 2, x, { infantry: 20, archer: 10 }, { trait: 'Cautious' }), a = army(s, 1, x, { infantry: 30 });
+  d.sortie = false; run(s, 1); assert(!d.fighting.length && !a.fighting.length, 'nobody fights in the open while the wall stands');
+  assert(c.wallHp < VM.War.wallMax(c) || size(a) < 30, 'the besiegers meet the gate and the wall-top archers');
+  d.sortie = true; run(s, 1); assert(d.fighting.length && a.fighting.length, 'the sortie meets them in the open');
+  // the decision itself: a brave officer who is stronger rides out, a cautious one who is weaker stays in
+  const mk = trait => { const w = siegeWorld(2, 10); w.c.owner = 2; w.c.governor = null; w.c.garrison = T({}); const dd = army(w.s, 2, w.x, { infantry: 40 }, { trait }); army(w.s, 1, w.x, { infantry: 20 }); VM.War.updateZones(w.s); run(w.s, 0.5); VM.Officers.armyThink ? null : null; return { w, dd }; };
+  const b = mk('Brave'); VM.Sim.advance(b.w.s, 2); assert(b.dd.sortie === true, 'a brave officer, twice as strong, rides out');
+  const k = (() => { const w = siegeWorld(2, 10); w.c.owner = 2; w.c.governor = null; w.c.garrison = T({}); const dd = army(w.s, 2, w.x, { infantry: 20 }, { trait: 'Cautious' }); army(w.s, 1, w.x, { infantry: 30 }); VM.War.updateZones(w.s); VM.Sim.advance(w.s, 2); return dd; })();
+  assert(k.sortie === false, 'a cautious officer, weaker, stays behind the walls');
+});
+
+test('food: an army marching out to attack takes a campaign of food from the stock; marching home takes none', () => {
+  const s = world(), f = s.factions[1], home = f.capital, foe = s.cities.find(c => c.owner !== 1 && c.owner !== 0);
+  const a = army(s, 1, home, { infantry: 30 }), r0 = a.rations, f0 = f.food; VM.Armies.move(s, a, foe.id);
+  const per = 30 * VM.CFG.ECON.foodPerHead;
+  assert(a.rations > r0 && f.food < f0 && Math.abs(a.rations - per * VM.CFG.WAR.campaignDays) < 1e-6, `it carries ${Math.round(a.rations / per)} days now (was ${Math.round(r0 / per)})`);
+  assert(a.rationDays >= VM.CFG.WAR.campaignDays - 1e-6, 'and can carry that much');
+  const b = army(s, 1, home, { infantry: 30 }), own = s.cities.find(c => c.owner === 1 && c.id !== home), rb = b.rations; VM.Armies.move(s, b, own.id); assert.strictEqual(b.rations, rb);
+});
+
+test('retreat: only food or morale pulls an army back; how low the morale may fall depends on the officer', () => {
+  const s = world(), home = s.factions[1].capital;
+  const a = army(s, 1, home, { infantry: 30 }, { trait: 'Rash' }), b = army(s, 1, home, { infantry: 30 }, { trait: 'Cautious' }), c = army(s, 1, home, { infantry: 30 }, { trait: 'Loyal' });
+  for (const x of [a, b, c]) { x.morale = 20; x.supply = { line: 'ok', starving: false, mult: 1 }; }
+  assert(!VM.War.retreatReason(s, a), 'Rash fights on at 20'); assert.strictEqual(VM.War.retreatReason(s, b), 'morale'); assert.strictEqual(VM.War.retreatReason(s, c), 'morale', 'an ordinary officer pulls back below 28');
+  c.morale = 60; assert(!VM.War.retreatReason(s, c));
+  c.supply = { line: 'cut', starving: false, mult: 3, depot: null }; c.rations = 30 * 0.1 * 3 * 10; assert(!VM.War.retreatReason(s, c), 'cut off but with ten days of food: no retreat');
+  c.rations = 30 * 0.1 * 3 * 2; assert.strictEqual(VM.War.retreatReason(s, c), 'food', 'two days of food left: back');
+  c.size; c.troops.infantry = 5; c.morale = 60; c.supply = { line: 'ok', starving: false, mult: 1 }; assert(!VM.War.retreatReason(s, c), 'losses alone are no reason');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

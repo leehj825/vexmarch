@@ -327,28 +327,39 @@ VM.City3D = (function () {
   function buildDynamic(L) {
     const m = soldierModels(), D = { group: new THREE.Group(), entries: [], engines: [], flags: [], shots: [], puffs: [], armies: L.armies };
     const wallH = wallHeight(L.wall.level), gc = new THREE.Color(L.color), E = D.entries;
-    // Garrison
-    for (let i = 0; i < L.garrison.visible; i++) {
-      const type = ['infantry', 'archer', 'spear'][i % 3];
-      if (L.garrison.onWall) { const a = (i + 0.5) / L.garrison.visible * TAU, p = polar(L.radius, a); E.push({ type, fx: p[0], fz: p[1], fy: wallH, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
+    // Garrison: archers on the wall top and the rest behind the gate on the side that is attacked (a calm city has them spread round the wall); when the gate
+    // falls the foot come forward to meet the attackers in the breach
+    const att = L.armies.find(a => a.assault), breach = L.armies.some(a => a.breach), gl = [];
+    for (const k of ['archer', 'spear', 'infantry', 'cavalry']) for (let n = 0; n < (L.garrison.mix[k] || 0); n++) gl.push(k);
+    let ia = 0, ib = 0;
+    gl.forEach((type, i) => {
+      const spread = (n, step) => ((n % 9) - 4) * step + (Math.floor(n / 9) % 2) * step * 0.5;
+      if (L.garrison.onWall && att && type === 'archer') { const a = att.angle + spread(ia++, 0.075), p = polar(L.radius, a); E.push({ type, fx: p[0], fz: p[1], fy: wallH, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
+      else if (L.garrison.onWall && att) {
+        const row = Math.floor(ib / 9), a = att.angle + spread(ib++, 0.09), p = polar(breach ? L.radius * 0.8 - row * 1.5 : L.radius - 3.4 - row * 1.5, a);
+        E.push({ type, fx: p[0], fz: p[1], fy: 0, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' });
+      } else if (L.garrison.onWall) { const a = (i + 0.5) / gl.length * TAU, p = polar(L.radius, a); E.push({ type, fx: p[0], fz: p[1], fy: wallH, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
       else { const a = i * 2.4, p = polar(9 + (i % 4) * 1.8, a); E.push({ type, fx: p[0], fz: p[1], fy: 0, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
-    }
+    });
     // Armies
     L.armies.forEach((A, ai) => {
       const col = new THREE.Color(A.color), keys = ['infantry', 'spear', 'archer', 'cavalry'];
       let order = []; for (const k of keys) for (let n = 0; n < A.mix[k]; n++) order.push(k);
-      const cols = Math.max(2, Math.ceil(Math.sqrt(A.soldiers * 1.6)));
-      // cavalry on the flanks, archers behind, foot in front
-      const rank = { infantry: 0, spear: 1, archer: 2, cavalry: 0 };
-      order = order.map((type, i) => ({ type, i })).sort((p, q) => rank[p.type] - rank[q.type] || p.i - q.i);
-      order.forEach(({ type }, i) => {
-        const r = Math.floor(i / cols), c = i % cols, rankId = i, lat = (c - (cols - 1) / 2) * (type === 'cavalry' ? 1.8 : 1.3);
-        E.push({ type, aid: A.id, lat, depth: r * 1.5, color: col, phase: i + ai * 7, rank: rankId, mode: A.mode, hostile: A.hostile, routed: A.routed, out: A.moving === 'out' });
+      // Roles: infantry and spearmen form the front, archers stand in the rows behind them, cavalry wait on the wings (and charge, fall back and swing round: see pose)
+      const foot = order.filter(t => t !== 'cavalry'), horse = order.filter(t => t === 'cavalry').length, cols = Math.max(2, Math.ceil(Math.sqrt(foot.length * 1.6)));
+      const line = foot.filter(t => t !== 'archer'), rowsLine = Math.ceil(line.length / cols);
+      let li = 0, ar = 0, ci = 0, idx = 0;
+      order.forEach((type, i) => {
+        let lat, depth, rank = idx++;
+        if (type === 'cavalry') { const side = ci % 2 ? 1 : -1; lat = side * ((cols - 1) / 2 * 1.3 + 3.2 + Math.floor(ci / 2) * 1.9); depth = 0; ci++; E.push({ type, aid: A.id, lat, depth, color: col, phase: i + ai * 7, rank, mode: A.mode, hostile: A.hostile, routed: A.routed, out: A.moving === 'out', cav: true, side }); return; }
+        if (type === 'archer') { const r = Math.floor(ar / cols), c = ar % cols; lat = (c - (cols - 1) / 2) * 1.3; depth = rowsLine * 1.5 + 3 + r * 1.5; ar++; }
+        else { const r = Math.floor(li / cols), c = li % cols; lat = (c - (cols - 1) / 2) * 1.3; depth = r * 1.5; li++; }
+        E.push({ type, aid: A.id, lat, depth, color: col, phase: i + ai * 7, rank, mode: A.mode, hostile: A.hostile, routed: A.routed, out: A.moving === 'out' });
       });
       for (let k = 0; k < A.fallen; k++) E.push({ type: 'infantry', aid: A.id, lat: ((k * 37) % 11 - 5) * 1.2, depth: -2 - (k % 3) * 1.2, color: col.clone().multiplyScalar(0.55), phase: k, mode: 'fallen', fallen: true });
       for (let k = 0; k < A.siege; k++) {
         const grp = new THREE.Group(), base = new THREE.Mesh(m.engineBase, m.mats.fixed), arm = new THREE.Group(); arm.position.set(0, 1.6, 0); arm.add(new THREE.Mesh(m.engineArm, m.mats.fixed)); grp.add(base); grp.add(arm); D.group.add(grp);
-        D.engines.push({ grp, arm, aid: A.id, lat: (k - (A.siege - 1) / 2) * 4.2, depth: Math.ceil(A.soldiers / cols) * 1.5 + 3, phase: k * 1.7 + ai, firing: A.mode === 'besieging', hostile: A.hostile, fired: false, out: A.moving === 'out' });
+        D.engines.push({ grp, arm, aid: A.id, lat: (k - (A.siege - 1) / 2) * 4.2, depth: (rowsLine + Math.ceil(Math.max(0, foot.length - line.length) / cols)) * 1.5 + 6, phase: k * 1.7 + ai, firing: A.mode === 'besieging', hostile: A.hostile, fired: false, out: A.moving === 'out' });
       }
       if (A.assault && !A.breach && L.wall.level > 0) {                      // ladders against the wall where the army attacks
         for (let k = -1; k <= 1; k++) {
@@ -413,7 +424,18 @@ VM.City3D = (function () {
         const dd2 = (an.d + depth) + (tgtD - (an.d + depth)) * k, ll = lat + (tgtLat - lat) * k, p = polarXZ(dd2, an.angle, ll);
         return [p[0], 0, p[1], toCity, 0, u <= 0 ? 'idle' : fight ? (e.phase % 5 === 4 ? 'block' : 'attack') : 'run'];
       }
-      case 'fighting': st = (e.phase + Math.floor(t * 0.4)) % 5 === 4 ? 'block' : 'attack'; depth -= 0.3; break;
+      case 'fighting': {
+        if (e.cav && A && A.cavPh !== undefined) {                                  // cavalry charge into the line, fall back, then swing round the flank to strike from behind (or regroup and charge again)
+          const foe = layout.armies.find(x => A.engaged.includes(x.id)), F = (foe ? foe.rows : 4) * 1.5, ph = A.cavPh, w = e.side, lerp = (a, b, u) => a + (b - a) * u * u * (3 - 2 * u);
+          let fwd, lt = lat;
+          if (ph < 0.3) { const u = ph / 0.3; fwd = lerp(-6, 4.2, u); lt = lat * lerp(1, 0.55, u); st = u > 0.55 ? 'attack' : 'run'; }
+          else if (ph < 0.55) { const u = (ph - 0.3) / 0.25; fwd = lerp(4.2, -8, u); lt = lat * lerp(0.55, 1.2, u); st = 'run'; }
+          else if (ph < 0.8) { const u = (ph - 0.55) / 0.25; if (A.flank) { fwd = lerp(-8, 2.2 + F * 0.55, u); lt = w * lerp(Math.abs(lat), Math.abs(lat) + 9, Math.sin(u * Math.PI)) + (lat - w * Math.abs(lat)) * 0; st = 'run'; } else { fwd = lerp(-8, -5, u); lt = lat; st = 'walk'; } }
+          else { const u = (ph - 0.8) / 0.2; if (A.flank) { fwd = lerp(2.2 + F * 0.55, 2.2 + F + 2.5, u); lt = lerp(w * (Math.abs(lat) + 5), w * 2.5, u); st = u > 0.35 ? 'attack' : 'run'; } else { fwd = lerp(-5, 3, u); lt = lerp(lat, lat * 0.6, u); st = u > 0.6 ? 'attack' : 'run'; } }
+          depth = -fwd; lat = lt;
+        } else { st = (e.phase + Math.floor(t * 0.4)) % 5 === 4 ? 'block' : 'attack'; depth -= 0.3; }
+        break;
+      }
       case 'fallen': st = 'die'; yaw = e.phase; break;
     }
     if (e.routed) { st = 'run'; yaw = outward; }
@@ -434,7 +456,7 @@ VM.City3D = (function () {
 
   function animate(dt) {
     if (!dyn) return;
-    const o = o3(), byId = {}; for (const A of dyn.armies) byId[A.id] = A;
+    const o = o3(), byId = {}; for (const A of layout.armies) byId[A.id] = A;
     for (const A of layout.armies) { if (A.assault) { if (!assaultSince.has(A.id)) assaultSince.set(A.id, t); } else assaultSince.delete(A.id); }
     for (const A of layout.armies) {
       const an = anchors.get(A.id); if (!an) continue;

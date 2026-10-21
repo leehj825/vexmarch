@@ -145,6 +145,7 @@ var LANG_KO = {
 "{a} has been destroyed": "{a} 세력이 멸망했습니다",
 "{a} has deserted to {b}!": "{a}이(가) {b}에게 달아났습니다!",
 "{a} has fallen to {b}!": "{a}이(가) {b}에게 함락되었습니다!",
+"The gate of {a} has been broken! Your defenders come out to fight.": "{a}의 성문이 뚫렸습니다! 수비대가 나가 싸웁니다.", "The gate of {a} is down!": "{a}의 성문이 무너졌습니다!",
 "{b} has fallen to {a}!": "{b}이(가) {a}에게 함락되었습니다!",
 "{a} has joined you in {b}": "{a}이(가) {b}에서 당신의 휘하에 들었습니다",
 "{a} is under siege!": "{a}이(가) 포위당하고 있습니다!",

@@ -50,10 +50,13 @@ VM.CityLayout = (function () {
       rem.sort((p, q) => q[0] - p[0]).slice(0, left).forEach(([, k]) => { out[k]++; });
       return out;
     };
+    // An army of the city's own that stays behind the walls while the city is besieged is drawn as part of the garrison, on the wall and at the gate
+    const besiegedBy = state.armies.some(e => e.owner !== city.owner && e.at === id && !e.routed && W.sieging(e)), inside = { infantry: 0, spear: 0, archer: 0, cavalry: 0 };
     for (const a of state.armies) {
       const atNode = a.at === id, onRoad = !atNode && a.edge && (a.edge.to === id || a.edge.from === id);
       if (!atNode && !onRoad) continue;
       const hostile = a.owner !== city.owner, size = VM.Armies.sizeOf(a);
+      if (atNode && !hostile && besiegedBy && W.inWalls(state, a)) { for (const k in inside) inside[k] += Math.round(a.troops[k] || 0); continue; }
       let ang = main, d, moving = null;
       if (atNode) {
         if (hostile) {
@@ -72,7 +75,7 @@ VM.CityLayout = (function () {
       }
       const foot = size - (a.troops.siege || 0), soldiers = foot < 0.5 ? 0 : Math.min(120, Math.round(foot));                  // one figure for every soldier
       armies.push({ id: a.id, owner: a.owner, color: state.factions[a.owner].color, hostile, angle: ang, d, size, soldiers, mix: mixOf(a, soldiers), siege: Math.min(6, Math.round(a.troops.siege || 0)),
-        fallen: Math.min(30, Math.round(Math.max(0, (a.peak || size) - size))), moving,
+        fallen: Math.min(30, Math.round(Math.max(0, (a.peak || size) - size))), moving, cavPh: VM.War.cavPhase(state, a), flank: VM.War.flanker(state, a), rows: Math.ceil(soldiers / Math.max(2, Math.ceil(Math.sqrt(soldiers * 1.6)))),
         mode: a.fighting.length ? 'fighting' : (moving ? 'march' : (hostile && W.sieging(a) ? 'besieging' : 'camp')), routed: a.routed, engaged: a.fighting.slice() });
     }
     // Armies in battle meet: a defender fighting an attacker stands in the attacker's line, facing it
@@ -212,10 +215,11 @@ VM.CityLayout = (function () {
 
     // Garrison on the wall (or around the keep without one)
     const gtotal = E.troopsOf(city.garrison);
-    L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal - (city.garrison.siege || 0)), 0, 60), onWall: wlvl > 0 };
+    const gm = {}; for (const k of ['infantry', 'spear', 'archer', 'cavalry']) gm[k] = Math.round((city.garrison[k] || 0) + inside[k]);
+    L.garrison = { total: gtotal, visible: clamp(gm.infantry + gm.spear + gm.archer + gm.cavalry, 0, 90), mix: gm, onWall: wlvl > 0 };
     L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0, L.smith.on ? 1 : 0, stage, L.suburb.length, L.works.map(w => w.kind[0]).join(''),
       L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', city.besieged ? 1 : 0].join('/');
-    L.sigArmies = [L.garrison.visible, L.assault ? 1 : 0, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10), a.breach ? 1 : 0].join(':')).join('|')].join('/');
+    L.sigArmies = [L.garrison.visible, Object.values(L.garrison.mix).join(','), L.assault ? 1 : 0, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10), a.breach ? 1 : 0].join(':')).join('|')].join('/');
     L.sig = L.sigStatic + '#' + L.sigArmies;
     return L;
   }

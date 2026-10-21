@@ -94,12 +94,14 @@ VM.CFG = {
     contact: 16,            // map units: armies this close are in battle
     k: 0.035,               // casualties per day = k x effective strength of the enemy
     strong: 1.4, weak: 0.7, // matchup multipliers
-    siegeField: 0.25,       // siege engines fight at this strength against troops
+    siegeField: 0,          // siege engines fight at this strength against troops: none, they only break gates and walls and stay behind the line
+    archerField: 1.15,      // what archers add when they shoot freely from behind a line or a wall
+    wallArcher: 1.5,        // archers on a wall top shoot this much better than in the field
     cmdBonus: 0.4,          // officer Command 100 = +40% strength
     home: 1.15,             // defender on its own land
     moraleRate: 8,          // morale lost per day at even odds (scaled by the odds, 0.3x to 3x)
     wallHp: [0, 600, 1500, 3000],
-    wallBonus: 1.5,         // garrison strength behind an unbroken wall
+    wallBonus: 1.3,         // garrison strength behind an unbroken wall (the archers on it add more)
     wallProtect: 0.35,      // share of normal damage the garrison takes while the wall stands
     siegeWall: 4,           // wall hit points per siege engine per day
     chip: 1.5,              // wall hit points per other soldier per day
@@ -107,7 +109,10 @@ VM.CFG = {
     captureMin: 0,          // garrison at or below this falls
     captureLoss: 0.15,      // population lost when a city is taken
     foreignFood: 3,         // food eaten per soldier in enemy or neutral land
-    rationDays: 12,         // days of food an army carries
+    rationDays: 12,         // days of food an army carries by default
+    campaignDays: 30,       // days of food its officer takes along when it marches out to attack (taken from the faction's stock)
+    retreatFoodDays: 4,     // a cut-off army falls back when its food would last no longer than this
+    retreatMorale: { Rash: 12, Brave: 18, other: 28, Cautious: 40 },   // below this morale the officer pulls back (by trait)
     refill: 4,              // rations refill speed when supplied (x consumption)
     cutDrain: 3, starveDrain: 8, recover: 1,   // morale per day: line cut / no food / recovery when safe
     desert: 0.02,           // troops lost per day while starving
@@ -145,6 +150,7 @@ VM.CFG = {
     proposalEvery: 40, proposalExpires: 20, proposalMax: 5,
     // Attack odds (my strength / theirs) an officer wants before acting alone, by trait
     odds: { Rash: 0.8, Brave: 0.9, Cautious: 1.6, other: 1.15 },
+    sortieOdds: { Rash: 0.9, Brave: 1.1, Cautious: 2.2, other: 1.6 },   // how much stronger than the besiegers an officer must be to ride out of his walls
     raidOdds: { Rash: 1.0, Brave: 1.2, Cautious: 2.2, other: 1.5 },
     garrisonTarget: { develop: 0.03, fortify: 0.06, recruit: 0.10 },
     recruitBatch: 6

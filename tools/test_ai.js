@@ -11,7 +11,7 @@ const size = a => VM.Armies.sizeOf(a);
 const run = (s, d) => VM.Sim.advance(s, d);
 const nodesOf = (s, f) => s.cities.filter(c => c.owner === f).length;
 function officer(s, owner, stats) {
-  const o = s.officers.find(x => x.owner === owner && x.army === null && x.role === 'idle' && !x._used) || s.officers.find(x => x.owner === 0 && x.army === null && !x._used);
+  const o = s.officers.find(x => x.owner === owner && x.army === null && x.role === 'idle' && !x._used) || s.officers.find(x => x.owner === 0 && x.army === null && !x._used) || s.officers.find(x => x.owner !== -1 && x.army === null && !x._used);
   o._used = true; o.owner = owner; Object.assign(o, { command: 60, might: 40, intellect: 40, politics: 50, trait: 'Cautious' }, stats || {}); return o;
 }
 const army = (s, owner, at, troops, stats) => VM.Armies.spawn(s, owner, at, T(troops), officer(s, owner, stats).id);

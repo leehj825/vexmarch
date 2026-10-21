@@ -140,10 +140,7 @@ VM.AI = (function () {
     });
   }
 
-  function weary(a) {
-    const s = a.supply;
-    return a.morale < 35 || (s && ((s.line !== 'ok' && !s.depot) || s.starving)) || VM.Armies.sizeOf(a) < 0.4 * a.peak;
-  }
+  function weary(state, a) { return !!VM.War.retreatReason(state, a); }
 
   function strikeForce(state, f, D) {
     const m = f.ai, strikes = armiesOf(state, f).filter(a => a.ai === 'strike' && !a.routed);
@@ -153,7 +150,7 @@ VM.AI = (function () {
       const o = state.officers[a.officer];
       if (D.abilities && (a.fighting.length || (a.at !== null && VM.War.sieging(a) && state.cities[a.at].owner !== f.id)) && state.time >= a.abilityReady) exec(state, f, { type: 'ability', army: a.id });
       if (!a.fighting.length) {
-        if (weary(a) && !a.rest) { a.rest = true; m.plan = m.plan && m.plan.armies.includes(a.id) ? null : m.plan; }
+        if (weary(state, a) && !a.rest) { a.rest = true; m.plan = m.plan && m.plan.armies.includes(a.id) ? null : m.plan; }
         if (a.rest) {
           if (a.morale >= 85 && !(a.supply && a.supply.line !== 'ok')) a.rest = false;
           else { const home = nearestOwn(state, f, originOf(a)); if (home >= 0 && a.dest !== home && !(a.at === home)) VM.Armies.move(state, a, home); }

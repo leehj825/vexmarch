@@ -52,7 +52,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     }, cap);
     await p.waitForTimeout(1200);
     info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'worst-case draw calls ' + info.calls); ok(info.triangles < 150000, 'worst-case triangles ' + info.triangles); ok(info.soldiers <= 200, 'soldiers ' + info.soldiers);
-    ok((await ev(() => VM.City3D.layout().armies.length)) === 2, 'both armies are in the scene');
+    ok((await ev(() => VM.City3D.layout().armies.length)) === 1, 'the besieger is an army in the scene; the army behind the wall is part of the garrison'); ok((await ev(() => VM.City3D.layout().garrison.visible)) >= 80, 'and the garrison shows both');
     // Opening the city again does not rearrange it: fields, houses and scenery stay where they were while the game goes on
     const pic = () => ev(() => { const L = VM.City3D.layout(); return JSON.stringify({ f: L.fields.map(x => [x.x, x.z]), h: L.houses.map(x => [x.x, x.z]), s: L.features.map(x => [x.kind, x.x, x.z]) }); });
     await ev(c => { __vm.closeCity(); __vm.openCity(c); __vm.speed = 0; }, cap); await p.waitForTimeout(400);
