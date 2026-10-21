@@ -56,8 +56,9 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     // Opening the city again does not rearrange it: fields, houses and scenery stay where they were while the game goes on
     const pic = () => ev(() => { const L = VM.City3D.layout(); return JSON.stringify({ f: L.fields.map(x => [x.x, x.z]), h: L.houses.map(x => [x.x, x.z]), s: L.features.map(x => [x.kind, x.x, x.z]) }); });
     await ev(c => { __vm.closeCity(); __vm.openCity(c); __vm.speed = 0; }, cap); await p.waitForTimeout(400);
+    await ev(c => { __vm.state.cities[c].pop = 200; __vm.closeCity(); __vm.openCity(c); }, cap); await p.waitForTimeout(300);
     const pic0 = JSON.parse(await pic());
-    await ev(c => { const s = __vm.state, city = s.cities[c]; city.buildings.farm = Math.min(3, city.buildings.farm + 1); city.pop = Math.min(VM.Eco.cap(city), city.pop + 900); }, cap);
+    await ev(c => { const s = __vm.state, city = s.cities[c]; city.buildings.farm = Math.min(3, city.buildings.farm + 1); city.pop = Math.min(VM.Eco.cap(city), city.pop + 250); }, cap);
     for (let i = 0; i < 3; i++) { await ev(c => { __vm.closeCity(); __vm.openCity(c); __vm.speed = 0; }, cap); await p.waitForTimeout(300); }
     const pic1 = JSON.parse(await pic());
     ok(JSON.stringify(pic1.s) === JSON.stringify(pic0.s), 'scenery did not move when the city was opened again');

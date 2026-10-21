@@ -152,10 +152,10 @@ test('armies in battle meet in one line, defender facing attacker; the signature
 
 test('the picture is stable: buildings, people, depots and armies never move what is already standing', () => {
   const s = world(7), id = own(s).id, c = s.cities[id];
-  c.buildings = { farm: 0, market: 0, barracks: 0, wall: 0, temple: 0 }; c.depot = null; c.pop = 300;
+  c.buildings = { farm: 0, market: 0, barracks: 0, wall: 0, temple: 0 }; c.depot = null; c.pop = 150;
   const snap = () => CL.build(s, id), a = snap();
   const same = (x, y, n) => { for (let i = 0; i < n; i++) assert(x[i].x === y[i].x && x[i].z === y[i].z && x[i].rot === y[i].rot, 'item ' + i + ' moved'); };
-  for (const step of [() => { c.buildings.farm = 1; }, () => { c.buildings.market = 3; c.buildings.barracks = 3; }, () => { c.buildings.temple = 2; c.buildings.wall = 3; }, () => { c.depot = { food: 900, target: 1000 }; }, () => { c.pop = 450; }, () => { c.pop = 600; c.buildings.farm = 3; },
+  for (const step of [() => { c.buildings.farm = 1; }, () => { c.buildings.market = 3; c.buildings.barracks = 3; }, () => { c.buildings.temple = 2; c.buildings.wall = 3; }, () => { c.depot = { food: 900, target: 1000 }; }, () => { c.pop = 225; }, () => { c.pop = 300; c.buildings.farm = 3; },
     () => { VM.Armies.spawn(s, 2, id, T({ infantry: 40 }), s.officers.find(o => o.owner === 2 && o.role === 'idle').id); VM.War.updateZones(s); }, () => { c.wallHp = 0; }]) {
     step(); const b = snap();
     assert.strictEqual(b.tier, a.tier); assert.strictEqual(b.radius, a.radius);
@@ -172,7 +172,7 @@ test('growth: the stage follows the people; stone and the suburb come with size,
   const s = world(7), id = own(s).id, c = s.cities[id];
   c.buildings = { farm: 1, market: 1, barracks: 1, wall: 0, temple: 0 }; c.spec = 'farmland';
   const at = pop => { c.pop = pop; return CL.build(s, id); };
-  const v = at(180), t = at(330), k = at(520), g = at(950);
+  const v = at(90), t = at(165), k = at(260), g = at(400);
   assert.deepStrictEqual([v.stage, t.stage, k.stage, g.stage], [1, 2, 3, 4]);
   assert(v.houses.some(h => h.style === 0) && !v.houses.some(h => h.style === 2), 'a village is tents and huts');
   assert(k.houses.some(h => h.style === 2) && g.houses.filter(h => h.style === 2).length > k.houses.filter(h => h.style === 2).length / 2, 'stone comes with size');
@@ -180,8 +180,8 @@ test('growth: the stage follows the people; stone and the suburb come with size,
   assert(!v.plaza && t.plaza && g.monument && !k.monument, 'a plaza from the second stage, a monument in a great city');
   assert(!v.paved && k.paved, 'streets are paved from the third stage');
   assert(!g.works.some(w => w.kind === 'windmill'), 'no windmill before farm level 3'); c.buildings.farm = 3;
-  assert(at(950).works.some(w => w.kind === 'windmill'), 'a windmill with farm level 3');
-  c.spec = 'iron'; assert(at(950).works.some(w => w.kind === 'quarry'), 'a quarry where iron is dug');
+  assert(at(400).works.some(w => w.kind === 'windmill'), 'a windmill with farm level 3');
+  c.spec = 'iron'; assert(at(400).works.some(w => w.kind === 'quarry'), 'a quarry where iron is dug');
   for (const L of [v, t, k, g]) for (const h of L.suburb) assert(Math.hypot(h.x, h.z) > L.radius + 2, 'the suburb is outside the walls');
 });
 

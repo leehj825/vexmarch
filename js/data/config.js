@@ -43,12 +43,13 @@ VM.CFG = {
 
   // ---- Economy ----
   ECON: {
-    baseCap: 600,          // population cap of a plain town, before specialty and buildings
+    baseCap: 300,          // population cap of a plain town (no node ever holds more than maxPop), before specialty and buildings
+    maxPop: 500,           // the most people any node can hold, buildings and specialty included
     startPopFrac: 0.55,    // starting population as a fraction of cap
-    popGrow: 0.02,         // per day, fraction of the gap to target closed while growing
+    popGrow: 0.001,        // per day, fraction of the gap to target closed while growing (slow: a town takes years to fill)
     popShrink: 0.03,       // ... while shrinking
     starveLoss: 0.02,      // per day, extra population loss while the faction has no food
-    tax: 0.04,             // gold per head per day at Normal tax (a head is about ten of the old ones: the game counts people, not crowds)
+    tax: 0.08,             // gold per head per day at Normal tax (a head is about ten of the old ones: the game counts people, not crowds)
     foodPerHead: 0.1,      // food per head (population and troops) per day
     foodBase: 0.075,      // food produced per cap point per day with no farms
     foodFarm: 0.025,      // ... added per farm level

@@ -21,11 +21,11 @@ VM.CityLayout = (function () {
 
   // The size of a place depends only on what it is (its specialty), never on its buildings or people, so the picture does not jump as the game goes on.
   const baseCapOf = city => VM.CFG.ECON.baseCap * VM.CFG.SPEC[city.spec].cap;
-  function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 600 ? 'city' : (c >= 480 ? 'town' : 'hamlet')); }
+  function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 300 ? 'city' : (c >= 240 ? 'town' : 'hamlet')); }
 
   // How far a place has grown, from its people: 1 a village of tents and huts, 2 a town of timber houses around a plaza, 3 a city with stone houses and
   // a suburb along the roads, 4 a great city with a monument and a wide suburb.
-  const stageOf = city => city.pop < 250 ? 1 : city.pop < 400 ? 2 : city.pop < 650 ? 3 : 4;
+  const stageOf = city => city.pop < 125 ? 1 : city.pop < 200 ? 2 : city.pop < 325 ? 3 : 4;
 
   // One gate and one road for every road on the map, each facing the neighbouring node it leads to, so the city agrees with the map.
   function gatesOf(state, id) {
@@ -141,13 +141,13 @@ VM.CityLayout = (function () {
     // adds houses without moving the old ones.
     if (city.spec === 'port') { const a = main + Math.PI * 0.9; L.water = { angle: a, r: R + 38, radius: 26 }; }
     const dry = a => !L.water || angDiff(a, L.water.angle) > 0.85;
-    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 22), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
+    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 11), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
     L.stage = stage; L.paved = stage >= 3;
     const onRoad = (p, half) => dirs.some(d => { const t = p.x * d.x + p.z * d.z; return t > -2 && Math.abs(p.x * d.z - p.z * d.x) < half; });            // inside the strip of street that runs from a gate to the keep
     // The plaza round the keep, with a well and, in a great city, a monument; the sites of the works outside the walls and the suburb along the roads are reserved too
     const wp = pol(R * 0.56 + 2, main - 0.55); L.well = { x: wp.x, z: wp.z }; take(wp.x, wp.z, 1.6);
     L.plaza = stage >= 2 ? { r: 9 + stage } : null;
-    if (stage >= 4) { const mp = pol(R * 0.56 + 2, main + 0.55); L.monument = { x: mp.x, z: mp.z }; take(mp.x, mp.z, 1.8); } else L.monument = null;
+    { const mp = pol(R * 0.56 + 2, main + 0.55); take(mp.x, mp.z, 1.8); L.monument = stage >= 4 ? { x: mp.x, z: mp.z } : null; }          // the monument's ground is reserved from the start
     const freeAngle = a => { for (let k = 0; k < 24; k++) { if (!gates.some(g => angDiff(g.angle, a) < 0.42)) return a; a += 0.3; } return a; };
     L.works = [];
     const work = (kind, a, r, size) => { const aa = freeAngle(a), p = pol(r, aa); take(p.x, p.z, size); return { kind, x: p.x, z: p.z, rot: aa }; };

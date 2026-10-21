@@ -7,7 +7,7 @@ VM.Eco = (function () {
 
   function cap(city) {
     const E = VM.CFG.ECON, S = VM.CFG.SPEC[city.spec], b = city.buildings;
-    return Math.round(E.baseCap * S.cap * (1 + 0.08 * b.farm + 0.05 * b.market + 0.05 * b.temple));
+    return Math.min(E.maxPop, Math.round(E.baseCap * S.cap * (1 + 0.08 * b.farm + 0.05 * b.market + 0.05 * b.temple)));
   }
 
   function upkeepOf(city) {

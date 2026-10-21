@@ -162,7 +162,7 @@ VM.World = (function () {
       if (spec[i] === 'farmland') city.buildings.farm = 1;
       if (spec[i] === 'market') city.buildings.market = 1;
       city.pop = Math.round(VM.Eco.cap(city) * E.startPopFrac);
-      const garrison = city.owner === 0 ? 0.03 : 0.02;
+      const garrison = city.owner === 0 ? 0.05 : 0.04;
       city.garrison.infantry = Math.round(city.pop * garrison);
       return city;
     });

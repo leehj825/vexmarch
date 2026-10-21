@@ -48,7 +48,7 @@ VM.Tutorial = (function () {
     const capId = s.factions[1].capital;
     let best = -1, bd = Infinity;
     for (const c of s.cities) { if (c.owner !== 0) continue; const d = VM.Armies.distance(s, capId, c.id); if (d < bd) { bd = d; best = c.id; } }
-    s.cities[best].garrison = { infantry: 4, spear: 0, cavalry: 0, archer: 0, siege: 0 }; s.cities[best].buildings.wall = 0; s.cities[best].wallHp = 0;
+    s.cities[best].garrison = { infantry: 3, spear: 0, cavalry: 0, archer: 0, siege: 0 }; s.cities[best].buildings.wall = 0; s.cities[best].wallHp = 0;
     s.tutorial = { target: best };
     return s;
   }
