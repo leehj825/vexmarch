@@ -252,6 +252,49 @@ test('mountain passes defend better than plains', () => {
   assert(VM.War.wallMax(pass) > VM.War.wallMax(plain));
 });
 
+
+// ---- Cities in the way (Phase 8b) ----
+function corridor(owner) {
+  const s = world(), home = s.factions[1].capital;
+  const far = [...s.cities].sort((a, b) => VM.Armies.distance(s, home, b.id) - VM.Armies.distance(s, home, a.id)).find(c => VM.Armies.path(s, home, c.id).length >= 4).id;
+  const path = VM.Armies.path(s, home, far), mid = path[1];
+  s.cities.forEach(c => { if (c.id !== home && c.id !== far) { c.garrison = T({}); } });
+  s.cities[mid].owner = owner; s.cities[mid].garrison = T({ infantry: 25 }); s.cities[mid].buildings.wall = 0; s.cities[mid].wallHp = 0;
+  return { s, home, far, mid, path };
+}
+
+test('in the way: an army marching through a hostile city stops there and lays siege instead of walking past', () => {
+  for (const owner of [2, 0]) {
+    const { s, home, far, mid } = corridor(owner);
+    const a = army(s, 1, home, { infantry: 500 }); VM.Armies.move(s, a, far);
+    let guard = 0; while (a.at !== mid && guard++ < 400) run(s, 0.25);
+    assert.strictEqual(a.at, mid, 'the army stopped at the city in the way'); assert.strictEqual(a.path.length, 0);
+    assert(s.events.some(e => e.type === 'blocked' && e.owner === 1 && e.at === mid), 'the player is told');
+    assert(s.cities[mid].besieged, 'it is besieging'); assert.notStrictEqual(a.at, far);
+    run(s, 40); assert.strictEqual(s.cities[mid].owner, 1, 'and takes it (' + (owner ? 'enemy' : 'free') + ' city)');
+  }
+});
+
+test('in the way: your own cities, routed armies and retreating armies pass through', () => {
+  const { s, home, far, mid, path } = corridor(2);
+  path.slice(1, -1).forEach(id => { s.cities[id].owner = 1; });        // every city on the way is yours: no obstacle
+  const a = army(s, 1, home, { infantry: 300 }); VM.Armies.move(s, a, far);
+  let guard = 0; while (a.at !== far && guard++ < 600) run(s, 0.25); assert.strictEqual(a.at, far, 'walks through its own city');
+  const t = corridor(2); t.path.slice(1, -1).forEach(id => { t.s.cities[id].owner = 2; t.s.cities[id].garrison = T({ infantry: 25 }); });
+  const b = army(t.s, 1, t.home, { infantry: 300 }); VM.Armies.move(t.s, b, t.far); b.routed = true;
+  guard = 0; while (b.at !== t.far && guard++ < 600) run(t.s, 0.25); assert.strictEqual(b.at, t.far, 'a routed army just keeps running');
+  const u = corridor(2); u.path.slice(1, -1).forEach(id => { u.s.cities[id].owner = 2; u.s.cities[id].garrison = T({ infantry: 25 }); });
+  const c = army(u.s, 1, u.home, { infantry: 300 }); VM.Armies.move(u.s, c, u.far); c.retreat = 1e6;
+  guard = 0; while (c.at !== u.far && guard++ < 600) run(u.s, 0.25); assert.strictEqual(c.at, u.far, 'a retreating army passes');
+});
+
+test('in the way: a march order from a city under siege leaves it; the next hostile city stops the army again', () => {
+  const { s, home, far, mid } = corridor(2);
+  const a = army(s, 1, mid, { infantry: 500 }); s.cities[mid].garrison = T({ infantry: 400 }); s.cities[mid].buildings.wall = 0;
+  run(s, 2); assert(s.cities[mid].besieged);
+  assert(VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: far }).ok); run(s, 2); assert(a.at === null || a.at !== mid, 'it can break off');
+});
+
 // ---- Victory and defeat ----
 test('elimination: a faction that loses its last city is out; its officers go free; player loss ends the game', () => {
   const s = world(); const f2 = s.factions[2];

@@ -142,6 +142,9 @@ VM.Armies = (function () {
     return { ok: true };
   }
 
+  // An army on its way through a city of another faction (or a free one) stops and lays siege to it. Routed or retreating armies are only running home.
+  const blockedBy = (state, army) => !army.routed && army.retreat <= 0 && state.cities[army.at].owner !== army.owner;
+
   function step(state, dd) {
     for (const army of state.armies) {
       if (army.fighting.length) continue;                 // locked in battle
@@ -157,6 +160,10 @@ VM.Armies = (function () {
         if (e.prog >= e.len - 1e-9) {
           army.at = e.to; army.edge = null; state.officers[army.officer].loc = army.at;
           if (!army.path.length) army.dest = null;
+          else if (blockedBy(state, army)) {                  // a city that is not yours stands in the way: it has to be fought, not walked past
+            army.path = []; army.dest = null;
+            VM.Eco.pushEvent(state, { type: 'blocked', owner: army.owner, army: army.id, at: army.at, city: army.at });
+          }
         }
       }
     }

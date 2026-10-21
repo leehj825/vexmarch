@@ -214,11 +214,13 @@ VM.City3D = (function () {
     };
     m.headGeo = shared(new THREE.SphereGeometry(0.24, 6, 5));
     m.mats = { tint: shared(new THREE.MeshLambertMaterial({ vertexColors: true })), fixed: shared(new THREE.MeshLambertMaterial({ vertexColors: true })), head: shared(new THREE.MeshLambertMaterial({ color: '#e8c9a0' })) };
+    m.ladder = mk(M => { for (const x of [-0.3, 0.3]) box(M, x, 0, 0, 0.08, 4.4, 0.1, COL.wood); for (let i = 0; i < 9; i++) box(M, 0, 0.3 + i * 0.47, 0, 0.62, 0.06, 0.08, COL.woodDark); });
     m.engineBase = mk(M => { box(M, 0, 0.35, 0, 1.6, 0.35, 2.6, COL.woodDark); for (const [wx, wz] of [[-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]]) cyl(M, wx, 0, wz, 0.4, 0.4, 0.2, COL.wood, 8); box(M, 0, 0.6, 0, 0.2, 1.4, 0.2, COL.wood); });
     m.engineArm = mk(M => { box(M, 0, 0, 0.1, 0.2, 0.2, 3.0, COL.wood); box(M, 0, -0.1, 1.5, 0.7, 0.4, 0.7, COL.woodDark); });
     models = m; return m;
   }
   const TYPES = ['infantry', 'spear', 'archer', 'cavalry'];
+  let conq = null, prevOwner = null, fleeing = [];
   const anchors = new Map();                                              // army id -> { d, angle }: where the army is drawn, eased toward where it should be
   const polarXZ = (d, a, lat) => [Math.cos(a) * d - Math.sin(a) * lat, Math.sin(a) * d + Math.cos(a) * lat];
 
@@ -228,8 +230,8 @@ VM.City3D = (function () {
     // Garrison
     for (let i = 0; i < L.garrison.visible; i++) {
       const type = ['infantry', 'archer', 'spear'][i % 3];
-      if (L.garrison.onWall) { const a = (i + 0.5) / L.garrison.visible * TAU, p = polar(L.radius, a); E.push({ type, fx: p[0], fz: p[1], fy: wallH, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
-      else { const a = i * 2.4, p = polar(9 + (i % 4) * 1.8, a); E.push({ type, fx: p[0], fz: p[1], fy: 0, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
+      if (L.garrison.onWall) { const a = (i + 0.5) / L.garrison.visible * TAU, p = polar(L.radius, a); E.push({ type, fx: p[0], fz: p[1], fy: wallH, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
+      else { const a = i * 2.4, p = polar(9 + (i % 4) * 1.8, a); E.push({ type, fx: p[0], fz: p[1], fy: 0, ang: a, yaw: Math.atan2(Math.cos(a), Math.sin(a)), color: gc, phase: i, mode: 'guard' }); }
     }
     // Armies
     L.armies.forEach((A, ai) => {
@@ -240,13 +242,19 @@ VM.City3D = (function () {
       const rank = { infantry: 0, spear: 1, archer: 2, cavalry: 0 };
       order = order.map((type, i) => ({ type, i })).sort((p, q) => rank[p.type] - rank[q.type] || p.i - q.i);
       order.forEach(({ type }, i) => {
-        const r = Math.floor(i / cols), c = i % cols, lat = (c - (cols - 1) / 2) * (type === 'cavalry' ? 1.8 : 1.3);
-        E.push({ type, aid: A.id, lat, depth: r * 1.5, color: col, phase: i + ai * 7, mode: A.mode, hostile: A.hostile, routed: A.routed, out: A.moving === 'out' });
+        const r = Math.floor(i / cols), c = i % cols, rankId = i, lat = (c - (cols - 1) / 2) * (type === 'cavalry' ? 1.8 : 1.3);
+        E.push({ type, aid: A.id, lat, depth: r * 1.5, color: col, phase: i + ai * 7, rank: rankId, mode: A.mode, hostile: A.hostile, routed: A.routed, out: A.moving === 'out' });
       });
       for (let k = 0; k < A.fallen; k++) E.push({ type: 'infantry', aid: A.id, lat: ((k * 37) % 11 - 5) * 1.2, depth: -2 - (k % 3) * 1.2, color: col.clone().multiplyScalar(0.55), phase: k, mode: 'fallen', fallen: true });
       for (let k = 0; k < A.siege; k++) {
         const grp = new THREE.Group(), base = new THREE.Mesh(m.engineBase, m.mats.fixed), arm = new THREE.Group(); arm.position.set(0, 1.6, 0); arm.add(new THREE.Mesh(m.engineArm, m.mats.fixed)); grp.add(base); grp.add(arm); D.group.add(grp);
         D.engines.push({ grp, arm, aid: A.id, lat: (k - (A.siege - 1) / 2) * 4.2, depth: -6, phase: k * 1.7 + ai, firing: A.mode === 'besieging', hostile: A.hostile, fired: false, out: A.moving === 'out' });
+      }
+      if (A.assault && !A.breach && L.wall.level > 0) {                      // ladders against the wall where the army attacks
+        for (let k = -1; k <= 1; k++) {
+          const a = A.angle + k * 0.16, p = polar(L.radius + 1.6, a), lad = new THREE.Mesh(m.ladder, m.mats.fixed);
+          lad.position.set(p[0], 0, p[1]); lad.rotation.order = 'YZX'; lad.rotation.y = -Math.atan2(-Math.sin(a), -Math.cos(a)) ; lad.rotation.z = -0.3; D.group.add(lad);
+        }
       }
       if (!anchors.has(A.id)) anchors.set(A.id, { d: A.d, angle: A.angle });
     });
@@ -272,17 +280,41 @@ VM.City3D = (function () {
   function pose(e, A, dt) {
     // where one soldier stands this frame: [x, y, z, yaw, tilt]
     const ph = t * 2.2 + e.phase;
-    if (e.fx !== undefined) return [e.fx, e.fy + Math.abs(Math.sin(ph * 0.5)) * 0.03, e.fz, e.yaw, 0];
+    if (e.fx !== undefined) {                                                          // the garrison: it stands guard, and fights back when the city is stormed
+      if (!layout.assault) return [e.fx, e.fy + Math.abs(Math.sin(ph * 0.5)) * 0.03, e.fz, e.yaw, 0];
+      const k = Math.max(0, Math.sin(ph * 2.0)) * 0.5, out = [Math.cos(e.ang), Math.sin(e.ang)];
+      return [e.fx + out[0] * k, e.fy + Math.abs(Math.sin(ph * 2.6)) * 0.16, e.fz + out[1] * k, e.yaw, 0];
+    }
     const an = anchors.get(e.aid); if (!an) return [0, -50, 0, 0, 0];
     let depth = e.depth, lat = e.lat, y = 0, tilt = 0;
     const toCity = Math.atan2(-Math.cos(an.angle), -Math.sin(an.angle)), outward = Math.atan2(Math.cos(an.angle), Math.sin(an.angle));
     let yaw = e.hostile || !A || A.moving === 'in' || A.mode === 'camp' ? toCity : outward;
     if (e.out) yaw = outward;
     if (A && A.clash && !A.hostile) yaw = outward;
+    const conquering = conq && A && !A.hostile && A.owner === layout.owner, ct = conq ? t - conq.t0 : 0;
+    if (conquering && ct < 7.5) {                                                      // the city has fallen: the victors run in, then cheer
+      if (ct < 3) { y = Math.abs(Math.sin(ph * 2.4)) * 0.14; yaw = toCity; }
+      else { y = Math.abs(Math.sin(ph * 1.7)) * 0.4; tilt = -0.25; yaw = e.phase; }
+      const p = polarXZ(an.d + depth * 0.6, an.angle, lat * 0.7); return [p[0], y, p[1], yaw, tilt];
+    }
     switch (e.mode) {
       case 'march': y = Math.abs(Math.sin(ph * 2.0)) * 0.1; lat += Math.sin(ph * 0.7) * 0.06; break;
       case 'camp': y = Math.max(0, Math.sin(ph * 0.4)) * 0.04; break;
-      case 'besieging': y = Math.abs(Math.sin(ph)) * 0.07; depth -= Math.sin(t * 0.8 + e.phase * 0.3) * 0.5; break;
+      case 'besieging': {
+        if (!A || !A.assault) { y = Math.abs(Math.sin(ph)) * 0.07; break; }
+        // Waves: each soldier runs at the wall (or through the breach), fights there, and falls back. Three waves, ten seconds a round.
+        const R = layout.radius, wave = (e.rank || 0) % 3, u = ((t + wave * 3.3 + (e.phase % 7) * 0.12) % 10) / 10;
+        const form = { d: an.d + depth, lat }, tgtD = A.breach ? R * 0.55 + (e.rank % 5) * 0.6 : R + 1.4 + (e.rank % 3) * 0.5, tgtLat = lat * 0.45;
+        const run = A.breach && wave === 0 ? 0.35 : 0.3;
+        let f, fight = false;
+        if (A.breach && wave === 0) { f = Math.min(1, u / run); fight = u > run; }                       // the first wave goes in and stays
+        else if (u < run) f = u / run; else if (u < 0.72) { f = 1; fight = true; } else f = 1 - (u - 0.72) / 0.28;
+        f = f * f * (3 - 2 * f);
+        const dd2 = form.d + (tgtD - form.d) * f, ll = form.lat + (tgtLat - form.lat) * f;
+        y = Math.abs(Math.sin(ph * (fight ? 3 : 2))) * (fight ? 0.18 : 0.09);
+        const jit = fight ? Math.sin(ph * 3.1) * 0.2 : 0, p = polarXZ(dd2 + (fight ? jit : 0), an.angle, ll + jit);
+        return [p[0], y, p[1], f > 0.02 && f < 0.98 && !fight ? (u < 0.72 ? toCity : outward) : toCity, 0];
+      }
       case 'fighting': y = Math.abs(Math.sin(ph * 2.6)) * 0.14; depth += (A && A.hostile ? -1 : 1) * Math.max(0, Math.sin(ph * 2.1)) * 0.5; lat += Math.sin(ph * 3) * 0.15; break;
       case 'fallen': y = 0.18; tilt = -1.5; yaw = e.phase; break;
     }
@@ -294,7 +326,13 @@ VM.City3D = (function () {
   function animate(dt) {
     if (!dyn) return;
     const o = o3(), m = soldierModels(), byId = {}; for (const A of dyn.armies) byId[A.id] = A;
-    for (const A of layout.armies) { const an = anchors.get(A.id); if (an) { an.d += (A.d - an.d) * Math.min(1, dt * 3); an.angle = A.angle; } }
+    for (const A of layout.armies) {
+      const an = anchors.get(A.id); if (!an) continue;
+      let tgt = A.d, ang = A.angle;
+      if (conq && !A.hostile && A.owner === layout.owner && t - conq.t0 < 7.5) { tgt = layout.radius * 0.5; ang = conq.angle; }      // the victors go into the city
+      an.d += (tgt - an.d) * Math.min(1, dt * (conq && t - conq.t0 < 7.5 ? 1.2 : 3)); an.angle = ang;
+    }
+    if (conq) conquestEffects(dt);
     for (const type of TYPES) {
       const g = dyn.groups[type]; if (!g) continue;
       g.list.forEach((e, i) => {
@@ -325,7 +363,27 @@ VM.City3D = (function () {
     for (const p of dyn.puffs) { p.u += dt * p.speed; p.m.scale.setScalar(p.s0 + p.u * p.grow); p.m.material.opacity = Math.max(0, 0.75 - p.u * 0.75); if (p.u >= 1) p.done = true; }
     dyn.puffs = dyn.puffs.filter(p => { if (p.done) { dyn.group.remove(p.m); p.m.material.dispose(); } return !p.done; });
   }
-  let shotMat = null, arrowMat = null, shotTimer = 0, sparkTimer = 0;
+  let shotMat = null, arrowMat = null, shotTimer = 0, sparkTimer = 0, confetti = 0;
+  // The city falls: the flag changes colour, defenders run out of the far gate, and the victors celebrate with sparks of their colour.
+  function conquestEffects(dt) {
+    const ct = t - conq.t0, f = dyn.flags[0];
+    if (f) f.m.material.color.set(conq.from).lerp(new THREE.Color(conq.to), Math.min(1, Math.max(0, (ct - 1) / 2)));
+    if (ct > 2 && ct < 7) { confetti -= dt; if (confetti <= 0) { confetti = 0.12; const a = Math.random() * TAU, r = 2 + Math.random() * 6; puff(Math.cos(a) * r, 4 + Math.random() * 6, Math.sin(a) * r, Math.random() < 0.5 ? conq.to : '#f2d27a', 0.25, 0.7, 1.0); } }
+    for (const q of fleeing) { q.u += dt / 5; const k = Math.min(1, q.u); q.m.position.set(q.x0 + (q.x1 - q.x0) * k, Math.abs(Math.sin(t * 9 + q.ph)) * 0.12, q.z0 + (q.z1 - q.z0) * k); q.h.position.set(q.m.position.x, q.m.position.y + 1.15, q.m.position.z); }
+    if (ct > 8) { for (const q of fleeing) { dyn.group.remove(q.m); dyn.group.remove(q.h); q.m.material.dispose(); } fleeing = []; conq = null; }
+  }
+  function startConquest(L, prev, from, to) {
+    const A = L.armies.find(a => !a.hostile && a.owner === L.owner); if (!A) return;
+    conq = { t0: t, from, to, angle: prevAssaultAngle !== null ? prevAssaultAngle : A.angle };
+    const m = soldierModels(), out = (conq.angle + Math.PI);                              // the old defenders flee through the gate on the far side
+    fleeing = [];
+    for (let i = 0; i < 7; i++) {
+      const a0 = i * 0.9, p0 = polar(3 + (i % 3), a0), p1 = polar(L.radius + 26, out + (i - 3) * 0.12);
+      const mat = new THREE.MeshLambertMaterial({ vertexColors: true, color: from }), body = new THREE.Mesh(m.infantry.tint, mat), head = new THREE.Mesh(m.headGeo, m.mats.head);
+      dyn.group.add(body); dyn.group.add(head); fleeing.push({ m: body, h: head, x0: p0[0], z0: p0[1], x1: p1[0], z1: p1[1], u: 0, ph: i });
+    }
+  }
+  let prevAssaultAngle = null;
   function shoot(e, angle) {                                                // a stone from a siege engine toward the wall
     if (!layout || dyn.shots.length > 12) return;
     const R = layout.radius, a = angle + (Math.random() - 0.5) * 0.5, tx = Math.cos(a) * R, tz = Math.sin(a) * R;
@@ -338,9 +396,16 @@ VM.City3D = (function () {
     if (dyn.shots.length > 14) return;
     const g = dyn.groups.archer; if (!g) return;
     if (!arrowMat) arrowMat = shared(new THREE.MeshLambertMaterial({ color: '#e8e0c8' }));
-    const picks = g.list.filter(e => e._x !== undefined && !e.fallen && (e.mode === 'fighting' || e.mode === 'besieging') && Math.random() < 0.25).slice(0, 3);
+    const picks = g.list.filter(e => e._x !== undefined && !e.fallen && (e.mode === 'fighting' || e.mode === 'besieging' || (e.mode === 'guard' && layout.assault)) && Math.random() < 0.25).slice(0, 3);
     for (const e of picks) {
-      const A = byId[e.aid]; if (!A) continue;
+      const A = byId[e.aid];
+      if (e.mode === 'guard') {                                                    // defenders on the wall shoot at the attackers
+        const att = dyn.armies.find(x => x.assault), an2 = att && anchors.get(att.id); if (!an2) continue;
+        const p2 = polarXZ(an2.d + 3, an2.angle, (Math.random() - 0.5) * 10);
+        const m2 = new THREE.Mesh(sharedGeo('arrow', () => new THREE.BoxGeometry(0.05, 0.05, 0.8)), arrowMat); dyn.group.add(m2);
+        dyn.shots.push({ m: m2, arrow: true, u: 0, dur: 0.8, arc: 5, x0: e._x, y0: e._y + 1.4, z0: e._z, tx: p2[0], ty: 1.0, tz: p2[1], puff: null }); continue;
+      }
+      if (!A) continue;
       let tx, tz;
       if (A.mode === 'fighting') { const foe = dyn.armies.find(x => x.hostile !== A.hostile && x.mode === 'fighting' && (x.engaged.includes(A.id) || A.engaged.includes(x.id))); const an = foe && anchors.get(foe.id); if (!an) continue; const p = polarXZ(an.d, an.angle, (Math.random() - 0.5) * 8); tx = p[0]; tz = p[1]; }
       else { const R = layout.radius, a = A.angle + (Math.random() - 0.5) * 0.4; tx = Math.cos(a) * R; tz = Math.sin(a) * R; }
@@ -350,6 +415,7 @@ VM.City3D = (function () {
   }
   function sparks() {
     for (const A of dyn.armies) {
+      if (A.assault) { const an = anchors.get(A.id); if (an && Math.random() < 0.7) { const p = polarXZ(layout.radius + (A.breach ? -layout.radius * 0.35 : 1.3), an.angle, (Math.random() - 0.5) * 8); puff(p[0], 1.4 + Math.random() * 1.5, p[1], '#ffd070', 0.2, 0.9, 3.2); } }
       if (!A.clash || A.hostile) continue;
       const an = anchors.get(A.id); if (!an) continue;
       const p = polarXZ(an.d + 2.5, an.angle, (Math.random() - 0.5) * 10); puff(p[0], 1.2 + Math.random(), p[1], '#ffd070', 0.25, 1.1, 3.2);
@@ -418,7 +484,7 @@ VM.City3D = (function () {
 
   function open(id) {
     if (!ensureRenderer()) return false;
-    cityId = id; sig = ''; sigA = ''; anchors.clear(); shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
+    cityId = id; sig = ''; sigA = ''; anchors.clear(); conq = null; fleeing = []; layout = null; prevAssaultAngle = null; shown = true; cam.auto = false; cam.yaw = 0; cam.dist = 0;      // yaw 0 looks north from the south, so the roads point the way they do on the map
     canvas.classList.add('on'); resize(); refresh(true);
     const foe = layout.armies.find(a => a.hostile) || layout.armies[0];                  // start by looking at the action
     if (foe) { cam.yaw = Math.atan2(-Math.cos(foe.angle), -Math.sin(foe.angle)) + 0.3; cam.auto = false; }
@@ -429,7 +495,12 @@ VM.City3D = (function () {
   let sigA = '';
   function refresh(force) {
     if (cityId < 0) return;
-    const L = VM.CityLayout.build(ui.state, cityId); layout = L;
+    const old = layout, L = VM.CityLayout.build(ui.state, cityId); layout = L;
+    const assaulter = L.armies.find(a => a.assault); if (assaulter) prevAssaultAngle = assaulter.angle;
+    if (!force && old && old.id === L.id && old.owner !== L.owner && L.armies.some(a => !a.hostile && a.owner === L.owner)) {        // the city changed hands while we watch
+      const from = old.color, to = L.color; sig = ''; sigA = null;
+      rebuildStatic(L); sig = L.sigStatic; rebuildDynamic(L); sigA = L.sigArmies; startConquest(L, old, from, to); return;
+    }
     if (force || L.sigStatic !== sig) { sig = L.sigStatic; rebuildStatic(L); sigA = null; }
     if (force || L.sigArmies !== sigA) { sigA = L.sigArmies; rebuildDynamic(L); }
   }
@@ -448,7 +519,7 @@ VM.City3D = (function () {
 
   return {
     init, open, close, frame, refresh, supported: () => ensureRenderer(), isOpen: () => shown, id: () => cityId, layout: () => layout,
-    info: () => renderer ? { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, staticTriangles: stats.tris, soldiers: dyn ? dyn.entries.length : 0, calls3d: 0 } : null,
+    info: () => renderer ? { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, staticTriangles: stats.tris, soldiers: dyn ? dyn.entries.length : 0, conquest: !!conq, assaultRadii: dyn ? dyn.entries.filter(e => e.mode === 'besieging' && e._x !== undefined).map(e => Math.hypot(e._x, e._z)) : [] } : null,
     camera: cam
   };
 })();

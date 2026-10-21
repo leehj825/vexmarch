@@ -251,6 +251,7 @@ VM.Officers = (function () {
     const s = a.supply, here = a.at !== null ? state.cities[a.at] : null;
     const weary = a.morale < 35 || (s && (s.line !== 'ok' && !s.depot)) || (s && s.starving) || VM.Armies.sizeOf(a) < 0.4 * a.peak;
     if (a.order === 'hold') return;
+    if (here && here.owner !== a.owner && VM.War.sieging(a)) return;     // a hostile city in the way is being fought: stay until it falls
     if (weary || a.rest) {                                            // fall back and recover
       a.rest = a.morale < 85 || !!(s && s.line !== 'ok');
       if (a.dest !== null && state.cities[a.dest].owner === a.owner) return;       // already on its way to a friendly city

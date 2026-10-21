@@ -77,6 +77,20 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     info = await ev(() => VM.City3D.info()); ok(info.calls <= 40, 'battle draw calls ' + info.calls); ok(info.triangles < 60000, 'battle triangles ' + info.triangles);
     await ev(() => { __vm.speed = 1; }); await p.waitForTimeout(2500); await ev(() => { __vm.speed = 0; });
     ok(errs.length === 0, 'no errors while the battle plays: ' + errs.join(' | '));
+    // An assault: the attackers run at the wall and back; when the city falls the scene changes hands with a conquest
+    await ev(c => { const s = __vm.state, me = s.player, T = o => Object.assign({ infantry: 0, spear: 0, cavalry: 0, archer: 0, siege: 0 }, o), foe = s.factions.find(f => !f.neutral && f.id !== me).id;
+      s.armies.splice(0, s.armies.length); s.officers.forEach(o => { o.army = null; if (o.role === 'commander') o.role = 'idle'; });
+      const city = s.cities[c]; city.owner = me; city.buildings.wall = 2; city.wallHp = VM.War.wallMax(city); city.garrison = T({ infantry: 150, archer: 60 });
+      const a = VM.Armies.spawn(s, foe, c, T({ infantry: 450, spear: 150, archer: 120, cavalry: 60, siege: 4 }), s.officers.find(o => o.owner === foe && o.role === 'idle').id); a.order = 'hold';
+      VM.War.updateZones(s); __vm.closeCity(); __vm.openCity(c); __vm.speed = 1; }, cap);
+    const R = await ev(() => VM.City3D.layout().radius); let nearest = 99, farthest = 0;
+    for (let i = 0; i < 24; i++) { await p.waitForTimeout(500); const r = await ev(() => VM.City3D.info().assaultRadii); if (r.length) { nearest = Math.min(nearest, ...r); farthest = Math.max(farthest, ...r); } }
+    ok(nearest < R + 2.2, 'attackers reach the wall (closest ' + nearest.toFixed(1) + ' vs wall ' + R + ')'); ok(farthest > R + 10, 'and fall back again (farthest ' + farthest.toFixed(1) + ')');
+    ok(await ev(() => VM.City3D.layout().assault), 'the layout says the city is being stormed');
+    await ev(c => { const city = __vm.state.cities[c]; city.garrison = { infantry: 2, spear: 0, cavalry: 0, archer: 0, siege: 0 }; city.wallHp = 0; __vm.speed = 4; }, cap);
+    let fell = false, conquest = false; for (let i = 0; i < 40 && !conquest; i++) { await p.waitForTimeout(400); fell = fell || await ev(c => __vm.state.cities[c].owner !== __vm.state.player, cap); conquest = await ev(() => VM.City3D.info().conquest); }
+    await ev(() => { __vm.speed = 0; }); ok(fell, 'the city fell'); ok(conquest, 'the conquest scene played');
+    await p.waitForTimeout(500);
     // Other places: every kind of city opens
     const kinds = await ev(() => { const s = __vm.state, seen = {}; for (const c of s.cities) if (!seen[c.spec]) seen[c.spec] = c.id; return seen; });
     for (const k in kinds) { await ev(id => { __vm.closeCity(); __vm.openCity(id); }, kinds[k]); await p.waitForTimeout(250); ok(await ev(() => VM.City3D.info().calls) > 0, k + ' city draws'); }

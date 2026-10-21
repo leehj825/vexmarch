@@ -187,5 +187,17 @@ test('the roads of the city are the roads of the map: one per neighbour, facing 
   }
 });
 
+
+test('a besieging army assaults: ladders while the wall stands, a breach when it is down or missing', () => {
+  const s = world(), c = s.cities.find(x => x.owner === 0 && x.spec !== 'pass'); c.garrison = T({ infantry: 100 }); c.buildings.wall = 2; c.wallHp = VM.War.wallMax(c);
+  const e = VM.Armies.spawn(s, 2, c.id, T({ infantry: 400, siege: 3 }), s.officers.find(o => o.owner === 2 && o.role === 'idle').id); e.order = 'hold';
+  VM.War.updateZones(s); let L = CL.build(s, c.id), A = L.armies[0];
+  assert(A.assault && !A.breach && L.assault, 'storming a standing wall'); assert.strictEqual(L.owner, 0);
+  c.wallHp = 0; L = CL.build(s, c.id); assert(L.armies[0].breach, 'a broken wall is a breach');
+  c.wallHp = VM.War.wallMax(c); c.buildings.wall = 0; c.wallHp = 0; L = CL.build(s, c.id); assert(L.armies[0].breach, 'no wall at all: they walk in');
+  c.owner = 1; const f = VM.Armies.spawn(s, 1, c.id, T({ infantry: 100 }), s.officers.find(o => o.owner === 1 && o.role === 'idle').id);
+  assert(!CL.build(s, c.id).armies.find(x => x.id === f.id).assault, 'only hostile besiegers assault');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

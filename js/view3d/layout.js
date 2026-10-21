@@ -97,6 +97,9 @@ VM.CityLayout = (function () {
     L.wall = { level: wlvl, radius: R, hpFrac, segments: seg,
       towers: wlvl >= 2 ? seg.map((s, i) => i % 4 === 0 ? s.angle : null).filter(a => a !== null).concat(gates.flatMap(g => [g.angle - TAU / N * 1.6, g.angle + TAU / N * 1.6])) : gates.flatMap(g => [g.angle - TAU / N * 1.6, g.angle + TAU / N * 1.6]) };
     if (wlvl === 0) L.wall.towers = [];
+    // Armies laying siege assault the city: with the wall standing they storm it with ladders; with no wall or a breached one they pour in
+    for (const A of armies) { A.assault = A.hostile && A.mode === 'besieging'; A.breach = A.assault && (wlvl === 0 || city.wallHp <= 0); }
+    L.assault = armies.some(a => a.assault); L.owner = city.owner; L.ownerName = owner.name;
 
     // Fixed sites for the buildings that have levels
     const sites = {
@@ -180,7 +183,7 @@ VM.CityLayout = (function () {
     L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal / 14), gtotal > 0 ? 1 : 0, 36), onWall: wlvl > 0 };
     L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0,
       L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', city.besieged ? 1 : 0].join('/');
-    L.sigArmies = [L.garrison.visible, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10)].join(':')).join('|')].join('/');
+    L.sigArmies = [L.garrison.visible, L.assault ? 1 : 0, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10), a.breach ? 1 : 0].join(':')).join('|')].join('/');
     L.sig = L.sigStatic + '#' + L.sigArmies;
     return L;
   }

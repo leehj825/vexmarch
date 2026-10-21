@@ -151,7 +151,8 @@ var LANG_KO = {
 "{a} was captured and joins you": "{a}이(가) 포로가 되어 당신 편에 섰습니다",
 "{a}'s army routed near {b}": "{a}의 군대가 {b} 부근에서 패주했습니다",
 "{a}'s loyalty is low. A gift might help.": "{a}의 충성도가 낮습니다. 선물이 도움이 될지 모릅니다.",
-"{a} captured!": "{a} 점령!", "{0} captured!": "{0} 점령!",
+"{a} captured!": "{a} 점령!",
+"Your army halted at {a}: a hostile city stands in the way and must be taken first": "{a}에서 아군이 멈췄습니다. 길을 막은 적 도시를 먼저 함락해야 합니다", "{0} captured!": "{0} 점령!",
 
 // ---- settings ----
 "Master volume": "전체 음량", "Music": "음악", "Effects": "효과음",

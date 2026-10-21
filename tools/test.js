@@ -224,6 +224,7 @@ test('army: marches along roads and arrives after length / speed days', () => {
   const { s, city, o } = armyWorld();
   VM.Commands.exec(s, { type: 'formArmy', faction: 1, city: city.id, officer: o.id });
   const a = s.armies[0], dest = farNode(s, city.id), p = VM.Armies.path(s, city.id, dest);
+  p.forEach(id => { s.cities[id].owner = 1; });                 // a city of someone else on the way would stop the army (tested in test_war.js)
   let len = 0; for (let i = 0; i < p.length - 1; i++) len += VM.Armies.roadLen(s, p[i], p[i + 1]);
   assert(VM.Commands.exec(s, { type: 'moveArmy', faction: 1, army: a.id, to: dest }).ok);
   const days = len / VM.Armies.speedOf(a);

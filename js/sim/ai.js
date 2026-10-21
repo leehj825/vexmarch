@@ -187,7 +187,7 @@ VM.AI = (function () {
     }
     if (plan.phase === 'march') {
       const a = state.armies.find(x => x.id === plan.armies[0]); if (!a) { m.plan = null; return; }
-      if (a.fighting.length || (a.at === plan.target && VM.War.sieging(a))) return;
+      if (a.fighting.length || (a.at !== null && state.cities[a.at].owner !== f.id && VM.War.sieging(a))) return;     // fighting, or besieging the target or a city in the way
       if (a.dest !== plan.target && !a.rest) {
         // Re-check the odds on the day it leaves.
         if (ratio(state, a, target) < odds * 0.85) { m.plan = null; m.cool = state.time + 20; return; }
