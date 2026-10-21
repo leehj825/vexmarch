@@ -208,7 +208,7 @@ VM.City3D = (function () {
     // Fields and farmhouses
     for (const f of L.fields) {
       box(M, f.x, 0, f.z, f.w, 0.08, f.d, COL.soil, f.rot);
-      for (let r = 0; r < 5; r++) { const o = (r - 2) * (f.d / 5.2), c = Math.cos(f.rot + Math.PI / 2), sn = Math.sin(f.rot + Math.PI / 2); box(M, f.x + c * o, 0.08, f.z + sn * o, f.w * 0.9, 0.35, 0.45, f.crop ? COL.wheat : COL.crop, f.rot); }
+      for (let r = 0; r < 5; r++) { const o = (r - 2) * (f.d / 5.2), c = Math.sin(f.rot), sn = Math.cos(f.rot); box(M, f.x + c * o, 0.08, f.z + sn * o, f.w * 0.88, 0.3, 0.5, f.crop ? COL.wheat : COL.crop, f.rot); }
     }
     for (const fh of L.farmhouses) { box(M, fh.x, 0, fh.z, 3.2, 1.8, 2.4, COL.plaster2, -fh.rot); gable(M, fh.x, 1.8, fh.z, 3.2, 2.4, 1.3, -fh.rot, COL.roofs[1]); cyl(M, fh.x + 2.6, 0, fh.z, 0.55, 0.65, 2.2, COL.hay, 7); }
     // Features
