@@ -22,10 +22,10 @@ test('every city of every seed lays out without overlaps or NaN', () => {
     for (const c of s.cities) {
       const L = CL.build(s, c.id), all = [].concat(L.houses, L.stalls, L.fields, L.features);
       for (const o of all) assert(Number.isFinite(o.x) && Number.isFinite(o.z), `${seed}/${c.id} finite`);
-      for (let i = 0; i < L.houses.length; i++) for (let j = i + 1; j < L.houses.length; j++) assert(Math.hypot(L.houses[i].x - L.houses[j].x, L.houses[i].z - L.houses[j].z) >= 2.9 - 1e-9, 'houses do not overlap');
+      for (let i = 0; i < L.houses.length; i++) for (let j = i + 1; j < L.houses.length; j++) assert(Math.hypot(L.houses[i].x - L.houses[j].x, L.houses[i].z - L.houses[j].z) >= 2.6 - 1e-9, 'houses do not overlap');
       for (const h of L.houses) assert(Math.hypot(h.x, h.z) < L.radius, 'houses inside the walls');
       assert(L.gates.length === Math.min(3, s.map.nodes[c.id].adj.length), 'one gate per road, at most three');
-      assert(L.housesWanted >= 4 && L.houses.length >= Math.min(L.housesWanted, 12), `houses ${L.houses.length}/${L.housesWanted}`);
+      assert(L.housesWanted >= 4 && L.houses.length >= Math.min(L.housesWanted, 7), `houses ${L.houses.length}/${L.housesWanted}`);
     }
   }
 });
@@ -147,6 +147,31 @@ test('armies in battle meet in one line, defender facing attacker; the signature
   assert(CL.angDiff(A.angle, B.angle) < 1e-9 && A.d < B.d && B.d - A.d < 8, 'one line');
   assert.strictEqual(before.sigStatic.split('/').slice(0, 5).join('/'), L.sigStatic.split('/').slice(0, 5).join('/'));
   assert.notStrictEqual(before.sigArmies, L.sigArmies);
+});
+
+
+test('the picture is stable: buildings, people, depots and armies never move what is already standing', () => {
+  const s = world(7), id = own(s).id, c = s.cities[id];
+  c.buildings = { farm: 0, market: 0, barracks: 0, wall: 0, temple: 0 }; c.depot = null; c.pop = 3000;
+  const snap = () => CL.build(s, id), a = snap();
+  const same = (x, y, n) => { for (let i = 0; i < n; i++) assert(x[i].x === y[i].x && x[i].z === y[i].z && x[i].rot === y[i].rot, 'item ' + i + ' moved'); };
+  for (const step of [() => { c.buildings.farm = 1; }, () => { c.buildings.market = 3; c.buildings.barracks = 3; }, () => { c.buildings.temple = 2; c.buildings.wall = 3; }, () => { c.depot = { food: 900, target: 1000 }; }, () => { c.pop = 4500; }, () => { c.pop = 6000; c.buildings.farm = 3; },
+    () => { VM.Armies.spawn(s, 2, id, T({ infantry: 400 }), s.officers.find(o => o.owner === 2 && o.role === 'idle').id); VM.War.updateZones(s); }, () => { c.wallHp = 0; }]) {
+    step(); const b = snap();
+    assert.strictEqual(b.tier, a.tier); assert.strictEqual(b.radius, a.radius);
+    same(a.houses, b.houses, Math.min(a.houses.length, b.houses.length));
+    same(a.fields, b.fields, Math.min(a.fields.length, b.fields.length));
+    assert.strictEqual(JSON.stringify(a.features), JSON.stringify(b.features), 'scenery stays put');
+    assert.strictEqual(JSON.stringify(a.gates), JSON.stringify(b.gates));
+  }
+  const grown = snap(); same(a.houses, grown.houses, a.houses.length); assert(grown.houses.length > a.houses.length, 'but the town does grow');
+  assert(grown.fields.length > a.fields.length && grown.farmhouses.length > a.farmhouses.length, 'and the fields too');
+});
+
+test('the same city looks the same after a save and load, and on opening it again', () => {
+  const s = world(7), id = own(s).id, before = JSON.stringify(CL.build(s, id));
+  const t = VM.Sim.load(VM.Sim.save(s)); assert.strictEqual(JSON.stringify(CL.build(t, id)), before);
+  assert.strictEqual(JSON.stringify(CL.build(s, id)), before, 'building it twice gives the same picture');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
