@@ -77,7 +77,7 @@
 
   VM.MapView.init(document.getElementById('map'), ui, document.getElementById('map3d'));
   document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
-  VM.City3D.init(document.getElementById('city3d'), ui); document.getElementById('backBtn').addEventListener('click', () => ui.closeCity());
+  VM.City3D.init(document.getElementById('city3d'), ui);
   VM.UIPrefs.apply(); VM.I18N.start();
   VM.Panels.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
   addEventListener('pointerdown', () => VM.Audio.init(), { once: true }); addEventListener('keydown', () => VM.Audio.init(), { once: true });

@@ -24,7 +24,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     ok(await ev(() => __vm.cityView) === cap, 'the view button opens the city'); ok(await ev(() => __vm.speed) === 1, 'entering a city slows 4x down to normal speed'); ok(await ev(() => document.body.classList.contains('in3d')), 'in3d class');
     let info = await ev(() => VM.City3D.info()); ok(info && info.calls > 0 && info.calls <= 40, 'draw calls ' + info.calls); ok(info.triangles < 150000, 'triangles ' + info.triangles);
     const shot = await p.screenshot(); ok(shot.length > 20000, 'the canvas is not blank (' + shot.length + ' bytes)');
-    await p.click('#backBtn'); await p.waitForTimeout(500);
+    await p.click('[data-act="backmap"]'); await p.waitForTimeout(500);
     ok(await ev(() => __vm.cityView === null), 'back to the map'); ok(await ev(() => !document.body.classList.contains('in3d')), 'in3d cleared');
     await ev(c => { __vm.speed = 0; __vm.selectedCity = c; __vm.openCity(c); }, cap); ok(await ev(() => __vm.speed) === 1, 'entering a city from pause runs time at normal speed'); await ev(() => { __vm.speed = 0; }); await p.waitForTimeout(500); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
     ok(await ev(() => __vm.cityView === null), 'Escape leaves the city');

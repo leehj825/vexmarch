@@ -29,6 +29,7 @@ var LANG_KO = {
 "STARVING": "기근", "SUPPLY CUT": "보급 차단",
 
 // ---- 3D city ----
+"Map": "지도", "Flat map": "평면 지도", "{0}D terrain": "{0}D 지형", "North up": "북쪽을 위로", "Tilt up": "위로 기울이기", "Tilt down": "아래로 기울이기", "Turn left": "왼쪽으로 돌리기", "Turn right": "오른쪽으로 돌리기", "The map style changes the next time the game starts.": "지도 방식은 게임을 다시 시작할 때 바뀝니다.",
 "View city": "도시 보기", "← Back to map": "← 지도로", "Back to map": "지도로",
 "Drag to look around · two fingers to pan and zoom": "끌어서 둘러보기 · 두 손가락으로 이동 및 확대",
 "The 3D view is not available on this device": "이 기기에서는 3D 보기를 쓸 수 없습니다",
