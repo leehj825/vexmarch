@@ -106,7 +106,8 @@ VM.CityLayout = (function () {
       market: { angle: main, r: R * 0.62 },
       barracks: { angle: main + Math.PI, r: R * 0.55 },
       temple: { angle: main + Math.PI / 2, r: R * 0.55 },
-      depot: { angle: main - 0.5, r: R * 0.82 }
+      depot: { angle: main - 0.5, r: R * 0.82 },
+      smith: { angle: main - Math.PI / 2, r: R * 0.55 }
     };
     for (const k in sites) Object.assign(sites[k], pol(sites[k].r, sites[k].angle));
     const obstacles = [{ x: 0, z: 0, r: 6.5 }];                                    // the keep
@@ -129,6 +130,8 @@ VM.CityLayout = (function () {
     take(sites.temple.x, sites.temple.z, 2.6);
     L.depot = city.depot ? { x: sites.depot.x, z: sites.depot.z, crates: clamp(Math.ceil(city.depot.food / 400), 1, 8) } : null;
     take(sites.depot.x, sites.depot.z, 2);
+    L.smith = { on: city.spec === 'iron' || blvl >= 3 || tier === 'city' || tier === 'capital', x: sites.smith.x, z: sites.smith.z, rot: sites.smith.angle };      // a smithy where iron is worked or the army is strong
+    take(sites.smith.x, sites.smith.z, tier === "hamlet" ? 2.2 : 3.2);
 
     // Houses: decorative, as many as the people need. The candidate spots come from a fixed sequence and only the first `wanted` are used, so a growing town
     // adds houses without moving the old ones.
@@ -181,7 +184,7 @@ VM.CityLayout = (function () {
     // Garrison on the wall (or around the keep without one)
     const gtotal = E.troopsOf(city.garrison);
     L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal / 14), gtotal > 0 ? 1 : 0, 36), onWall: wlvl > 0 };
-    L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0,
+    L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0, L.smith.on ? 1 : 0,
       L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', city.besieged ? 1 : 0].join('/');
     L.sigArmies = [L.garrison.visible, L.assault ? 1 : 0, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10), a.breach ? 1 : 0].join(':')).join('|')].join('/');
     L.sig = L.sigStatic + '#' + L.sigArmies;

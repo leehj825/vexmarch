@@ -11,7 +11,7 @@ VM.City3D = (function () {
     sand: '#d8c890', water: '#4f86b8', door: '#3a2a22', hay: '#d9bf6a', canvas: '#e8dcb8', gold: '#f2d27a', glow: '#8fd8ff'
   };
   let renderer, scene, camera, canvas, ui, ok = false, layout = null, sig = '', cityId = -1, t = 0, shown = false;
-  let staticMesh = null, ground = null, water = null, dyn = null;
+  let staticMesh = null, ground = null, water = null, dyn = null, texMeshes = [];
   const cam = { yaw: 0.8, pitch: 0.82, dist: 40, minD: 20, maxD: 120, auto: true, tx: 0, tz: 0 };
   const pointers = new Map(); let pinch = 0;
 
@@ -29,6 +29,39 @@ VM.City3D = (function () {
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.nor, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
     return new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
   };
+  // The textured models of Nightfall Settlement (tree, tent, well, smithy, range, campfire, fence, wall): decoded once, then merged per texture, so the
+  // whole set costs four draw calls however many are placed.
+  const structGeos = {}, structMats = {};
+  function structGeo(key) {
+    if (structGeos[key]) return structGeos[key];
+    const d = VM.StructModels.parts[key], u = (s, T) => { const bin = atob(s), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new T(a.buffer); };
+    const p = u(d.pos, Int16Array), uv = u(d.uv, Uint16Array), nr = u(d.nor, Int8Array), idx = u(d.idx, Uint16Array);
+    return (structGeos[key] = { t: d.t, p: Float32Array.from(p, v => v / 1000), n: Float32Array.from(nr, v => v / 127), uv: Float32Array.from(uv, v => v / 65535), idx });
+  }
+  function TexMerger() { this.by = {}; this.tris = 0; }
+  TexMerger.prototype.add = function (key, x, y, z, rot, sx, sy, sz) {            // model with its front toward +z, scaled, turned about Y by rot, set down at (x, y, z)
+    if (!VM.StructModels) return;
+    const g = structGeo(key), B = this.by[g.t] || (this.by[g.t] = { pos: [], nor: [], uv: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
+    sx = sx || 1; sy = sy || sx; sz = sz || sx;
+    for (let i = 0; i < g.p.length; i += 3) {
+      const px = g.p[i] * sx, py = g.p[i + 1] * sy, pz = g.p[i + 2] * sz, nx = g.n[i], ny = g.n[i + 1], nz = g.n[i + 2];
+      B.pos.push(px * c + pz * sn + x, py + y, -px * sn + pz * c + z); B.nor.push(nx * c + nz * sn, ny, -nx * sn + nz * c);
+    }
+    for (let i = 0; i < g.uv.length; i++) B.uv.push(g.uv[i]);
+    for (let i = 0; i < g.idx.length; i++) B.idx.push(g.idx[i] + base);
+    this.tris += g.idx.length / 3;
+  };
+  TexMerger.prototype.meshes = function () {
+    return Object.keys(this.by).map(t => {
+      const B = this.by[t], geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(B.nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
+      geo.setIndex(B.idx);
+      if (!structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
+      return new THREE.Mesh(geo, structMats[t]);
+    });
+  };
+  let tx = null;                                                                  // the TexMerger of the city being built
+  const facing = (x, z) => Math.atan2(-x, -z);                                     // turn about Y that points a model's front (+z) at the city centre
   const yawFor = (dx, dz) => -Math.atan2(dz, dx);                 // rotation about Y that turns local +x toward (dx, dz) in the x/z plane
   const place = (g, x, y, z, rot) => { if (rot) g.rotateY(rot); g.translate(x, y, z); return g; };
   const box = (M, x, yb, z, w, h, d, color, rot, shade) => M.add(place(new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0), x, yb, z, rot), color, shade);
@@ -51,11 +84,30 @@ VM.City3D = (function () {
   // ---------------- the static city ----------------
   function wallHeight(level) { return [0, 2.2, 3.2, 4.2][level]; }
 
-  function house(M, h, ci, accent) {
-    const base = [COL.plaster, COL.plaster2, COL.plaster3][ci % 3];
-    box(M, h.x, 0, h.z, h.w, h.h, h.d, base, h.rot, 0.96 + (ci % 3) * 0.02);
+  // A house in Nightfall's village style: plaster walls in a timber frame, a gabled roof, a door with a lintel, shuttered windows with flower boxes, a
+  // chimney with a cap, and now and then a lean-to shed. In hamlets some of the homes are tents.
+  function house(M, h, ci, accent, tier) {
+    if (tier === 'hamlet' && ci % 3 === 0 && VM.StructModels) { tx.add('tent', h.x, 0, h.z, facing(h.x, h.z) + (ci % 2 ? 0.3 : -0.3), 0.62); return; }
+    const base = [COL.plaster, COL.plaster2, COL.plaster3][ci % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);
+    const lb = (lx, yb, lz, w, hh, d, color, shade) => M.add(place(new THREE.BoxGeometry(w, hh, d).translate(lx, yb + hh / 2, lz), h.x, 0, h.z, h.rot), color, shade);
+    box(M, h.x, 0, h.z, h.w + 0.12, 0.2, h.d + 0.12, COL.stoneDark, h.rot);                                    // stone footing
+    box(M, h.x, 0.2, h.z, h.w, h.h - 0.2, h.d, base, h.rot, 0.96 + (ci % 3) * 0.02);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) lb(sx * h.w / 2, 0.2, sz * h.d / 2, 0.14, h.h - 0.2, 0.14, COL.woodDark);   // corner posts
+    for (const sz of [-1, 1]) lb(0, h.h - 0.14, sz * h.d / 2, h.w + 0.08, 0.1, 0.1, COL.woodDark);                // beams under the roof
+    for (const sx of [-1, 1]) lb(sx * h.w / 2, h.h - 0.14, 0, 0.1, 0.1, h.d + 0.08, COL.woodDark);
+    if (ci % 2 === 0) for (const sx of [-1, 1]) lb(sx * h.w * 0.28, 0.35, h.d / 2 + 0.03, 0.08, h.h - 0.6, 0.06, COL.woodDark);   // a brace pair on the front
     gable(M, h.x, h.h, h.z, h.w, h.d, 0.9, h.rot, h.roof === 2 ? accent : COL.roofs[h.roof]);
-    if (h.chimney) { const c = Math.cos(h.rot) * h.w * 0.25, s = -Math.sin(h.rot) * h.w * 0.25; box(M, h.x + c, h.h + 0.2, h.z + s, 0.35, 0.9, 0.35, COL.stoneDark); }
+    lb(0, h.h + 0.88, 0, h.w + 0.5, 0.08, 0.1, COL.woodDark);                                                      // ridge beam
+    const dOff = ((ci * 7) % 3 - 1) * h.w * 0.18;
+    lb(dOff, 0.2, h.d / 2 + 0.03, 0.42, 0.85, 0.06, COL.door); lb(dOff, 1.05, h.d / 2 + 0.05, 0.56, 0.08, 0.1, COL.woodDark);   // door and lintel
+    for (const sx of [-1, 1]) {
+      const wx = sx * h.w * 0.32; if (Math.abs(wx - dOff) < 0.5) continue;
+      lb(wx, 0.55, h.d / 2 + 0.03, 0.3, 0.3, 0.06, '#f2c879');                                                    // a lit window with shutters and a flower box
+      for (const k of [-1, 1]) lb(wx + k * 0.24, 0.5, h.d / 2 + 0.05, 0.1, 0.4, 0.06, COL.woodDark);
+      lb(wx, 0.42, h.d / 2 + 0.12, 0.38, 0.1, 0.14, (ci + sx) % 2 ? '#c0504a' : '#d8a02a');
+    }
+    if (h.chimney) { const cx = c * h.w * 0.25, cz = -sn * h.w * 0.25; box(M, h.x + cx, h.h + 0.2, h.z + cz, 0.35, 0.9, 0.35, COL.stoneDark); box(M, h.x + cx, h.h + 1.1, h.z + cz, 0.46, 0.1, 0.46, COL.stone); }
+    if (ci % 4 === 1) { const side = ci % 8 === 1 ? 1 : -1; lb(side * (h.w / 2 + 0.45), 0, -0.1, 0.9, 0.9, h.d * 0.6, base, 0.92); lb(side * (h.w / 2 + 0.45), 0.9, -0.1, 1.05, 0.08, h.d * 0.7, COL.woodDark); }
   }
 
   function buildKeep(M, L) {
@@ -89,9 +141,9 @@ VM.City3D = (function () {
       const [x, z] = polar(R, s.angle), rot = yawFor(-Math.sin(s.angle), Math.cos(s.angle));
       if (s.damage === 2) { for (let k = 0; k < 4; k++) box(M, x + (k - 1.5) * 0.5, 0, z + (k % 2) * 0.4, 0.8, 0.5 + (k % 3) * 0.3, 0.8, COL.rockDark, k); return; }
       const h = s.damage === 1 ? wh * 0.62 : wh;
-      box(M, x, 0, z, chord, h, th, COL.stone, rot, s.damage ? 0.8 : 1);
+      if (VM.StructModels) tx.add('wall', x, 0, z, rot, chord / 3, h / 1.64, Math.max(1, th / 0.6)); else box(M, x, 0, z, chord, h, th, COL.stone, rot, s.damage ? 0.8 : 1);
       if (s.damage === 1) box(M, x + 0.3, 0, z, 0.9, 0.5, 0.9, COL.rockDark, 0.6);
-      else if (lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
+      else if (!VM.StructModels && lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
     });
     for (const a of W.towers) {
       const [x, z] = polar(R, a), th2 = lvl >= 2 ? 1.5 : 1.1, hh = wh + (lvl >= 2 ? 1.4 : 0.8);
@@ -112,7 +164,7 @@ VM.City3D = (function () {
     const accent = L.color, R = L.radius, rnd = mulberry(L.id * 7919 + 5);
     buildKeep(M, L);
     buildWalls(M, L, accent);
-    L.houses.forEach((h, i) => house(M, h, i, accent));
+    L.houses.forEach((h, i) => house(M, h, i, accent, L.tier));
     // Market stalls
     for (const s of L.stalls) {
       for (const [ox, oz] of [[-0.9, -0.7], [0.9, -0.7], [0.9, 0.7], [-0.9, 0.7]]) { const c = Math.cos(s.rot), sn = Math.sin(s.rot); cyl(M, s.x + ox * c - oz * sn, 0, s.z + ox * sn + oz * c, 0.06, 0.06, 1.8, COL.woodDark, 4); }
@@ -127,8 +179,13 @@ VM.City3D = (function () {
       cyl(M, B.x - Math.cos(B.rot) * 3, 0, B.z - Math.sin(B.rot) * 3, 0.08, 0.08, 4.4, COL.woodDark, 4);
       box(M, B.x - Math.cos(B.rot) * 3, 3.2, B.z - Math.sin(B.rot) * 3, 0.06, 1.0, 1.4, accent, rot);
     }
-    for (const tnt of B.tents) cone(M, tnt.x, 0, tnt.z, 1.7, 1.9, '#d9c79a', 6);
-    for (const d of B.dummies) { cyl(M, d.x, 0, d.z, 0.1, 0.12, 1.5, COL.woodDark, 5); box(M, d.x, 1.1, d.z, 1.0, 0.12, 0.12, COL.wood); ball(M, d.x, 1.7, d.z, 0.22, COL.hay, 5); }
+    for (const tnt of B.tents) { if (VM.StructModels) tx.add('tent', tnt.x, 0, tnt.z, facing(tnt.x, tnt.z), 0.8); else cone(M, tnt.x, 0, tnt.z, 1.7, 1.9, '#d9c79a', 6); }
+    if (L.smith.on && VM.StructModels) tx.add('smith', L.smith.x, 0, L.smith.z, facing(L.smith.x, L.smith.z), 0.85);
+    B.dummies.forEach((d, di) => {
+      if (VM.StructModels && di === 0) { tx.add('campfire', d.x, 0, d.z, 0, 0.9); return; }
+      if (VM.StructModels && B.level >= 3) { tx.add('range', d.x, 0, d.z, facing(d.x, d.z), 0.85); return; }
+      cyl(M, d.x, 0, d.z, 0.1, 0.12, 1.5, COL.woodDark, 5); box(M, d.x, 1.1, d.z, 1.0, 0.12, 0.12, COL.wood); ball(M, d.x, 1.7, d.z, 0.22, COL.hay, 5);
+    });
     // Temple
     const T = L.temple;
     if (T.level >= 1) {
@@ -150,12 +207,14 @@ VM.City3D = (function () {
     for (const fh of L.farmhouses) { box(M, fh.x, 0, fh.z, 3.2, 1.8, 2.4, COL.plaster2, -fh.rot); gable(M, fh.x, 1.8, fh.z, 3.2, 2.4, 1.3, -fh.rot, COL.roofs[1]); cyl(M, fh.x + 2.6, 0, fh.z, 0.55, 0.65, 2.2, COL.hay, 7); }
     // Features
     for (const f of L.features) {
-      if (f.kind === 'tree') { cyl(M, f.x, 0, f.z, 0.18, 0.24, 1.3 * f.size / 2.2, COL.woodDark, 5); cone(M, f.x, 1.0 * f.size / 2.2, f.z, 1.1 * f.size / 2.2, 2.2 * f.size / 2.2, rnd() < 0.5 ? COL.leaf : COL.leaf2, 6); }
+      if (f.kind === 'tree' && VM.StructModels) tx.add('tree', f.x, 0, f.z, f.rot, 0.85 * f.size / 2.2 + 0.15);
+      else if (f.kind === 'tree') { cyl(M, f.x, 0, f.z, 0.18, 0.24, 1.3 * f.size / 2.2, COL.woodDark, 5); cone(M, f.x, 1.0 * f.size / 2.2, f.z, 1.1 * f.size / 2.2, 2.2 * f.size / 2.2, rnd() < 0.5 ? COL.leaf : COL.leaf2, 6); }
       else if (f.kind === 'rock') { cone(M, f.x, 0, f.z, f.size * 0.7, f.size * 1.3, COL.rock, 5); cone(M, f.x + f.size * 0.6, 0, f.z, f.size * 0.45, f.size * 0.8, COL.rockDark, 5); }
       else if (f.kind === 'ore') { box(M, f.x, 0, f.z, f.size, f.size * 0.7, f.size, COL.rockDark, f.rot); box(M, f.x + 0.2, f.size * 0.6, f.z, f.size * 0.4, f.size * 0.4, f.size * 0.4, '#d2823a', f.rot); }
-      else if (f.kind === 'paddock') { for (let k = 0; k < 14; k++) { const p = polar(f.size * 0.7, k * TAU / 14); cyl(M, f.x + p[0], 0, f.z + p[1], 0.07, 0.07, 1.0, COL.woodDark, 4); } for (let k = 0; k < 3; k++) { const p = polar(f.size * 0.3, k * 2.1 + f.rot); box(M, f.x + p[0], 0.5, f.z + p[1], 1.4, 0.7, 0.5, k % 2 ? '#8a5a3a' : '#c9b8a0', f.rot + k); box(M, f.x + p[0] + 0.7, 0.9, f.z + p[1], 0.35, 0.6, 0.3, k % 2 ? '#8a5a3a' : '#c9b8a0', f.rot + k); } }
+      else if (f.kind === 'paddock') { for (let k = 0; k < 14; k++) { const a = k * TAU / 14, p = polar(f.size * 0.7, a); if (VM.StructModels) tx.add('fence', f.x + p[0], 0, f.z + p[1], yawFor(-Math.sin(a), Math.cos(a)), 0.8); else cyl(M, f.x + p[0], 0, f.z + p[1], 0.07, 0.07, 1.0, COL.woodDark, 4); } for (let k = 0; k < 3; k++) { const p = polar(f.size * 0.3, k * 2.1 + f.rot); box(M, f.x + p[0], 0.5, f.z + p[1], 1.4, 0.7, 0.5, k % 2 ? '#8a5a3a' : '#c9b8a0', f.rot + k); box(M, f.x + p[0] + 0.7, 0.9, f.z + p[1], 0.35, 0.6, 0.3, k % 2 ? '#8a5a3a' : '#c9b8a0', f.rot + k); } }
       else if (f.kind === 'stones') { for (let k = 0; k < 8; k++) { const p = polar(f.size, k * TAU / 8); box(M, f.x + p[0], 0, f.z + p[1], 0.7, 2.2 + (k % 2), 0.5, COL.stoneLight, k * 0.8); } box(M, f.x, 0, f.z, 1.2, 0.8, 1.2, COL.stone); ball(M, f.x, 1.3, f.z, 0.35, COL.glow, 6); }
       else if (f.kind === 'banner') { cyl(M, f.x, 0, f.z, 0.06, 0.06, 3, COL.woodDark, 4); box(M, f.x + 0.5, 1.7, f.z, 1.0, 1.2, 0.05, COL.gold, 0); }
+      else if (f.kind === 'well' && VM.StructModels) tx.add('well', f.x, 0, f.z, 0, 0.8);
       else if (f.kind === 'well') { cyl(M, f.x, 0, f.z, 0.8, 0.9, 0.8, COL.stone, 8); cyl(M, f.x - 0.7, 0, f.z, 0.06, 0.06, 1.8, COL.woodDark, 4); cyl(M, f.x + 0.7, 0, f.z, 0.06, 0.06, 1.8, COL.woodDark, 4); box(M, f.x, 1.8, f.z, 1.9, 0.12, 0.8, COL.roofs[0]); }
     }
     if (L.water) {                                                           // a pier into the water
@@ -440,14 +499,15 @@ VM.City3D = (function () {
   function dispose(obj) { obj.traverse(n => { if (n.geometry && !n.geometry.userData.shared) n.geometry.dispose(); if (n.material) { (Array.isArray(n.material) ? n.material : [n.material]).forEach(m => { if (!m.userData.shared) m.dispose(); }); } }); }
 
   function rebuildStatic(L) {
-    for (const o of [staticMesh, ground, water]) if (o) { scene.remove(o); dispose(o); }
-    const M = new Merger(); buildCity(M, L); staticMesh = M.mesh(); scene.add(staticMesh);
+    for (const o of [staticMesh, ground, water].concat(texMeshes)) if (o) { scene.remove(o); dispose(o); }
+    tx = new TexMerger(); const M = new Merger(); buildCity(M, L); staticMesh = M.mesh(); scene.add(staticMesh);
+    texMeshes = tx.meshes(); texMeshes.forEach(m => scene.add(m));
     ground = buildGround(L); scene.add(ground);
     water = null;
     if (L.water) { const g = new THREE.CircleGeometry(L.water.radius, 28); g.rotateX(-Math.PI / 2); const p = polar(L.water.r, L.water.angle); g.translate(p[0], 0.08, p[1]); water = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: COL.water, transparent: true, opacity: 0.88 })); scene.add(water); }
     const ext = Math.max(L.radius + 14, 36, ...L.armies.map(a => a.d + 8));                   // wide enough to see the armies outside the walls
     cam.minD = L.radius * 1.2; cam.maxD = Math.max(L.radius * 5.5, ext * 4.5); cam.dist = Math.min(cam.maxD, Math.max(cam.minD, cam.dist || ext * (innerWidth < innerHeight ? 3.0 : 2.0)));
-    stats.tris = M.tris;
+    stats.tris = M.tris + tx.tris;
   }
   function rebuildDynamic(L) {
     if (dyn) { scene.remove(dyn.group); dispose(dyn.group); }
