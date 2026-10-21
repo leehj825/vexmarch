@@ -58,7 +58,8 @@
       VM.Alerts.process(); overlay(); VM.Tutorial.update(); moodTick(dt);
       const m = Math.floor(ui.state.time / 30); if (m !== ui.lastSave && !ui.state.over) { ui.lastSave = m; save(); }
     }
-    if (ui.cityView !== null) VM.City3D.frame(dt); else VM.MapView.render();
+    if (ui.cityView !== null) { VM.City3D.frame(dt); const tb = document.getElementById('top').getBoundingClientRect().bottom; if (tb !== ui.topBottom) { ui.topBottom = tb; document.documentElement.style.setProperty('--topb', tb + 'px'); } }      // the Back button sits under the top bar, however many rows it wraps to
+    else VM.MapView.render();
     if (ui.running) { VM.Panels.update(); VM.Sheets.update(); }
     requestAnimationFrame(frame);
   }
@@ -74,7 +75,8 @@
     else if (e.key === 'Escape') { if (ui.cityView !== null) ui.closeCity(); else { ui.selectedArmy = null; ui.selectedCity = -1; } }
   });
 
-  VM.MapView.init(document.getElementById('map'), ui);
+  VM.MapView.init(document.getElementById('map'), ui, document.getElementById('map3d'));
+  document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
   VM.City3D.init(document.getElementById('city3d'), ui); document.getElementById('backBtn').addEventListener('click', () => ui.closeCity());
   VM.UIPrefs.apply(); VM.I18N.start();
   VM.Panels.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);

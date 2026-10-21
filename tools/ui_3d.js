@@ -30,7 +30,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     ok(await ev(() => __vm.cityView === null), 'Escape leaves the city');
 
     // Double tap on a node on the map
-    const pos = await ev(c => { const v = VM.MapView.view(), nd = __vm.state.map.nodes[c]; return { x: nd.x * v.s + v.ox, y: nd.y * v.s + v.oy }; }, cap);
+    const pos = await ev(c => VM.MapView.screenOf(c), cap);
     await ev(() => { __vm.selectedCity = -1; __vm.selectedArmy = null; });
     await p.mouse.click(pos.x, pos.y); await p.mouse.click(pos.x, pos.y); await p.waitForTimeout(700);
     ok(await ev(() => __vm.cityView) === cap, 'a double tap on a node opens the city'); await ev(() => __vm.closeCity());

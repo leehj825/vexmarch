@@ -24,7 +24,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     ok(await ev(() => VM.Tutorial.active()), 'tutorial started'); ok(await ev(() => __vm.state.aiOn === false), 'AI asleep during the tutorial');
     await p.click('#speed [data-s="0"]'); await p.click('#speed [data-s="1"]'); await p.waitForTimeout(250);
     const cap = await ev(() => __vm.state.factions[__vm.state.player].capital);
-    const pos = id => ev(id => { const v = VM.MapView.view(), n = __vm.state.map.nodes[id]; return { x: n.x * v.s + v.ox, y: n.y * v.s + v.oy }; }, id);
+    const pos = id => ev(id => VM.MapView.screenOf(id), id);
     let pt = await pos(cap); await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(250);
     ok(await ev(() => __vm.selectedCity) === cap, 'capital selected by tapping');
     await ev(() => { __vm.speed = 0; }); await p.waitForTimeout(150);
