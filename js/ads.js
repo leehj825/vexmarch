@@ -13,9 +13,10 @@
     try {
       await within(AdMob.initialize({ initializeForTesting: !real }), 8000);
       try { const info = await within(AdMob.requestConsentInfo(), 5000); if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await AdMob.showConsentForm(); } catch (e) { /* consent is optional outside the EEA */ }
-      AdMob.addListener('bannerAdLoaded', () => document.body.classList.add('adLive'));
-      AdMob.addListener('bannerAdFailedToLoad', () => document.body.classList.remove('adLive'));
-      const sync = () => { if (document.body.classList.contains('titlemode')) { hide(); document.body.classList.remove('adLive'); } else show(); };
+      AdMob.addListener('bannerAdLoaded', () => { if (!document.body.classList.contains('adLive')) document.body.classList.add('adLive'); });
+      AdMob.addListener('bannerAdFailedToLoad', () => { if (document.body.classList.contains('adLive')) document.body.classList.remove('adLive'); });
+      // Only touch the class when it really changes: even a no-op classList edit raises another mutation, and an observer that edits what it observes loops forever and freezes the app
+      const sync = () => { const cl = document.body.classList; if (cl.contains('titlemode')) { hide(); if (cl.contains('adLive')) cl.remove('adLive'); } else show(); };
       new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] }); sync();
     } catch (e) { /* ads are never allowed to break the game */ }
   }
