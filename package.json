@@ -13,7 +13,8 @@
     "tournament": "node tools/ai_tournament.js",
     "ui:test": "node tools/ui_smoke.js",
     "i18n:check": "node tools/i18n_crawl.js --ko --missing",
-    "ui:test3d": "node tools/ui_3d.js"
+    "ui:test3d": "node tools/ui_3d.js",
+    "ui:walk": "node tools/ui_walk.js"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.0",

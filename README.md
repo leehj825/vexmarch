@@ -2,7 +2,7 @@
 
 A real-time grand strategy game: 30 nodes, 4 to 6 factions, officers who run your cities, and supply lines that decide wars. Plain JavaScript (no build step, no modules) so it opens from `file://`; Capacitor wraps it for Android (`com.vexmarch.game`).
 
-See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 8 done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). The 3D city view (View city in the city panel, or double-tap a node) shows buildings, walls, soldiers of every kind and armies marching and fighting outside the gates; walk mode (Phase 9) is next. See `ANDROID.md` for the phone build.
+See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 9 done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). The 3D city view (View city in the city panel, or double-tap a node) shows buildings, walls, soldiers of every kind and armies marching and fighting outside the gates; Walk mode (the Walk button in your own city) lets you stroll the streets, talk to officers and townsfolk and give gifts while the clock is paused. The strategy map is 3D with terrain, and there is a Campaign mode with a story (`docs/STORY.md`) beside the random Skirmish. See `ANDROID.md` for the phone build.
 
 ## Run
 
@@ -15,6 +15,7 @@ npm test              # tools/test.js (map, determinism, saves, economy, command
 npm run tournament   # AI-vs-AI games: node tools/ai_tournament.js [seeds] [years] [levels]
 npm run ui:test       # browser smoke test (needs Playwright: PLAYWRIGHT=/path/to/playwright)
 npm run ui:test3d     # browser test of the 3D city view (needs Playwright)
+# more browser tests: tools/ui_map3d.js, ui_story.js, ui_walk.js, ui_ads.js (run with node, PLAYWRIGHT=...)
 npm run i18n:check    # lists texts still in English when the game runs in Korean
 npm run balance       # node tools/balance.js [seed] [years]: yearly economy tables for low/normal/high tax
 ```
@@ -44,6 +45,7 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/ads.js`, `js/ads_env.js` | AdMob banner (Android) and its settings |
 | `js/view3d/layout.js`, `js/view3d/city3d.js` | The 3D city: layout as data, Three.js renderer |
 | `js/data/story.js`, `js/sim/story.js`, `js/ui/story.js` | The campaign: history, houses, fixed map, officers and their ties, beats, endings (English and Korean), and the story pages (`docs/STORY.md`) |
+| `js/view3d/walk.js` | Walk mode: avatar, collisions, officers and townsfolk to talk to (`tools/ui_walk.js`) |
 | `js/view3d/terrain.js` | The 3D ground under the strategy map (height field, water, forests, roads, territory texture, camera, projection) |
 | `js/view3d/struct_models.js` | Nightfall's textured building models (wall, tent, well, smithy, range, tree, fence, campfire; `tools/extract_structs.js`) |
 | `js/view3d/crowd.js`, `js/view3d/crowd_clips.js` | The animated soldiers: simple figures skinned in the shader from a texture of baked clips (`tools/extract_crowd.js` rebuilds the data from Nightfall Settlement) |
