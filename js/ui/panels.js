@@ -13,6 +13,7 @@ VM.Panels = (function () {
     ui = uiRef; panel = $('panel');
     panel.addEventListener('click', onClick);
     panel.addEventListener('change', onChange);
+    panel.addEventListener('input', e => { const k = e.target.dataset.draft; if (!k || !ui.draft) return; const c = ui.state.cities[ui.draft.city]; ui.draft.take[k] = Math.max(0, Math.min(Math.floor(c.garrison[k] + 1e-9), Math.floor(+e.target.value || 0))); });
   }
 
   function cmd(c) {
@@ -33,10 +34,16 @@ VM.Panels = (function () {
       case 'recruit': cmd({ type: 'recruit', city: +d.city, troop: d.t, count: +d.n }); break;
       case 'form': {
         const sel = $('formOfficer'); if (!sel || sel.value === '') { toast('Choose an officer to lead the army'); break; }
-        const r = cmd({ type: 'formArmy', city: +d.city, officer: +sel.value });
-        if (r.ok) { ui.selectedCity = -1; ui.selectedArmy = r.army; }
+        const c = st.cities[+d.city], take = {}; for (const k in draftFor(c).take) if (ui.draft.take[k] > 0) take[k] = ui.draft.take[k];
+        const r = cmd({ type: 'formArmy', city: +d.city, officer: +sel.value, troops: take });
+        if (r.ok) { ui.draft = null; ui.selectedCity = -1; ui.selectedArmy = r.army; }
         break;
       }
+      case 'draft': { const c = st.cities[ui.selectedCity]; if (!c) break; const dr = draftFor(c); dr.take[d.t] = Math.max(0, Math.min(Math.floor(c.garrison[d.t] + 1e-9), (dr.take[d.t] || 0) + +d.n)); lastHTML = ''; break; }
+      case 'draftAll': { const c = st.cities[ui.selectedCity]; if (!c) break; const dr = draftFor(c); for (const k in VM.CFG.TROOPS) if (d.t === '*' || d.t === k) dr.take[k] = Math.floor(c.garrison[k] + 1e-9); lastHTML = ''; break; }
+      case 'draftNone': { const c = st.cities[ui.selectedCity]; if (!c) break; const dr = draftFor(c); for (const k in dr.take) dr.take[k] = 0; lastHTML = ''; break; }
+      case 'xfer': cmd({ type: 'transferTroops', army: +d.army, troop: d.t, count: +d.n }); break;
+      case 'merge': { const sel = $('mergeWith'); if (!sel || sel.value === '') break; const r = cmd({ type: 'mergeArmies', army: +d.army, with: +sel.value }); if (r.ok) toast('The armies are now one'); break; }
       case 'stop': cmd({ type: 'stopArmy', army: +d.army }); break;
       case 'disband': { const r = cmd({ type: 'disbandArmy', army: +d.army }); if (r.ok) ui.selectedArmy = null; break; }
       case 'ability': { const r = cmd({ type: 'ability', army: +d.army }); if (r.ok) toast(({ charge: 'Charge! Your troops hit harder for a few days', fire: 'Fire attack!', rally: 'Rally! Morale restored' })[r.kind]); break; }
@@ -45,6 +52,7 @@ VM.Panels = (function () {
       case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
       case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
       case 'view3d': ui.openCity(+d.city); break;
+      case 'backmap': ui.closeCity(); break;
       case 'goto': ui.centerOn(+d.city); break;
     }
   }
@@ -61,6 +69,12 @@ VM.Panels = (function () {
   const officerLine = o => `${o.name} · Cmd ${o.command} Mig ${o.might} Pol ${o.politics} Int ${o.intellect} · ${o.trait}`;
   const troopList = (t, all) => Object.keys(VM.CFG.TROOPS).filter(k => all || t[k] >= 0.5).map(k => `${VM.CFG.TROOPS[k].label} ${num(t[k])}`).join(' · ') || 'none';
   const bar = (frac, cls) => `<div class="bar ${cls || ''}"><i style="width:${Math.max(0, Math.min(100, frac * 100)).toFixed(0)}%"></i></div>`;
+  // The troops chosen for the next army, per city (kept while the panel redraws).
+  function draftFor(c) {
+    if (!ui.draft || ui.draft.city !== c.id) { ui.draft = { city: c.id, take: {} }; for (const k in VM.CFG.TROOPS) ui.draft.take[k] = Math.floor(c.garrison[k] + 1e-9); }
+    for (const k in VM.CFG.TROOPS) ui.draft.take[k] = Math.max(0, Math.min(Math.floor(c.garrison[k] + 1e-9), ui.draft.take[k] || 0));
+    return ui.draft;
+  }
   const POLICY_TIP = { manual: 'You decide everything here.', develop: 'The governor builds, sets taxes and keeps a small garrison, saving a gold reserve.', fortify: 'Walls first, then archers and a larger garrison.', recruit: 'Barracks first, then a large standing garrison to draw armies from.' };
   const ORDER_TIP = { hold: 'Stays where it is.', defend: 'Guards its station and meets intruders when the odds suit the officer.', reinforce: 'Marches to your cities that are under attack.', raid: 'Seeks weak hostile towns nearby, falls back to rest when worn down or cut off.' };
   const ABILITY = { charge: 'Charge', fire: 'Fire attack', rally: 'Rally' };
@@ -68,7 +82,7 @@ VM.Panels = (function () {
   function cityHTML(c) {
     const st = ui.state, me = st.player, N = st.map.nodes[c.id], S = VM.CFG.SPEC[c.spec], f = st.factions[c.owner], s = c.stats;
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c);
-    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span><button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button></div>`;
+    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span>${ui.cityView === c.id ? `<button data-act="backmap" class="btn sm">← Back to map</button>` : `<button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button>`}</div>`;
     h += `<div class="row"><span class="dot" style="background:${f.color}"></span>${f.name}${mine ? ' (you)' : ''}${c.besieged ? ' · <span class="bad">UNDER SIEGE</span>' : (c.contested ? ' · <span class="bad">CONTESTED</span>' : '')}</div>`;
     h += `<div class="row">Population <b>${num(c.pop)}</b> / ${num(s.cap)}</div>`;
     if (wmax > 0) h += `<div class="row">Wall <b>${num(c.wallHp)}</b> / ${num(wmax)}${bar(c.wallHp / wmax, 'wall')}</div>`;
@@ -103,14 +117,28 @@ VM.Panels = (function () {
     h += `<div class="sec">Recruit</div>`;
     for (const k of Object.keys(VM.CFG.TROOPS)) {
       const cost = VM.Eco.troopCost(c, k);
-      h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${cost.toFixed(1)}g each</span></span><span>` +
-        [10, 50, 200].map(n => `<button data-act="recruit" data-city="${c.id}" data-t="${k}" data-n="${n}" class="btn sm">+${n}</button>`).join('') + `</span></div>`;
+      h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${Math.round(cost)}g each</span></span><span>` +
+        [1, 5, 10].map(n => `<button data-act="recruit" data-city="${c.id}" data-t="${k}" data-n="${n}" class="btn sm">+${n}</button>`).join('') + `</span></div>`;
     }
     const free = st.officers.filter(o => o.owner === me && o.army === null && o.loc === c.id && c.governor !== o.id);
-    h += `<div class="sec">Army</div>`;
+    h += `<div class="sec">Form an army</div>`;
     if (!VM.Eco.troopsOf(c.garrison)) h += `<div class="row dim">Recruit troops to form an army from the garrison.</div>`;
     else if (!free.length) h += `<div class="row dim">No free officer in this city (the governor cannot lead an army).</div>`;
-    else h += `<div class="row">Leader <select id="formOfficer">` + free.map(o => `<option value="${o.id}">${o.name} · Cmd ${o.command}</option>`).join('') + `</select> <button data-act="form" data-city="${c.id}" class="btn">Form army</button></div>`;
+    else {
+      const d = draftFor(c); let total = 0, speed = Infinity;
+      h += `<div class="row dim">Choose how many of the garrison go with the army.</div>`;
+      for (const k of Object.keys(VM.CFG.TROOPS)) {
+        const have = Math.floor(c.garrison[k] + 1e-9); if (have < 1) continue;
+        const n = d.take[k] || 0; total += n; if (n > 0) speed = Math.min(speed, VM.CFG.TROOPS[k].speed);
+        h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${num(have)} here</span></span><span class="nowrap">` +
+          [-5, -1].map(x => `<button data-act="draft" data-t="${k}" data-n="${x}" class="btn sm">${x < 0 ? '−' + (-x) : '+' + x}</button>`).join('') +
+          `<input type="number" class="num" min="0" max="${have}" value="${n}" data-draft="${k}">` +
+          [1, 5].map(x => `<button data-act="draft" data-t="${k}" data-n="${x}" class="btn sm">+${x}</button>`).join('') +
+          `<button data-act="draftAll" data-t="${k}" class="btn sm">All</button></span></div>`;
+      }
+      h += `<div class="row dim">Taking ${num(total)} troops${total > 0 ? ' · speed ' + speed : ''} <button data-act="draftAll" data-t="*" class="btn sm">Take all</button> <button data-act="draftNone" class="btn sm">None</button></div>`;
+      h += `<div class="row">Leader <select id="formOfficer">` + free.map(o => `<option value="${o.id}">${o.name} · Cmd ${o.command}</option>`).join('') + `</select> <button data-act="form" data-city="${c.id}" class="btn"${total < 1 ? ' disabled' : ''}>Form army</button></div>`;
+    }
     return h;
   }
 
@@ -137,6 +165,17 @@ VM.Panels = (function () {
     h += `<div class="row">Orders ` + VM.Officers.ORDERS.map(k => `<button data-act="order" data-army="${a.id}" data-mode="${k}" class="chip${a.order === k ? ' on' : ''}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + `</div><div class="row dim">${ORDER_TIP[a.order]}${a.rest ? ' Resting now.' : ''}</div>`;
     const kind = VM.War.abilityOf(o), wait = Math.max(0, a.abilityReady - st.time);
     h += `<div class="row"><button data-act="ability" data-army="${a.id}" class="btn"${wait > 0 || a.routed ? ' disabled' : ''}>${ABILITY[kind]}</button> <span class="dim">${wait > 0 ? 'ready in ' + Math.ceil(wait) + ' days' : 'ready'}</span></div>`;
+    const home = a.at !== null && st.cities[a.at].owner === a.owner && !a.fighting.length && !a.routed ? st.cities[a.at] : null;
+    if (home) {
+      h += `<div class="sec">Troops in ${N[home.id].name}</div><div class="row dim">Move recruits between the army and the city's garrison.</div>`;
+      for (const k of Object.keys(VM.CFG.TROOPS)) {
+        const inArmy = Math.floor((a.troops[k] || 0) + 1e-9), inCity = Math.floor(home.garrison[k] + 1e-9); if (inArmy < 1 && inCity < 1) continue;
+        h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">army ${num(inArmy)} · city ${num(inCity)}</span></span><span class="nowrap">` +
+          [-5, -1, 1, 5].map(x => `<button data-act="xfer" data-army="${a.id}" data-t="${k}" data-n="${x}" class="btn sm"${(x < 0 ? inArmy : inCity) < 1 ? ' disabled' : ''}>${x < 0 ? '−' + (-x) : '+' + x}</button>`).join('') + `</span></div>`;
+      }
+      const mates = st.armies.filter(x => x.owner === a.owner && x.id !== a.id && x.at === a.at && !x.fighting.length && !x.routed);
+      if (mates.length) h += `<div class="row">Join with <select id="mergeWith"><option value="">(choose)</option>` + mates.map(x => `<option value="${x.id}">${st.officers[x.officer].name} · ${num(VM.Armies.sizeOf(x))}</option>`).join('') + `</select> <button data-act="merge" data-army="${a.id}" class="btn">Merge</button></div>`;
+    }
     h += `<div class="row dim">Tap a node to march there (right-click works too). Moving out of a battle costs morale. Tap empty ground to deselect.</div>`;
     h += `<div class="row"><button data-act="stop" data-army="${a.id}" class="btn">Halt</button> <button data-act="disband" data-army="${a.id}" class="btn"${a.at === null || st.cities[a.at].owner !== a.owner || a.fighting.length ? ' disabled' : ''}>Disband into city</button></div>`;
     return h;
@@ -154,7 +193,7 @@ VM.Panels = (function () {
     if (ui.selectedArmy !== null && !army) ui.selectedArmy = null;
     if (army) h = armyHTML(army); else if (ui.selectedCity >= 0) h = cityHTML(st.cities[ui.selectedCity]);
     panel.classList.toggle('open', !!h);
-    if (h !== lastHTML && !(document.activeElement && panel.contains(document.activeElement) && document.activeElement.tagName === 'SELECT' && h && lastHTML)) { panel.innerHTML = h; lastHTML = h; }
+    if (h !== lastHTML && !(document.activeElement && panel.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT') && h && lastHTML)) { panel.innerHTML = h; lastHTML = h; }
   }
 
   return { init, update, toast };

@@ -40,6 +40,7 @@ VM.Sheets = (function () {
       case 'mute': VM.Audio.toggleMute(); lastHTML = ''; break;
       case 'lang': VM.I18N.set(d.l); lastHTML = ''; break;
       case 'size': VM.UIPrefs.set('size', d.v); lastHTML = ''; break;
+      case 'map3d': VM.UIPrefs.set('map3d', d.v); lastHTML = ''; break;
       case 'tutorial': VM.Tutorial.finish(false); ui.sheet = null; VM.Title.startTutorial(); break;
       case 'delsave': try { localStorage.removeItem('vexmarch.save'); VM.Panels.toast('Saved game deleted'); } catch (e) { /* ignore */ } break;
       case 'answer': { const r = cmd({ type: 'answerProposal', proposal: +d.p, accept: d.yes === '1' }); if (r.ok && d.yes === '1') VM.Panels.toast('Approved'); break; }
@@ -104,6 +105,7 @@ VM.Sheets = (function () {
     h += `<div class="row"><button data-act="mute" class="chip${A.get('mute') ? ' on' : ''}">${A.get('mute') ? 'Sound off' : 'Sound on'}</button></div>`;
     h += `<div class="sec">Language</div><div class="row">` + VM.I18N.NAMES.map(([l, n]) => `<button data-act="lang" data-l="${l}" class="chip${VM.I18N.lang === l ? ' on' : ''}" translate="no">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Text size</div><div class="row">` + [['small', 'Small'], ['normal', 'Normal'], ['large', 'Large']].map(([v, n]) => `<button data-act="size" data-v="${v}" class="chip${VM.UIPrefs.get('size') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
+    h += `<div class="sec">Map</div><div class="row">` + [['on', '3D terrain'], ['off', 'Flat map']].map(([v, n]) => `<button data-act="map3d" data-v="${v}" class="chip${(VM.UIPrefs.get('map3d') || 'on') === v ? ' on' : ''}">${n}</button>`).join('') + `</div><div class="row dim">The map style changes the next time the game starts.</div>`;
     h += `<div class="sec">Help</div><div class="row"><button data-act="tutorial" class="btn">Replay the tutorial</button></div>`;
     h += `<div class="row"><button data-act="delsave" class="btn">Delete saved game</button></div>`;
     h += `<div class="row dim">Pausing for alerts is chosen in the Alerts list.</div>`;

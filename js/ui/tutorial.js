@@ -17,9 +17,9 @@ VM.Tutorial = (function () {
       done: () => ui.selectedCity === cap() },
     { id: 'farm', text: 'Food keeps people alive and lets cities grow. Build a Farm in your capital: press the Farm button in the Buildings list.',
       done: () => { const c = ui.state.cities[cap()]; return (c.build && c.build.type === 'farm') || c.buildings.farm > mem.farm; } },
-    { id: 'recruit', text: 'Troops cost gold and come from the population. Press +50 next to Infantry.',
-      done: () => VM.Eco.troopsOf(ui.state.cities[cap()].garrison) >= mem.troops + 50 || mine().length > 0 },
-    { id: 'army', text: 'Form an army: pick a leader and press Form army. It takes the garrison with it.',
+    { id: 'recruit', text: 'Troops cost gold and come from the population. Press +1 next to Infantry.',
+      done: () => VM.Eco.troopsOf(ui.state.cities[cap()].garrison) >= mem.troops + 1 || mine().length > 0 },
+    { id: 'army', text: 'Form an army: choose how many troops go (all of them by default), pick a leader and press Form army.',
       done: () => mine().length > 0 },
     { id: 'march', text: 'Armies march along roads. With the army selected, tap the glowing grey village (a free node) to send it there. It lays siege on arrival.', focus: () => target,
       done: () => mine().some(a => a.dest === target || a.at === target) || ui.state.cities[target].owner === me() },
@@ -48,7 +48,7 @@ VM.Tutorial = (function () {
     const capId = s.factions[1].capital;
     let best = -1, bd = Infinity;
     for (const c of s.cities) { if (c.owner !== 0) continue; const d = VM.Armies.distance(s, capId, c.id); if (d < bd) { bd = d; best = c.id; } }
-    s.cities[best].garrison = { infantry: 40, spear: 0, cavalry: 0, archer: 0, siege: 0 }; s.cities[best].buildings.wall = 0; s.cities[best].wallHp = 0;
+    s.cities[best].garrison = { infantry: 3, spear: 0, cavalry: 0, archer: 0, siege: 0 }; s.cities[best].buildings.wall = 0; s.cities[best].wallHp = 0;
     s.tutorial = { target: best };
     return s;
   }

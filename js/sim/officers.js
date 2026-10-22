@@ -244,13 +244,27 @@ VM.Officers = (function () {
     VM.Armies.move(state, a, node);
   }
 
+  // An officer inside his own walled city under siege chooses between holding the walls with the garrison and riding out to fight the besiegers in the open:
+  // out if he is clearly the stronger, or if the gate is about to fall; behind the walls otherwise. How sure he must be depends on his nature.
+  function decideSortie(state, a, city) {
+    const foes = state.armies.filter(e => e.owner !== a.owner && e.at === city.id && !e.routed && VM.War.sieging(e));
+    if (!foes.length || city.wallHp <= 0) { a.sortie = false; return; }
+    const o = state.officers[a.officer], foe = { troops: {} };
+    for (const e of foes) for (const k in e.troops) foe.troops[k] = (foe.troops[k] || 0) + e.troops[k];
+    const ratio = VM.War.power(a.troops, foe.troops) * VM.War.armyMods(state, a) / Math.max(1, VM.War.power(foe.troops, a.troops) * foes.reduce((m, e) => Math.max(m, VM.War.armyMods(state, e)), 1));
+    const need = oddsFor(O().sortieOdds, o.trait), failing = city.wallHp < 0.35 * VM.War.wallMax(city) && foe.troops.siege > 0;
+    a.sortie = ratio >= need || (failing && ratio >= need * 0.7);
+  }
+
   function armyThink(state, a) {
     const C = O(), o = state.officers[a.officer];
     a.peak = Math.max(a.peak || 0, VM.Armies.sizeOf(a));
     if (a.routed || a.fighting.length) return;
     const s = a.supply, here = a.at !== null ? state.cities[a.at] : null;
-    const weary = a.morale < 35 || (s && (s.line !== 'ok' && !s.depot)) || (s && s.starving) || VM.Armies.sizeOf(a) < 0.4 * a.peak;
+    if (here && here.owner === a.owner) decideSortie(state, a, here);
     if (a.order === 'hold') return;
+    const weary = !!VM.War.retreatReason(state, a);                    // the food would run out, or the men have lost heart (how far they are pushed depends on the officer)
+    if (!weary && !a.rest && here && here.owner !== a.owner && VM.War.sieging(a)) return;     // a hostile city in the way is being fought: stay until it falls
     if (weary || a.rest) {                                            // fall back and recover
       a.rest = a.morale < 85 || !!(s && s.line !== 'ok');
       if (a.dest !== null && state.cities[a.dest].owner === a.owner) return;       // already on its way to a friendly city

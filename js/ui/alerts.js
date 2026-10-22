@@ -36,6 +36,8 @@ VM.Alerts = (function () {
         if (ev.from === me) return spec(`${N[ev.city].name} has fallen to ${nm(ev.owner)}!`, 'attack', true, ev.city);
         if (ev.owner === me) return spec(`${N[ev.city].name} captured!`, 'info', false, ev.city);
         return spec(`${nm(ev.owner)} took ${N[ev.city].name}`, 'info', false, ev.city, false);
+      case 'breach': return ev.owner === me ? spec(`The gate of ${N[ev.city].name} has been broken! Your defenders come out to fight.`, 'attack', true, ev.city) : (state.armies.some(x => x.owner === me && x.at === ev.city) ? spec(`The gate of ${N[ev.city].name} is down!`, 'info', false, ev.city, false) : null);
+      case 'blocked': return mine ? spec(`Your army halted at ${N[ev.at].name}: a hostile city stands in the way and must be taken first`, 'info', false, ev.at) : null;
       case 'cut': return mine ? spec('An army of yours has been cut off from supply!', 'army', true, null) : null;
       case 'officerCaptured': return mine ? spec(`${on(ev.officer)} was captured and joins you`, 'info', false, null) : (ev.from === me ? spec(`${on(ev.officer)} was captured by ${nm(ev.owner)}`, 'info', false, null) : null);
       case 'officerDied': return ev.owner === me ? spec(`${on(ev.officer)} fell in battle`, 'info', false, null) : null;

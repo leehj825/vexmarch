@@ -7,7 +7,7 @@ var VM = globalThis.VM = globalThis.VM || {};
 VM.CityLayout = (function () {
   const TAU = Math.PI * 2;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const RADIUS = { hamlet: 12, town: 13.5, city: 15, capital: 18 };
+  const RADIUS = { hamlet: 18, town: 21, city: 24, capital: 29 };
   const WALL_SEGMENTS = 32;
 
   function rng(seed) {
@@ -21,19 +21,15 @@ VM.CityLayout = (function () {
 
   // The size of a place depends only on what it is (its specialty), never on its buildings or people, so the picture does not jump as the game goes on.
   const baseCapOf = city => VM.CFG.ECON.baseCap * VM.CFG.SPEC[city.spec].cap;
-  function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 6000 ? 'city' : (c >= 4800 ? 'town' : 'hamlet')); }
+  function tierOf(city) { const c = baseCapOf(city); return city.spec === 'capital' ? 'capital' : (c >= 300 ? 'city' : (c >= 240 ? 'town' : 'hamlet')); }
 
-  // Up to three gates, one toward each of the most spread-out roads.
+  // How far a place has grown, from its people: 1 a village of tents and huts, 2 a town of timber houses around a plaza, 3 a city with stone houses and
+  // a suburb along the roads, 4 a great city with a monument and a wide suburb.
+  const stageOf = city => city.pop < 125 ? 1 : city.pop < 200 ? 2 : city.pop < 325 ? 3 : 4;
+
+  // One gate and one road for every road on the map, each facing the neighbouring node it leads to, so the city agrees with the map.
   function gatesOf(state, id) {
-    const adj = state.map.nodes[id].adj.map(n => ({ toward: n, angle: bearing(state, id, n) }));
-    if (adj.length <= 3) return adj.sort((a, b) => a.angle - b.angle);
-    const pick = [adj.reduce((a, b) => (b.toward < a.toward ? b : a), adj[0])];
-    while (pick.length < 3) {
-      let best = null, bd = -1;
-      for (const g of adj) { if (pick.includes(g)) continue; const d = Math.min(...pick.map(p => angDiff(p.angle, g.angle))); if (d > bd) { bd = d; best = g; } }
-      pick.push(best);
-    }
-    return pick.sort((a, b) => a.angle - b.angle);
+    return state.map.nodes[id].adj.map(n => ({ toward: n, angle: bearing(state, id, n) })).sort((a, b) => a.angle - b.angle);
   }
 
   function build(state, id) {
@@ -54,10 +50,13 @@ VM.CityLayout = (function () {
       rem.sort((p, q) => q[0] - p[0]).slice(0, left).forEach(([, k]) => { out[k]++; });
       return out;
     };
+    // An army of the city's own that stays behind the walls while the city is besieged is drawn as part of the garrison, on the wall and at the gate
+    const besiegedBy = state.armies.some(e => e.owner !== city.owner && e.at === id && !e.routed && W.sieging(e)), inside = { infantry: 0, spear: 0, archer: 0, cavalry: 0 };
     for (const a of state.armies) {
       const atNode = a.at === id, onRoad = !atNode && a.edge && (a.edge.to === id || a.edge.from === id);
       if (!atNode && !onRoad) continue;
       const hostile = a.owner !== city.owner, size = VM.Armies.sizeOf(a);
+      if (atNode && !hostile && besiegedBy && W.inWalls(state, a)) { for (const k in inside) inside[k] += Math.round(a.troops[k] || 0); continue; }
       let ang = main, d, moving = null;
       if (atNode) {
         if (hostile) {
@@ -74,15 +73,15 @@ VM.CityLayout = (function () {
         ang = bearing(state, id, incoming ? e.from : e.to); moving = incoming ? 'in' : 'out';
         d = R + 14 + remaining * SCALE;
       }
-      const foot = size - (a.troops.siege || 0), soldiers = foot < 1 ? 0 : clamp(Math.round(foot / 12), 3, 60);
+      const foot = size - (a.troops.siege || 0), soldiers = foot < 0.5 ? 0 : Math.min(120, Math.round(foot));                  // one figure for every soldier
       armies.push({ id: a.id, owner: a.owner, color: state.factions[a.owner].color, hostile, angle: ang, d, size, soldiers, mix: mixOf(a, soldiers), siege: Math.min(6, Math.round(a.troops.siege || 0)),
-        fallen: Math.min(24, Math.round(Math.max(0, (a.peak || size) - size) / 15)), moving,
+        fallen: Math.min(30, Math.round(Math.max(0, (a.peak || size) - size))), moving, cavPh: VM.War.cavPhase(state, a), flank: VM.War.flanker(state, a), rows: Math.ceil(soldiers / Math.max(2, Math.ceil(Math.sqrt(soldiers * 1.6)))),
         mode: a.fighting.length ? 'fighting' : (moving ? 'march' : (hostile && W.sieging(a) ? 'besieging' : 'camp')), routed: a.routed, engaged: a.fighting.slice() });
     }
     // Armies in battle meet: a defender fighting an attacker stands in the attacker's line, facing it
     for (const A of armies) if (A.mode === 'fighting' && !A.hostile) {
       const foe = armies.find(x => x.hostile && x.mode === 'fighting' && (A.engaged.includes(x.id) || x.engaged.includes(A.id)));
-      if (foe) { A.angle = foe.angle; A.d = foe.d - 5; A.clash = true; foe.clash = true; }
+      if (foe) { A.angle = foe.angle; A.d = foe.d - 2.2; A.clash = true; foe.clash = true; }          // the front lines face each other; each army's ranks stand behind its front line
     }
     L.armies = armies;
     const attackers = armies.filter(a => a.hostile).map(a => a.angle);
@@ -105,13 +104,17 @@ VM.CityLayout = (function () {
     L.wall = { level: wlvl, radius: R, hpFrac, segments: seg,
       towers: wlvl >= 2 ? seg.map((s, i) => i % 4 === 0 ? s.angle : null).filter(a => a !== null).concat(gates.flatMap(g => [g.angle - TAU / N * 1.6, g.angle + TAU / N * 1.6])) : gates.flatMap(g => [g.angle - TAU / N * 1.6, g.angle + TAU / N * 1.6]) };
     if (wlvl === 0) L.wall.towers = [];
+    // Armies laying siege assault the city: with the wall standing they storm it with ladders; with no wall or a breached one they pour in
+    for (const A of armies) { A.assault = A.hostile && A.mode === 'besieging'; A.breach = A.assault && (wlvl === 0 || city.wallHp <= 0); }
+    L.assault = armies.some(a => a.assault); L.owner = city.owner; L.ownerName = owner.name;
 
     // Fixed sites for the buildings that have levels
     const sites = {
       market: { angle: main, r: R * 0.62 },
       barracks: { angle: main + Math.PI, r: R * 0.55 },
       temple: { angle: main + Math.PI / 2, r: R * 0.55 },
-      depot: { angle: main - 0.5, r: R * 0.82 }
+      depot: { angle: main - 0.5, r: R * 0.82 },
+      smith: { angle: main - Math.PI / 2, r: R * 0.55 }
     };
     for (const k in sites) Object.assign(sites[k], pol(sites[k].r, sites[k].angle));
     const obstacles = [{ x: 0, z: 0, r: 6.5 }];                                    // the keep
@@ -134,30 +137,58 @@ VM.CityLayout = (function () {
     take(sites.temple.x, sites.temple.z, 2.6);
     L.depot = city.depot ? { x: sites.depot.x, z: sites.depot.z, crates: clamp(Math.ceil(city.depot.food / 400), 1, 8) } : null;
     take(sites.depot.x, sites.depot.z, 2);
+    L.smith = { on: city.spec === 'iron' || blvl >= 3 || tier === 'city' || tier === 'capital', x: sites.smith.x, z: sites.smith.z, rot: sites.smith.angle };      // a smithy where iron is worked or the army is strong
+    take(sites.smith.x, sites.smith.z, tier === "hamlet" ? 2.2 : 3.2);
 
     // Houses: decorative, as many as the people need. The candidate spots come from a fixed sequence and only the first `wanted` are used, so a growing town
     // adds houses without moving the old ones.
-    const wanted = clamp(Math.round(city.pop / 220), 4, 48), spots = [];
-    for (let tries = 0; tries < 1500 && spots.length < 48; tries++) {
-      const a = rH() * TAU, rr = 7.5 + Math.sqrt(rH()) * (R - 9.5), p = pol(rr, a);
+    if (city.spec === 'port') { const a = main + Math.PI * 0.9; L.water = { angle: a, r: R + 38, radius: 26 }; }
+    const dry = a => !L.water || angDiff(a, L.water.angle) > 0.85;
+    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 11), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
+    L.stage = stage; L.paved = stage >= 3;
+    const onRoad = (p, half) => dirs.some(d => { const t = p.x * d.x + p.z * d.z; return t > -2 && Math.abs(p.x * d.z - p.z * d.x) < half; });            // inside the strip of street that runs from a gate to the keep
+    // The plaza round the keep, with a well and, in a great city, a monument; the sites of the works outside the walls and the suburb along the roads are reserved too
+    const wp = pol(R * 0.56 + 2, main - 0.55); L.well = { x: wp.x, z: wp.z }; take(wp.x, wp.z, 1.6);
+    L.plaza = stage >= 2 ? { r: 9 + stage } : null;
+    { const mp = pol(R * 0.56 + 2, main + 0.55); take(mp.x, mp.z, 1.8); L.monument = stage >= 4 ? { x: mp.x, z: mp.z } : null; }          // the monument's ground is reserved from the start
+    const freeAngle = a => { for (let k = 0; k < 24; k++) { if (!gates.some(g => angDiff(g.angle, a) < 0.42)) return a; a += 0.3; } return a; };
+    L.works = [];
+    const work = (kind, a, r, size) => { const aa = freeAngle(a), p = pol(r, aa); take(p.x, p.z, size); return { kind, x: p.x, z: p.z, rot: aa }; };
+    const wk = { windmill: work('windmill', main + 2.0, R + 12, 5), lumber: work('lumber', main + 3.7, R + 11, 5), quarry: work('quarry', main + 5.0, R + 12, 5) };
+    if (city.buildings.farm >= 3) L.works.push(wk.windmill);
+    if (stage >= 2) L.works.push(wk.lumber);
+    if (city.spec === 'iron' || city.spec === 'pass') L.works.push(wk.quarry);
+    const sub = [];                                                                // the suburb: houses either side of each road, just outside the gate
+    for (let k = 0; k < 7; k++) gates.forEach((g, gi) => {
+      const side = (k + gi) % 2 ? 1 : -1, t = R + 4.5 + Math.floor(k / 2) * 4.2, lat = side * (4.4 + (k % 3) * 0.7), d = dirs[gi], p = { x: d.x * t - d.z * lat, z: d.z * t + d.x * lat };
+      if (!dry(Math.atan2(p.z, p.x))) return;
+      sub.push({ x: p.x, z: p.z, rot: Math.atan2(d.z, d.x) + (side > 0 ? -Math.PI / 2 : Math.PI / 2) + (k % 2 ? 0.12 : -0.1), w: 1.8 + (k % 3) * 0.25, d: 1.8 + ((k + 1) % 3) * 0.25, h: 1.2 + (k % 2) * 0.4, roof: (k + gi) % 3, chimney: k % 3 === 0 });
+    });
+    for (const q of sub) take(q.x, q.z, 2.4);
+    L.suburb = sub.slice(0, stage >= 4 ? 16 : stage >= 3 ? 7 : 0);
+    for (let tries = 0; tries < 2500 && spots.length < 48; tries++) {
+      const a = rH() * TAU, rr = 8.5 + Math.sqrt(rH()) * (R - 11), p = pol(rr, a);
       const rot = a + (rH() - 0.5) * 0.6, w = 1.6 + rH() * 0.8, d = 1.6 + rH() * 0.8, h = 1.1 + rH() * 0.7, roof = Math.floor(rH() * 3), chimney = rH() < 0.4;
-      if (gates.some(g => angDiff(g.angle, a) < 0.2 && rr > 5)) continue;           // leave the road into each gate clear
-      if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 1.3)) continue;
-      if (spots.some(h2 => Math.hypot(h2.x - p.x, h2.z - p.z) < 2.6)) continue;
+      if (onRoad(p, 3.4) && rr > 4) continue;                                       // keep the street from each gate clear
+      if (rr < 13) continue;                                                        // the plaza's ground is kept free from the start, whatever its stage
+      if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 1.5)) continue;
+      if (spots.some(h2 => Math.hypot(h2.x - p.x, h2.z - p.z) < 3.4)) continue;
       spots.push({ x: p.x, z: p.z, rot, w, d, h, roof, chimney });
     }
+    // The look of each home follows the stage of the place: tents and huts, then timber, then stone (older homes first, so a growing town changes house by house)
+    const styleOf = (i, st) => st <= 1 ? (i % 3 === 0 ? 1 : 0) : st === 2 ? (i % 5 === 0 ? 0 : 1) : st === 3 ? (i % 2 ? 2 : 1) : (i % 4 === 3 ? 1 : 2);
+    spots.forEach((h, i) => { h.style = styleOf(i, stage); });
+    L.suburb.forEach((h, i) => { h.style = stage >= 4 ? 2 : 1; });
     L.houses = spots.slice(0, wanted);
     L.housesWanted = wanted;
 
-    if (city.spec === 'port') { const a = main + Math.PI * 0.9; L.water = { angle: a, r: R + 38, radius: 26 }; }
-    const dry = a => !L.water || angDiff(a, L.water.angle) > 0.85;
 
     // Fields and farmhouses outside the walls: a fixed list of spots, the first few used as the farms grow
     const flvl = city.buildings.farm, nf = Math.min(14, flvl * 3 + (city.spec === 'farmland' ? 3 : 0) + 1), fspots = [];
     for (let tries = 0; tries < 600 && fspots.length < 14; tries++) {
       const a = rF() * TAU, rr = R + 7 + rF() * 16, p = pol(rr, a), crop = rF() < 0.5 ? 0 : 1;
       if (gates.some(g => angDiff(g.angle, a) < 0.3) || !dry(a)) continue;
-      if (fspots.some(f => Math.hypot(f.x - p.x, f.z - p.z) < 8)) continue;
+      if (fspots.some(f => Math.hypot(f.x - p.x, f.z - p.z) < 8) || obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 5)) continue;
       fspots.push({ x: p.x, z: p.z, rot: a + Math.PI / 2, w: 7, d: 5, crop });
     }
     L.fields = fspots.slice(0, nf); L.farmhouses = [];
@@ -166,14 +197,13 @@ VM.CityLayout = (function () {
     // Terrain features that say what the place is known for
     L.features = [];
     const free = angle => !gates.some(g => angDiff(g.angle, angle) < 0.45) && dry(angle);
-    const ring = (kind, n, rMin, rMax, size) => { for (let t = 0, c = 0; t < 200 && c < n; t++) { const a = rX() * TAU, rd = rX(), rot = rX() * TAU, sz = rX(); if (!free(a)) continue; const p = pol(rMin + rd * (rMax - rMin), a); L.features.push({ kind, x: p.x, z: p.z, rot, size: size * (0.7 + sz * 0.6) }); c++; } };
+    const ring = (kind, n, rMin, rMax, size) => { for (let t = 0, c = 0; t < 200 && c < n; t++) { const a = rX() * TAU, rd = rX(), rot = rX() * TAU, sz = rX(); if (!free(a)) continue; const p = pol(rMin + rd * (rMax - rMin), a); if (kind === 'tree' && obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 2)) continue; L.features.push({ kind, x: p.x, z: p.z, rot, size: size * (0.7 + sz * 0.6) }); c++; } };
     if (city.spec === 'pass') ring('rock', 11, R + 6, R + 28, 5);
     if (city.spec === 'iron') { ring('rock', 6, R + 8, R + 26, 3.5); ring('ore', 5, R + 6, R + 20, 1.4); }
     if (city.spec === 'horse') ring('paddock', 3, R + 8, R + 20, 6);
     if (city.spec === 'holy') ring('stones', 1, 7, 8, 3);
     if (city.spec === 'market') ring('banner', 4, R * 0.3, R * 0.7, 1);
     ring('tree', 16, R + 5, R + 34, 2.2);
-    if (tier === 'hamlet' || tier === 'town') L.features.push({ kind: 'well', x: 3.2, z: 3.2, rot: 0, size: 1 });
 
     // Scaffolding where something is being built
     L.construction = null;
@@ -185,13 +215,14 @@ VM.CityLayout = (function () {
 
     // Garrison on the wall (or around the keep without one)
     const gtotal = E.troopsOf(city.garrison);
-    L.garrison = { total: gtotal, visible: clamp(Math.round(gtotal / 14), gtotal > 0 ? 1 : 0, 36), onWall: wlvl > 0 };
-    L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0,
+    const gm = {}; for (const k of ['infantry', 'spear', 'archer', 'cavalry']) gm[k] = Math.round((city.garrison[k] || 0) + inside[k]);
+    L.garrison = { total: gtotal, visible: clamp(gm.infantry + gm.spear + gm.archer + gm.cavalry, 0, 90), mix: gm, onWall: wlvl > 0 };
+    L.sigStatic = [id, city.owner, tier, wlvl, Math.round(hpFrac * 8), seg.map(s => s.damage).join(''), L.houses.length, L.fields.length, L.stalls.length, blvl, L.temple.level, L.depot ? L.depot.crates : 0, L.smith.on ? 1 : 0, stage, L.suburb.length, L.works.map(w => w.kind[0]).join(''),
       L.construction ? L.construction.type + Math.floor(L.construction.progress * 5) : '-', city.besieged ? 1 : 0].join('/');
-    L.sigArmies = [L.garrison.visible, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10)].join(':')).join('|')].join('/');
+    L.sigArmies = [L.garrison.visible, Object.values(L.garrison.mix).join(','), L.assault ? 1 : 0, armies.map(a => [a.id, a.soldiers, Object.values(a.mix).join(','), a.siege, a.mode, a.fallen, Math.round(a.angle * 10), a.breach ? 1 : 0].join(':')).join('|')].join('/');
     L.sig = L.sigStatic + '#' + L.sigArmies;
     return L;
   }
 
-  return { build, tierOf, RADIUS, bearing, angDiff, rng, WALL_SEGMENTS };
+  return { build, tierOf, stageOf, RADIUS, bearing, angDiff, rng, WALL_SEGMENTS };
 })();

@@ -40,7 +40,7 @@ test('loyalty: a disloyal idle officer or governor defects to a rival; a command
   const s = world();
   const idle = officer(s, 1, { trait: 'Schemer' }); idle.loc = s.factions[1].capital; idle.loyalty = 2;
   const cap = s.cities[s.factions[1].capital], gov = s.officers[cap.governor]; gov.loyalty = 2; gov.trait = 'Schemer';
-  const a = army(s, 1, s.factions[1].capital, { infantry: 100 }, { trait: 'Schemer' }); const cmdr = s.officers[a.officer]; cmdr.loyalty = 2;
+  const a = army(s, 1, s.factions[1].capital, { infantry: 10 }, { trait: 'Schemer' }); const cmdr = s.officers[a.officer]; cmdr.loyalty = 2;
   s.factions[1].gold = 0; s.factions[1].broke = true;
   for (let d = 0; d < 300 && (idle.owner === 1 || gov.owner === 1); d++) { idle.loyalty = Math.min(idle.loyalty, 3); gov.loyalty = Math.min(gov.loyalty, 3); run(s, 1); s.factions[1].gold = Math.max(s.factions[1].gold, 0); }
   assert(idle.owner !== 1 && gov.owner !== 1, 'both left');
@@ -170,9 +170,9 @@ function twoCities(s) {
 }
 
 test('orders: Hold stays put; Defend intercepts a weaker raider and returns to its station afterwards', () => {
-  const s = world(), { st, nb } = twoCities(s), a = army(s, 1, st.id, { infantry: 700 }, { trait: 'Brave' });
+  const s = world(), { st, nb } = twoCities(s), a = army(s, 1, st.id, { infantry: 70 }, { trait: 'Brave' });
   VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'hold' });
-  const e = army(s, 2, nb, { infantry: 150 }); e.order = 'hold';
+  const e = army(s, 2, nb, { infantry: 15 }); e.order = 'hold';
   run(s, 20); assert.strictEqual(a.at, st.id, 'hold does not move');
   VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'defend' });
   run(s, 3); assert(a.at !== st.id || a.dest !== null, 'moves to intercept');
@@ -182,52 +182,52 @@ test('orders: Hold stays put; Defend intercepts a weaker raider and returns to i
 });
 
 test('orders: odds and temperament matter (a cautious defender will not meet an even fight, a rash one will)', () => {
-  const trial = trait => { const s = world(), { st, nb } = twoCities(s); const a = army(s, 1, st.id, { infantry: 400 }, { trait, command: 60 }); const e = army(s, 2, nb, { infantry: 430 }); e.order = 'hold';
+  const trial = trait => { const s = world(), { st, nb } = twoCities(s); const a = army(s, 1, st.id, { infantry: 40 }, { trait, command: 60 }); const e = army(s, 2, nb, { infantry: 43 }); e.order = 'hold';
     VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'defend' }); run(s, 6); return a.at !== st.id || a.dest !== null || a.fighting.length > 0; };
   assert.strictEqual(trial('Cautious'), false); assert.strictEqual(trial('Rash'), true);
 });
 
 test('orders: Reinforce marches to the nearest own city that is under attack', () => {
   const s = world(), f = s.factions[1], own = s.cities.filter(c => c.owner === 1), target = own[1], idleAt = own[2];
-  const a = army(s, 1, idleAt.id, { infantry: 300 }); VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'reinforce' });
-  const e = army(s, 2, target.id, { infantry: 60 }); e.order = 'hold';
+  const a = army(s, 1, idleAt.id, { infantry: 30 }); VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'reinforce' });
+  const e = army(s, 2, target.id, { infantry: 6 }); e.order = 'hold';
   run(s, 2); assert(target.contested || target.besieged);
   run(s, 40); assert(evs(s, 'rout').some(x => x.owner === 2) || evs(s, 'destroyed').some(x => x.owner === 2), 'the intruder was driven off'); assert(!target.contested && !target.besieged);
 });
 
 test('orders: Raid takes a weak nearby town, rests when worn down, and goes out again', () => {
-  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 20 });
-  const a = army(s, 1, st.id, { infantry: 600 }, { trait: 'Rash' }); VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'raid' });
+  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 2 });
+  const a = army(s, 1, st.id, { infantry: 60 }, { trait: 'Rash' }); VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'raid' });
   run(s, 60); assert.strictEqual(s.cities[nb].owner, 1, 'raid captured the town');
   a.morale = 20; a.at !== null && run(s, 5);
   run(s, 100); assert(a.morale > 60 || a.rest, 'rested');
 });
 
 test('orders: Raid ignores a target that is too strong for its temperament', () => {
-  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 450 }); s.cities[nb].buildings.wall = 2; s.cities[nb].wallHp = VM.War.wallMax(s.cities[nb]);
-  const a = army(s, 1, st.id, { infantry: 500 }, { trait: 'Cautious' }); VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'raid' });
+  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 45 }); s.cities[nb].buildings.wall = 2; s.cities[nb].wallHp = VM.War.wallMax(s.cities[nb]);
+  const a = army(s, 1, st.id, { infantry: 50 }, { trait: 'Cautious' }); VM.Commands.exec(s, { type: 'setOrder', faction: 1, army: a.id, mode: 'raid' });
   run(s, 30); assert.strictEqual(s.cities[nb].owner, 0); assert(a.dest === null);
 });
 
 // ---------- Proposals ----------
 test('proposals: a rash commander asks to attack a weak neighbour; accepting sends the army, declining waits it out', () => {
-  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 20 });
-  const a = army(s, 1, st.id, { infantry: 600 }, { trait: 'Rash' });
+  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 2 });
+  const a = army(s, 1, st.id, { infantry: 60 }, { trait: 'Rash' });
   run(s, 3); const p = s.proposals[0]; assert(p && p.type === 'attack' && p.army === a.id && p.target === nb);
   assert(evs(s, 'proposal').length === 1);
   assert(VM.Commands.exec(s, { type: 'answerProposal', faction: 1, proposal: p.id, accept: true }).ok); assert(a.dest === nb);
   assert(!VM.Commands.exec(s, { type: 'answerProposal', faction: 1, proposal: p.id, accept: true }).ok, 'answered once');
-  const t = world(), q = twoCities(t); t.cities[q.nb].garrison = T({ infantry: 20 }); const b = army(t, 1, q.st.id, { infantry: 600 }, { trait: 'Rash' });
+  const t = world(), q = twoCities(t); t.cities[q.nb].garrison = T({ infantry: 2 }); const b = army(t, 1, q.st.id, { infantry: 60 }, { trait: 'Rash' });
   run(t, 3); VM.Commands.exec(t, { type: 'answerProposal', faction: 1, proposal: t.proposals[0].id, accept: false }); assert.strictEqual(b.dest, null);
   run(t, 30); assert.strictEqual(t.proposals.length, 0, 'no pestering inside the cooldown');
   run(t, 20); assert.strictEqual(t.proposals.length, 1, 'asks again later');
 });
 
 test('proposals: they expire, and the AI factions never receive them', () => {
-  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 20 }); army(s, 1, st.id, { infantry: 600 }, { trait: 'Rash' });
+  const s = world(), { st, nb } = twoCities(s); s.cities[nb].garrison = T({ infantry: 2 }); army(s, 1, st.id, { infantry: 60 }, { trait: 'Rash' });
   run(s, 3); assert.strictEqual(s.proposals.length, 1); run(s, O.proposalExpires + 2); assert(!s.proposals.some(p => p.created < 3), 'expired');
-  const t = world(), c2 = t.cities.find(c => c.owner === 2); const nb2 = t.map.nodes[c2.id].adj.find(n => t.cities[n].owner !== 2); t.cities[nb2].owner = 0; t.cities[nb2].garrison = T({ infantry: 20 });
-  army(t, 2, c2.id, { infantry: 600 }, { trait: 'Rash' }); run(t, 10); assert.strictEqual(t.proposals.length, 0);
+  const t = world(), c2 = t.cities.find(c => c.owner === 2); const nb2 = t.map.nodes[c2.id].adj.find(n => t.cities[n].owner !== 2); t.cities[nb2].owner = 0; t.cities[nb2].garrison = T({ infantry: 2 });
+  army(t, 2, c2.id, { infantry: 60 }, { trait: 'Rash' }); run(t, 10); assert.strictEqual(t.proposals.length, 0);
 });
 
 test('proposals: a cautious governor asks for a wall when enemies are near', () => {
@@ -240,7 +240,7 @@ test('proposals: a cautious governor asks for a wall when enemies are near', () 
 // ---------- Alerts and whole-world ----------
 test('alerts: an attack on your city raises one event, not one per day', () => {
   const s = world(), c = s.cities.find(c => c.owner === 1 && c.id !== s.factions[1].capital);
-  army(s, 2, c.id, { infantry: 300 }); run(s, 10);
+  army(s, 2, c.id, { infantry: 30 }); run(s, 10);
   assert.strictEqual(evs(s, 'attacked').filter(e => e.city === c.id).length, 1);
 });
 

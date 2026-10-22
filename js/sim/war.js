@@ -11,13 +11,14 @@ VM.War = (function () {
   function matchup(a, d) { return BEATS[a] === d ? W().strong : (BEATS[d] === a ? W().weak : 1); }
 
   // Effective strength of troops `att` against troops `def`: each type is weighted by how it fares against the enemy's mix.
-  function power(att, def) {
-    const dt = total(def); let p = 0;
+  // opts: cav = the cavalry's multiplier this moment (it charges, falls back and swings round), arch = what archers add when they can shoot freely
+  function power(att, def, opts) {
+    const dt = total(def); let p = 0, cm = (opts && opts.cav) || 1, am = (opts && opts.arch) || 1;
     for (const k in att) {
       if (!att[k]) continue;
       let m = 1;
       if (dt > 0) { m = 0; for (const j in def) m += def[j] / dt * matchup(k, j); }
-      if (VM.CFG.TROOPS[k].siege) m *= W().siegeField;
+      if (VM.CFG.TROOPS[k].siege) m *= W().siegeField; else if (k === 'cavalry') m *= cm; else if (k === 'archer') m *= am;
       p += att[k] * m;
     }
     return p;
@@ -113,7 +114,7 @@ VM.War = (function () {
       let need = eat * mult * dd, poolDraw = 0, starving = false;
       if (useDepot) { const d = state.cities[depot.id].depot, take = Math.min(need, d.food); d.food -= take; need -= take; }
       if (need > 1e-9) {
-        if (line === 'ok') { poolDraw = need / dd; a.rations = Math.min(eat * W().rationDays, a.rations + eat * dd * W().refill); }
+        if (line === 'ok') { poolDraw = need / dd; a.rations = Math.min(eat * (a.rationDays || W().rationDays), a.rations + eat * dd * W().refill); }
         else { a.rations -= need; if (a.rations <= 0) { a.rations = 0; starving = true; } }
       }
       if (line === 'ok' && state.factions[a.owner].starving && poolDraw > 0) starving = true;
@@ -123,12 +124,48 @@ VM.War = (function () {
   }
 
   // ---- Damage helpers ----
-  function hurt(t, amount) {
-    const n = total(t); if (n <= 0) return 0;
-    const f = Math.max(0, 1 - amount / n);
-    for (const k in t) t[k] *= f;
-    return Math.min(n, amount);
+  // Soldiers are counted one by one: the damage of every step adds to a fraction carried on the army (or garrison), and each whole point kills one soldier, picked
+  // at random (by the game's own seeded numbers) among the kinds present. `w` says how exposed each kind is (archers behind a firm line are hard to reach),
+  // so a run still repeats exactly.
+  function hurt(state, t, carry, amount, w) {
+    const n = total(t); if (n <= 0 || !(amount > 0)) return 0;
+    amount = Math.min(n, amount); carry.x = (carry.x || 0) + amount;
+    const k = Math.min(Math.floor(carry.x + 1e-9), n); carry.x -= k;
+    for (let i = 0; i < k; i++) {
+      let sum = 0; for (const kind in t) sum += t[kind] * (w && w[kind] !== undefined ? w[kind] : 1);
+      let r = VM.RNG.next(state) * sum;
+      for (const kind in t) { if (t[kind] <= 0) continue; r -= t[kind] * (w && w[kind] !== undefined ? w[kind] : 1); if (r < 0) { t[kind] -= 1; break; } }
+    }
+    return amount;
   }
+  const carryOf = o => o.carry || (o.carry = {});
+
+  // Why an officer would pull his army back from a campaign, if at all: the food would run out, or the men have lost heart (the limit depends on his nature)
+  function retreatReason(state, a) {
+    const o = state.officers[a.officer], s = a.supply, n = VM.Armies.sizeOf(a);
+    if (s && s.starving) return 'food';
+    if (s && s.line !== 'ok' && !s.depot) { const eat = n * VM.CFG.ECON.foodPerHead * (s.mult || 1); if (eat > 0 && a.rations / eat < W().retreatFoodDays) return 'food'; }
+    const lim = W().retreatMorale;
+    if (a.morale < (o && lim[o.trait] !== undefined ? lim[o.trait] : lim.other)) return 'morale';
+    return null;
+  }
+
+  // ---- Roles in the field: infantry hold the line, archers shoot from behind it, cavalry charge, fall back and swing round, engines stay out of it ----
+  const cavPhase = (state, a) => ((state.time + a.id * 1.7) % 8) / 8;
+  function flanker(state, a) { const o = state.officers[a.officer]; return !!o && (o.trait === 'Rash' || o.trait === 'Brave' || (o.command >= 55 && o.trait !== 'Cautious')); }
+  function cavMult(state, a) { const ph = cavPhase(state, a), fl = flanker(state, a); return ph < 0.3 ? 2.0 : ph < 0.55 ? 0.2 : ph < 0.8 ? (fl ? 0.3 : 0.9) : (fl ? 2.2 : 1.0); }
+  const roleOpts = (state, a) => ({ cav: cavMult(state, a), arch: W().archerField });
+  // how exposed each kind of an army is to the enemy's blows right now
+  function weightsOf(state, a, foes) {
+    const t = a.troops, line = (t.infantry || 0) + (t.spear || 0), foot = line + (t.archer || 0) + (t.cavalry || 0), holds = line >= 0.25 * foot;
+    const ph = cavPhase(state, a), engaged = ph < 0.3 || (ph >= 0.8 && flanker(state, a));
+    const w = { infantry: 1, spear: 1, archer: holds ? 0.35 : 1, cavalry: engaged ? 1 : 0.4, siege: holds ? 0.12 : 0.5 };
+    for (const e of foes || []) if ((e.troops.cavalry || 0) > 0 && flanker(state, e) && cavPhase(state, e) >= 0.8) { w.archer = Math.min(1.2, w.archer * 3); break; }   // riders behind the line find the archers
+    return w;
+  }
+  const WALLW = () => ({ infantry: 1, spear: 1, archer: 0.3, cavalry: 0.6, siege: 0.3 });                // behind a wall the archers on it are hard to hit
+  // an army inside its own walled city fights from the walls with the garrison, unless its officer has sent it out
+  const inWalls = (state, a) => a.at !== null && !a.routed && !a.sortie && state.cities[a.at].owner === a.owner && state.cities[a.at].wallHp > 0;
 
   function fate(state, o, victor, from) {
     const r = VM.RNG.next(state);
@@ -190,55 +227,63 @@ VM.War = (function () {
       const a = armies[i], b = armies[j];
       if (a.owner === b.owner || a.routed || b.routed) continue;
       if (dist(ps.get(a.id), ps.get(b.id)) > W().contact) continue;
+      if (inWalls(state, a) || inWalls(state, b)) continue;                    // the wall is between them: see the siege below
       if (a.retreat <= 0) a.fighting.push(b.id);
       if (b.retreat <= 0) b.fighting.push(a.id);
       if (a.retreat > 0) b.fighting.push(a.id);      // a retreating army is still chased and struck, but does not strike back
       if (b.retreat > 0) a.fighting.push(b.id);
     }
     const byId = new Map(armies.map(a => [a.id, a]));
-    // Army against army
+    // Army against army: the front line trades blows, archers shoot over it, cavalry come and go (see the roles above); siege engines do not fight here
     for (const a of armies) {
       if (a.retreat > 0 || !a.fighting.length) continue;
-      const mods = armyMods(state, a);
+      const mods = armyMods(state, a), ro = roleOpts(state, a);
       for (const eid of a.fighting) {
-        const e = byId.get(eid), p = power(a.troops, e.troops) * mods / a.fighting.length;
+        const e = byId.get(eid), p = power(a.troops, e.troops, ro) * mods / a.fighting.length;
         add(incoming, e.id, p); add(enemyPow, e.id, p); add(outPow, a.id, p);
       }
     }
-    // Garrisons strike armies besieging them; besiegers strike the garrison and its wall when no army is in the way.
+    // A besieged city: its garrison, and the armies inside it that stay behind the walls, shoot from the wall tops and hold the gate. Besiegers hit the gate with
+    // their numbers or their engines; when it falls everybody fights in the open.
     const sieges = {};
     for (const a of armies) if (sieging(a) && state.cities[a.at].owner !== a.owner) (sieges[a.at] = sieges[a.at] || []).push(a);
     for (const cid in sieges) {
-      const city = state.cities[cid], list = sieges[cid], g = city.garrison, gt = total(g);
+      const city = state.cities[cid], list = sieges[cid], walled = city.wallHp > 0;
+      const holders = walled ? armies.filter(h => h.owner === city.owner && h.at === city.id && inWalls(state, h)) : [];
+      const pool = {}; for (const src of [city.garrison].concat(holders.map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
+      const gt = total(pool), poolPow = walled ? Object.assign({}, pool, { archer: (pool.archer || 0) * W().wallArcher }) : pool;
       for (const a of list) {
-        if (gt > 0) { const p = power(g, a.troops) * garrisonMods(state, city) / list.length; add(incoming, a.id, p); add(enemyPow, a.id, p); }
+        if (gt > 0) { const p = power(poolPow, a.troops, { arch: W().archerField }) * garrisonMods(state, city) / list.length; add(incoming, a.id, p); add(enemyPow, a.id, p); }
         if (a.fighting.length) continue;
         const mods = armyMods(state, a);
         if (city.wallHp > 0) {
-          let sg = a.troops.siege || 0, rest = total(a.troops) - sg;
+          const sg = a.troops.siege || 0, rest = total(a.troops) - sg;
           city.wallHp = Math.max(0, city.wallHp - (sg * W().siegeWall + rest * W().chip) * mods * dd);
+          if (city.wallHp <= 0) VM.Eco.pushEvent(state, { type: 'breach', owner: city.owner, city: city.id });
         }
-        const p = power(a.troops, g) * mods * (city.wallHp > 0 ? W().wallProtect : 1);
-        add(outPow, a.id, p); city._dmg = (city._dmg || 0) + p;
+        const full = power(a.troops, pool, roleOpts(state, a)) * mods;
+        add(outPow, a.id, full); city._dmg = (city._dmg || 0) + full * (walled ? W().wallProtect : 1);
       }
+      city._pool = { holders, n: gt, walled };
     }
     // Apply damage and morale
-    const dead = [];
     for (const a of armies) {
       const inc = incoming.get(a.id) || 0;
       if (inc > 0) {
-        hurt(a.troops, inc * K * dd);
+        hurt(state, a.troops, carryOf(a), inc * K * dd, weightsOf(state, a, a.fighting.map(id => byId.get(id)).filter(Boolean)));
         const own = Math.max(1, outPow.get(a.id) || 0), ratio = clamp(inc / own, 0.3, 3);
         a.morale = Math.max(0, a.morale - W().moraleRate * ratio * dd);
       }
       if (a.fighting.length && !was.get(a.id)) VM.Eco.pushEvent(state, { type: 'battle', owner: a.owner, army: a.id, at: VM.Armies.zoneOf(a), enemy: byId.get(a.fighting[0]).owner });
     }
     for (const cid in sieges) {
-      const city = state.cities[cid];
-      if (city._dmg) hurt(city.garrison, city._dmg * K * dd);
-      delete city._dmg;
+      const city = state.cities[cid], P = city._pool;
+      if (city._dmg && P && P.n > 0) {                                           // the damage is shared among everyone behind the wall by their numbers
+        const dmg = city._dmg * K * dd, members = [{ t: city.garrison, c: carryOf(city) }].concat(P.holders.map(h => ({ t: h.troops, c: carryOf(h) })));
+        for (const m of members) hurt(state, m.t, m.c, dmg * total(m.t) / P.n, P.walled ? WALLW() : null);
+      }
+      delete city._dmg; delete city._pool;
     }
-    return { byId, dead };
   }
 
   function cleanup(state) {
@@ -276,7 +321,7 @@ VM.War = (function () {
       if (a.retreat > 0) a.retreat = Math.max(0, a.retreat - dd);
       if (a.fighting.length || a.routed) continue;
       const s = a.supply;
-      if (s && s.starving) { a.morale = Math.max(0, a.morale - W().starveDrain * dd); for (const k in a.troops) a.troops[k] *= 1 - W().desert * dd; }
+      if (s && s.starving) { a.morale = Math.max(0, a.morale - W().starveDrain * dd); hurt(state, a.troops, carryOf(a), VM.Armies.sizeOf(a) * W().desert * dd); }
       else if (s && s.line !== 'ok' && !s.depot) a.morale = Math.max(0, a.morale - W().cutDrain * dd);
       else if (!sieging(a) || !state.cities[a.at].besieged || state.cities[a.at].owner === a.owner) a.morale = Math.min(100, a.morale + W().recover * dd);
     }
@@ -328,8 +373,8 @@ VM.War = (function () {
       if (kind === 'charge') a.buff = { kind: 'charge', until: state.time + W().chargeDays, mult: W().chargeMult };
       else {
         const pct = 0.06 + 0.08 * o.intellect / 100;
-        if (a.fighting.length) for (const e of state.armies) { if (a.fighting.includes(e.id)) { hurt(e.troops, VM.Armies.sizeOf(e) * pct); e.morale = Math.max(0, e.morale - 15); } }
-        else { const c = state.cities[a.at]; hurt(c.garrison, total(c.garrison) * pct); c.wallHp = Math.max(0, c.wallHp - wallMax(c) * pct); }
+        if (a.fighting.length) for (const e of state.armies) { if (a.fighting.includes(e.id)) { hurt(state, e.troops, carryOf(e), VM.Armies.sizeOf(e) * pct); e.morale = Math.max(0, e.morale - 15); } }
+        else { const c = state.cities[a.at]; hurt(state, c.garrison, carryOf(c), total(c.garrison) * pct); c.wallHp = Math.max(0, c.wallHp - wallMax(c) * pct); }
       }
     }
     a.abilityReady = state.time + W().abilityCooldown;
@@ -345,5 +390,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
+  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
 })();

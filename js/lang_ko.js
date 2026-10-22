@@ -29,8 +29,10 @@ var LANG_KO = {
 "STARVING": "기근", "SUPPLY CUT": "보급 차단",
 
 // ---- 3D city ----
+"Map": "지도", "Flat map": "평면 지도", "{0}D terrain": "{0}D 지형", "North up": "북쪽을 위로", "Tilt up": "위로 기울이기", "Tilt down": "아래로 기울이기", "Turn left": "왼쪽으로 돌리기", "Turn right": "오른쪽으로 돌리기", "The map style changes the next time the game starts.": "지도 방식은 게임을 다시 시작할 때 바뀝니다.",
+"Paused": "일시정지", "Resume": "계속하기", "Save and go to the main menu": "저장하고 메인 메뉴로",
 "View city": "도시 보기", "← Back to map": "← 지도로", "Back to map": "지도로",
-"Drag to look around · scroll or pinch to zoom": "끌어서 둘러보기 · 스크롤 또는 두 손가락으로 확대",
+"Drag to look around · two fingers to pan and zoom": "끌어서 둘러보기 · 두 손가락으로 이동 및 확대",
 "The 3D view is not available on this device": "이 기기에서는 3D 보기를 쓸 수 없습니다",
 
 // ---- cities ----
@@ -144,6 +146,7 @@ var LANG_KO = {
 "{a} has been destroyed": "{a} 세력이 멸망했습니다",
 "{a} has deserted to {b}!": "{a}이(가) {b}에게 달아났습니다!",
 "{a} has fallen to {b}!": "{a}이(가) {b}에게 함락되었습니다!",
+"The gate of {a} has been broken! Your defenders come out to fight.": "{a}의 성문이 뚫렸습니다! 수비대가 나가 싸웁니다.", "The gate of {a} is down!": "{a}의 성문이 무너졌습니다!",
 "{b} has fallen to {a}!": "{b}이(가) {a}에게 함락되었습니다!",
 "{a} has joined you in {b}": "{a}이(가) {b}에서 당신의 휘하에 들었습니다",
 "{a} is under siege!": "{a}이(가) 포위당하고 있습니다!",
@@ -151,7 +154,8 @@ var LANG_KO = {
 "{a} was captured and joins you": "{a}이(가) 포로가 되어 당신 편에 섰습니다",
 "{a}'s army routed near {b}": "{a}의 군대가 {b} 부근에서 패주했습니다",
 "{a}'s loyalty is low. A gift might help.": "{a}의 충성도가 낮습니다. 선물이 도움이 될지 모릅니다.",
-"{a} captured!": "{a} 점령!", "{0} captured!": "{0} 점령!",
+"{a} captured!": "{a} 점령!",
+"Your army halted at {a}: a hostile city stands in the way and must be taken first": "{a}에서 아군이 멈췄습니다. 길을 막은 적 도시를 먼저 함락해야 합니다", "{0} captured!": "{0} 점령!",
 
 // ---- settings ----
 "Master volume": "전체 음량", "Music": "음악", "Effects": "효과음",
@@ -168,7 +172,11 @@ var LANG_KO = {
 "This is your realm. Tap your capital (the star inside the gold ring) to open it.": "여기가 당신의 영토입니다. 수도(금빛 고리 안의 별)를 눌러 열어 보세요.",
 "Food keeps people alive and lets cities grow. Build a Farm in your capital: press the Farm button in the Buildings list.": "식량은 백성을 살리고 도시를 키웁니다. 수도에 농장을 지으세요. 건물 목록의 농장 버튼을 누르면 됩니다.",
 "Troops cost gold and come from the population. Press {0} next to Infantry.": "병사는 골드가 들고 인구에서 나옵니다. 보병 옆의 {0} 버튼을 누르세요.",
-"Form an army: pick a leader and press Form army. It takes the garrison with it.": "군대를 편성하세요. 지휘관을 고르고 '군대 편성'을 누르면 수비대가 함께 떠납니다.",
+"Form an army: choose how many troops go (all of them by default), pick a leader and press Form army.": "군대를 편성하세요. 함께 갈 병사 수(기본은 전부)를 정하고, 지휘관을 고른 뒤 '군대 편성'을 누르세요.",
+"Form an army": "군대 편성", "Choose how many of the garrison go with the army.": "수비대에서 몇 명이 함께 갈지 정하세요.", "All": "전부", "Take all": "전부 데려가기", "None": "없음",
+"{0} here": "{0}명 있음", "Taking {0} troops": "{0}명 편성", "Taking {0} troops · speed {1}": "{0}명 편성 · 속도 {1}", "Troops in {a}": "{a}의 병력", "Move recruits between the army and the city's garrison.": "군대와 도시 수비대 사이에서 병사를 옮기세요.",
+"army {0} · city {1}": "군대 {0} · 도시 {1}", "Join with": "합류할 군대", "(choose)": "(선택)", "Merge": "합치기", "The armies are now one": "군대가 하나로 합쳐졌습니다",
+"Choose some troops": "병사를 고르세요", "Not that many in the garrison": "수비대에 그만큼 없습니다", "None of that kind in the garrison": "수비대에 그 병종이 없습니다", "None of that kind in the army": "군대에 그 병종이 없습니다", "The army would be empty: disband it instead": "군대가 텅 비게 됩니다. 대신 해산하세요", "Army must be in a city": "군대가 도시 안에 있어야 합니다",
 "Armies march along roads. With the army selected, tap the glowing grey village (a free node) to send it there. It lays siege on arrival.": "군대는 길을 따라 진군합니다. 군대를 선택한 뒤 빛나는 회색 마을(주인 없는 거점)을 눌러 보내세요. 도착하면 포위를 시작합니다.",
 "Watch the siege: its garrison fights back and the red ring pulses. When the village falls it is yours and it feeds your treasury.": "포위를 지켜보세요. 수비대가 맞서 싸우고 붉은 고리가 깜빡입니다. 마을이 함락되면 당신 것이 되어 재정에 보탬이 됩니다.",
 "Delegate: open your new village, choose a Governor from the list and set the policy to Develop. Officers keep the city growing without you.": "위임하세요. 새 마을을 열어 목록에서 태수를 고르고 방침을 '발전'으로 정하면, 장수가 알아서 도시를 키웁니다.",

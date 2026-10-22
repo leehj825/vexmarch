@@ -1,5 +1,11 @@
 /* Vexmarch - palette follows Deepward: ink background, warm cream text, gold accents. */
 html, body { margin: 0; height: 100%; overflow: hidden; background: #07060a; color: #eee6d6; font-family: system-ui, -apple-system, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+#map3d { position: fixed; inset: 0; width: 100%; height: 100%; display: none; }
+body.map3d #map3d { display: block; }
+#mapctl { position: fixed; right: 8px; top: 50%; transform: translateY(-50%); display: none; flex-direction: column; gap: 6px; z-index: 5; }
+body.map3d #mapctl { display: flex; }
+body.in3d #mapctl, body.titlemode #mapctl { display: none; }
+#mapctl button { pointer-events: auto; width: 38px; height: 38px; padding: 0; border: 1px solid rgba(242, 210, 122, 0.55); border-radius: 6px; background: rgba(12, 10, 14, 0.72); color: #f2d27a; font-size: 18px; }
 #map { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 #hud { position: fixed; inset: 0; pointer-events: none; padding-top: env(safe-area-inset-top); }
 #top { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; padding: 8px 10px; }
@@ -66,6 +72,10 @@ select { background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 1
 
 #over { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4, 3, 6, 0.8); pointer-events: auto; text-align: center; padding: 16px; }
 #over.on { display: flex; }
+#pauseMenu { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4, 3, 6, 0.7); pointer-events: auto; text-align: center; padding: 16px; z-index: 30; }
+#pauseMenu.on { display: flex; }
+#pauseMenu h2 { margin: 0 0 14px; font-size: 30px; letter-spacing: 0.1em; color: #f2d27a; }
+#pauseMenu .btn { display: block; width: min(300px, 80vw); margin: 8px auto; padding: 10px 14px; font-size: 16px; }
 #over h2 { margin: 0 0 8px; font-size: 40px; letter-spacing: 0.12em; color: #f2d27a; } #over.lose h2 { color: #e0483a; }
 #over p { margin: 0 0 18px; opacity: 0.8; }
 #over button { padding: 11px 26px; font-size: 14px; font-weight: 700; letter-spacing: 0.06em; border: none; border-radius: 4px; color: #1a1008; background: linear-gradient(#f2d27a, #c9963a); cursor: pointer; }
@@ -107,9 +117,9 @@ html[data-size="large"] #lesson .lx, html[data-size="large"] #toast { font-size:
 /* 3D city view */
 #city3d { position: fixed; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; pointer-events: none; transition: opacity 0.35s; touch-action: none; background: #5b6fa0; }
 #city3d.on { opacity: 1; pointer-events: auto; }
-#backBtn { position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); display: none; padding: 6px 14px; border: 1px solid #f2d27a; border-radius: 4px; background: rgba(12, 10, 14, 0.85); color: #f2d27a; font-weight: 700; font-size: 13px; cursor: pointer; pointer-events: auto; }
-body.in3d #backBtn { display: block; }
-#hint3d { position: fixed; left: 50%; bottom: calc(8px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 4px 10px; background: rgba(12, 10, 14, 0.6); border-radius: 10px; font-size: 11px; opacity: 0; transition: opacity 0.4s; pointer-events: none; white-space: nowrap; }
+body.in3d #hint3d { position: fixed; left: 50%; bottom: calc(8px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 4px 10px; background: rgba(12, 10, 14, 0.6); border-radius: 10px; font-size: 11px; opacity: 0; transition: opacity 0.4s; pointer-events: none; white-space: nowrap; }
 body.in3d #hint3d { opacity: 0.8; }
-body.in3d.adLive #backBtn { top: calc(60px + env(safe-area-inset-top)); }
-@media (max-width: 720px) { #backBtn { top: calc(92px + env(safe-area-inset-top)); left: 10px; transform: none; } body.in3d.adLive #backBtn { top: calc(148px + env(safe-area-inset-top)); } #hint3d { display: none; } body.in3d #panel { max-height: 36vh; } }
+body.in3d #lesson { top: calc(96px + env(safe-area-inset-top)); }
+@media (max-width: 720px) { 
+.nowrap { white-space: nowrap; }
+input.num { width: 52px; padding: 3px 4px; margin: 0 3px; background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 190, 0.35); border-radius: 4px; font-size: 12px; text-align: center; }

@@ -4,28 +4,35 @@ var VM = globalThis.VM = globalThis.VM || {};
 VM.MapView = (function () {
   const RES = 4, LAND = 118, MARG = 130;                    // territory raster: map units per pixel, and how far land reaches from a node
   let canvas, ctx, ui, view = { s: 1, ox: 0, oy: 0 }, fitScale = 1, dpr = 1;
-  let terr = null, terrKey = '', nearest = null, pointers = new Map(), drag = null, pinch = null;
+  let terr = null, terr3 = false, terrKey = '', nearest = null, pointers = new Map(), drag = null, pinch = null;
 
+  let T = null, use3d = false, twist = null, rotated = false;                               // T: the 3D ground (js/view3d/terrain.js) when the map is shown in 3D
   const sx = x => x * view.s + view.ox, sy = y => y * view.s + view.oy;
+  // where a map point is on the screen, and how big things drawn there are compared with the starting view (1 = as at first)
+  const P = (x, y, lift) => use3d ? T.project(x, y, lift) : { x: sx(x), y: sy(y), k: view.s / fitScale };
   const toMap = (px, py) => ({ x: (px - view.ox) / view.s, y: (py - view.oy) / view.s });
   const S = () => ui.state;
 
-  function init(c, uiRef) {
+  function init(c, uiRef, c3) {
     canvas = c; ctx = c.getContext('2d'); ui = uiRef;
+    if (c3 && VM.MapTerrain && VM.MapTerrain.supported() && VM.UIPrefs.get('map3d') !== 'off' && VM.MapTerrain.init(c3)) { T = VM.MapTerrain; use3d = true; }
+    document.body.classList.toggle('map3d', use3d);
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
     canvas.addEventListener('wheel', e => { e.preventDefault(); zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0012)); }, { passive: false });
-    canvas.addEventListener('contextmenu', e => { e.preventDefault(); const h = hit(e.clientX, e.clientY); if (h && h.kind === 'node') ui.onOrder(h.id); });
+    canvas.addEventListener('contextmenu', e => { e.preventDefault(); if (rotated) { rotated = false; return; } const h = hit(e.clientX, e.clientY); if (h && h.kind === 'node') ui.onOrder(h.id); });
     addEventListener('resize', resize); resize();
   }
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(innerHeight * dpr);
+    if (use3d) T.resize();
     if (S()) fit();
   }
 
   function fit() {
+    if (use3d) { T.build(S()); T.fit(S()); terrKey = ''; nearest = null; return; }
     const m = S().map, pad = Math.min(60, innerWidth * 0.06), topPad = 56;
     fitScale = Math.min((innerWidth - pad * 2) / m.w, (innerHeight - pad * 2 - topPad) / m.h);
     view.s = fitScale; view.ox = (innerWidth - m.w * fitScale) / 2; view.oy = topPad + (innerHeight - topPad - m.h * fitScale) / 2;
@@ -33,12 +40,18 @@ VM.MapView = (function () {
   }
 
   function zoomAt(px, py, k) {
+    if (use3d) {                                                              // zoom toward the point under the pointer
+      const c = T.cam, before = T.groundAt(px, py); c.dist /= k; T.place(); const after = T.groundAt(px, py);
+      if (before && after) { c.tx += before.x - after.x; c.tz += before.y - after.y; T.bounds(S()); T.place(); }
+      return;
+    }
     const ns = Math.max(fitScale * 0.7, Math.min(fitScale * 3.5, view.s * k)), r = ns / view.s;
     view.ox = px - (px - view.ox) * r; view.oy = py - (py - view.oy) * r; view.s = ns;
   }
 
   function centerOn(id) {
-    const n = S().map.nodes[id]; view.s = Math.max(view.s, fitScale * 1.35);
+    const n = S().map.nodes[id];
+    if (use3d) { const c = T.cam; c.tx = n.x; c.tz = n.y; c.dist = Math.min(c.dist, c.fit * 0.62); T.place(); return; } view.s = Math.max(view.s, fitScale * 1.35);
     const cx = innerWidth > 720 ? (innerWidth + 360) / 2 : innerWidth / 2;      // keep clear of the side panel
     view.ox = cx - n.x * view.s; view.oy = (innerWidth > 720 ? innerHeight / 2 : innerHeight * 0.36) - n.y * view.s;
   }
@@ -48,7 +61,7 @@ VM.MapView = (function () {
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 1) drag = { sx: e.clientX, sy: e.clientY, moved: false, button: e.button };
-    else { drag = null; const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }; }
+    else { drag = null; const [a, b] = [...pointers.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), a: Math.atan2(b.y - a.y, b.x - a.x), my: (a.y + b.y) / 2 }; }
   }
   function move(e) {
     const p = pointers.get(e.pointerId); if (!p) return;
@@ -56,9 +69,17 @@ VM.MapView = (function () {
     if (pinch && pointers.size >= 2) {
       const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
       zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, d / pinch.d); pinch.d = d;
+      if (use3d) {                                                            // two fingers also turn the map (twist) and tilt it (move up or down together)
+        const ang = Math.atan2(b.y - a.y, b.x - a.x); let da = ang - pinch.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+        T.cam.yaw += da; pinch.a = ang; const my = (a.y + b.y) / 2; T.cam.pitch += (my - pinch.my) * 0.004; pinch.my = my; T.place();
+      }
     } else if (drag) {
       if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) drag.moved = true;
-      if (drag.moved) { view.ox += dx; view.oy += dy; }
+      if (drag.moved) {
+        if (use3d && (drag.button === 2 || e.ctrlKey)) { T.cam.yaw -= dx * 0.006; T.cam.pitch += dy * 0.005; T.place(); rotated = true; }                    // right drag: turn and tilt
+        else if (use3d) { const g0 = T.groundAt(e.clientX - dx, e.clientY - dy), g1 = T.groundAt(e.clientX, e.clientY); if (g0 && g1) { T.cam.tx += g0.x - g1.x; T.cam.tz += g0.y - g1.y; T.bounds(S()); T.place(); } }
+        else { view.ox += dx; view.oy += dy; }
+      }
     }
   }
   function up(e) {
@@ -69,8 +90,8 @@ VM.MapView = (function () {
   }
 
   function armyScreenPos(a, slot) {
-    const p = VM.Armies.position(S(), a);
-    return { x: sx(p.x) + slot * 16, y: sy(p.y) - (a.at !== null ? 18 : 10) };
+    const p = VM.Armies.position(S(), a), q = P(p.x, p.y);
+    return { x: q.x + slot * 16, y: q.y - (a.at !== null ? 18 : 10) };
   }
 
   function hit(px, py) {
@@ -83,7 +104,7 @@ VM.MapView = (function () {
     }
     if (best) return best;
     bd = 26 * 26;
-    for (const n of st.map.nodes) { const dx = sx(n.x) - px, dy = sy(n.y) - py, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = { kind: 'node', id: n.id }; } }
+    for (const n of st.map.nodes) { const q = P(n.x, n.y, 1.5), dx = q.x - px, dy = q.y - py, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = { kind: 'node', id: n.id }; } }
     return best;
   }
 
@@ -109,7 +130,7 @@ VM.MapView = (function () {
       terr = document.createElement('canvas'); terr.width = w; terr.height = h; terrKey = '';
     }
     const key = st.cities.map(c => c.owner).join('') + '|' + st.player;
-    if (key === terrKey) return;
+    if (key === terrKey) return false;
     terrKey = key;
     const t = terr.getContext('2d'), img = t.createImageData(w, h), d = img.data;
     const rgb = st.factions.map(f => [parseInt(f.color.slice(1, 3), 16), parseInt(f.color.slice(3, 5), 16), parseInt(f.color.slice(5, 7), 16)]);
@@ -122,7 +143,7 @@ VM.MapView = (function () {
       const p = i * 4; d[p] = c[0]; d[p + 1] = c[1]; d[p + 2] = c[2];
       d[p + 3] = border ? 200 : (o === 0 ? 34 : 70);
     }
-    t.putImageData(img, 0, 0);
+    t.putImageData(img, 0, 0); return true;
   }
 
   // ---- Drawing ----
@@ -162,35 +183,39 @@ VM.MapView = (function () {
     const st = S(); if (!st) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, innerWidth, innerHeight);
     const N = st.map.nodes, me = st.player;
-    buildTerritory();
-    ctx.imageSmoothingEnabled = true; ctx.drawImage(terr, view.ox - MARG * view.s, view.oy - MARG * view.s, terr.width * RES * view.s, terr.height * RES * view.s);
-
-    ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(238,230,214,0.32)'; ctx.lineWidth = Math.max(1.5, 2.2 * view.s / fitScale);
-    for (const [a, b] of st.map.edges) { ctx.beginPath(); ctx.moveTo(sx(N[a].x), sy(N[a].y)); ctx.lineTo(sx(N[b].x), sy(N[b].y)); ctx.stroke(); }
+    const changed = buildTerritory();
+    if (use3d) { if (changed || !terr3) { T.setTerritory(terr); terr3 = true; } T.render(); }                  // the ground, its colours and roads are drawn by the 3D layer
+    else {
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(terr, view.ox - MARG * view.s, view.oy - MARG * view.s, terr.width * RES * view.s, terr.height * RES * view.s);
+      ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(238,230,214,0.32)'; ctx.lineWidth = Math.max(1.5, 2.2 * view.s / fitScale);
+      for (const [a, b] of st.map.edges) { ctx.beginPath(); ctx.moveTo(sx(N[a].x), sy(N[a].y)); ctx.lineTo(sx(N[b].x), sy(N[b].y)); ctx.stroke(); }
+    }
+    // a line over the ground through map points, bent to the terrain in 3D
+    const ground = list => { const out = []; list.forEach((p, i) => { if (!i || !use3d) { out.push(P(p.x, p.y)); return; } const q = list[i - 1], n = Math.max(1, Math.ceil(Math.hypot(p.x - q.x, p.y - q.y) / 25)); for (let k = 1; k <= n; k++) out.push(P(q.x + (p.x - q.x) * k / n, q.y + (p.y - q.y) * k / n, 1)); }); return out; };
 
     // Selected army: its march route and its supply line.
     const sel = ui.selectedArmy !== null ? st.armies.find(a => a.id === ui.selectedArmy) : null;
     for (const a of st.armies) {
       if (a.owner !== me && a !== sel) continue;
       if (a.dest === null && !a.path.length) continue;
-      const pos = VM.Armies.position(st, a), pts = [{ x: sx(pos.x), y: sy(pos.y) }];
-      if (a.edge) pts.push({ x: sx(N[a.edge.to].x), y: sy(N[a.edge.to].y) });
-      for (const id of a.path) pts.push({ x: sx(N[id].x), y: sy(N[id].y) });
-      polyline(pts, a === sel ? '#f2d27a' : 'rgba(242,210,122,0.4)', a === sel ? 3 : 2);
+      const pos = VM.Armies.position(st, a), mp = [{ x: pos.x, y: pos.y }];
+      if (a.edge) mp.push({ x: N[a.edge.to].x, y: N[a.edge.to].y });
+      for (const id of a.path) mp.push({ x: N[id].x, y: N[id].y });
+      polyline(ground(mp), a === sel ? '#f2d27a' : 'rgba(242,210,122,0.4)', a === sel ? 3 : 2);
     }
     if (sel) {
       const sp = VM.Armies.supplyPath(st, sel);
       if (sp && sp.length > 1) {
-        const pos = VM.Armies.position(st, sel), pts = [{ x: sx(pos.x), y: sy(pos.y) }].concat(sp.map(id => ({ x: sx(N[id].x), y: sy(N[id].y) })));
-        polyline(pts, sel.supply && sel.supply.line !== 'ok' ? '#e0483a' : 'rgba(200,224,112,0.85)', 2.5);
+        const pos = VM.Armies.position(st, sel), mp = [{ x: pos.x, y: pos.y }].concat(sp.map(id => ({ x: N[id].x, y: N[id].y })));
+        polyline(ground(mp), sel.supply && sel.supply.line !== 'ok' ? '#e0483a' : 'rgba(200,224,112,0.85)', 2.5);
       }
     }
 
     // Nodes
-    const zoom = view.s / fitScale, fs = Math.max(10, Math.min(14, 11 * zoom));
-    for (const c of st.cities) {
-      const n = N[c.id], f = st.factions[c.owner], x = sx(n.x), y = sy(n.y);
-      const r = (c.spec === 'capital' ? 13 : 9 + 3 * Math.min(1, c.pop / Math.max(1, c.stats ? c.stats.cap : 1))) * Math.min(1.5, Math.max(0.85, zoom));
+    const order = st.cities.map(c => ({ c, q: P(N[c.id].x, N[c.id].y, 1.5) })); if (use3d) order.sort((a, b) => b.q.depth - a.q.depth);        // far ones first, so near ones cover them
+    for (const { c, q } of order) {
+      const n = N[c.id], f = st.factions[c.owner], x = q.x, y = q.y, zoom = use3d ? Math.max(0.55, Math.min(1.6, q.k)) : q.k, fs = Math.max(use3d ? 9 : 10, Math.min(14, 11 * zoom));
+      const r = (c.spec === 'capital' ? 13 : 9 + 3 * Math.min(1, c.pop / Math.max(1, c.stats ? c.stats.cap : 1))) * (use3d ? zoom : Math.min(1.5, Math.max(0.85, zoom)));
       if (c.owner === me) { ctx.strokeStyle = '#f2d27a'; ctx.lineWidth = 2; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 7); ctx.stroke(); dashed(false); }
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = f.color; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
@@ -209,7 +234,7 @@ VM.MapView = (function () {
     }
 
     const fo = VM.Tutorial.focus();                                           // the node the tutorial wants you to look at
-    if (fo >= 0) { const n = N[fo], r = 22 + (Math.sin(Date.now() / 200) + 1) * 5; ctx.strokeStyle = '#f2d27a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(sx(n.x), sy(n.y), r, 0, 7); ctx.stroke(); }
+    if (fo >= 0) { const n = N[fo], q = P(n.x, n.y, 1.5), r = 22 + (Math.sin(Date.now() / 200) + 1) * 5; ctx.strokeStyle = '#f2d27a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, 7); ctx.stroke(); }
 
     // Armies
     const slots = {};
@@ -228,12 +253,18 @@ VM.MapView = (function () {
     for (const a of st.armies) for (const id of a.fighting) {
       if (id < a.id) continue;
       const e = st.armies.find(x => x.id === id); if (!e) continue;
-      const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), bx = sx((p.x + q.x) / 2), by = sy((p.y + q.y) / 2) - 4, z = 7 + Math.sin(Date.now() / 120);
+      const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), pq = P((p.x + q.x) / 2, (p.y + q.y) / 2, 1.5), bx = pq.x, by = pq.y - 4, z = 7 + Math.sin(Date.now() / 120);
       ctx.strokeStyle = '#ff5a48'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - z, by - z); ctx.lineTo(bx + z, by + z); ctx.moveTo(bx + z, by - z); ctx.lineTo(bx - z, by + z); ctx.stroke();
     }
     const vg = ctx.createRadialGradient(innerWidth / 2, innerHeight / 2, Math.min(innerWidth, innerHeight) * 0.45, innerWidth / 2, innerHeight / 2, Math.max(innerWidth, innerHeight) * 0.75);
     vg.addColorStop(0, 'rgba(7,6,10,0)'); vg.addColorStop(1, 'rgba(7,6,10,0.55)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, innerWidth, innerHeight);
   }
 
-  return { init, render, fit, centerOn, resize, view: () => view };
+  // The buttons beside the map: turn, tilt and switch between the 3D and the flat map
+  function control(act) {
+    if (!use3d) return; const c = T.cam;
+    if (act === 'left') c.yaw += 0.35; else if (act === 'right') c.yaw -= 0.35; else if (act === 'up') c.pitch += 0.15; else if (act === 'down') c.pitch -= 0.15; else if (act === 'north') { c.yaw = 0; c.pitch = 0.95; }
+    T.place();
+  }
+  return { init, render, fit, centerOn, resize, control, is3d: () => use3d, view: () => view, screenOf: id => { const n = S().map.nodes[id], q = P(n.x, n.y, 1.5); return { x: q.x, y: q.y }; } };
 })();

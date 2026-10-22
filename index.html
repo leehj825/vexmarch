@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="titlemode">
+<canvas id="map3d"></canvas>
 <canvas id="map"></canvas>
 <canvas id="city3d"></canvas>
 <div id="hud">
@@ -18,12 +19,13 @@
     </div>
     <div id="speed"><button id="offBtn" class="wide">Officers</button><button id="alertBtn" class="wide">Alerts</button><button id="setBtn" title="Settings">⚙</button><button data-s="0" title="Pause (space)">II</button><button data-s="1">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button id="menuBtn" title="Menu">☰</button></div>
   </div>
-  <button id="backBtn">← Back to map</button>
-  <div id="hint3d">Drag to look around · scroll or pinch to zoom</div>
+  <div id="mapctl"><button data-mc="north" title="North up">⌖</button><button data-mc="left" title="Turn left">⟲</button><button data-mc="right" title="Turn right">⟳</button><button data-mc="up" title="Tilt up">⇧</button><button data-mc="down" title="Tilt down">⇩</button></div>
+  <div id="hint3d">Drag to look around · two fingers to pan and zoom</div>
   <div id="panel"></div>
   <div id="sheet"></div>
   <div id="lesson"></div>
   <div id="toast"></div>
+  <div id="pauseMenu"><div><h2>Paused</h2><button data-pm="resume" class="btn">Resume</button><button data-pm="settings" class="btn">Settings</button><button data-pm="exit" class="btn">Save and go to the main menu</button></div></div>
   <div id="over"><div><h2 id="overT"></h2><p id="overP"></p><button id="overBtn">Main menu</button></div></div>
 </div>
 <div id="title" class="screen">
@@ -51,11 +53,15 @@
 <script src="js/sim/tick.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="js/view3d/layout.js"></script>
+<script src="js/view3d/struct_models.js"></script>
+<script src="js/view3d/crowd_clips.js"></script>
+<script src="js/view3d/crowd.js"></script>
 <script src="js/view3d/city3d.js"></script>
 <script src="js/ui/prefs.js"></script>
 <script src="js/ui/audio.js"></script>
 <script src="js/lang_ko.js"></script>
 <script src="js/i18n.js"></script>
+<script src="js/view3d/terrain.js"></script>
 <script src="js/ui/map.js"></script>
 <script src="js/ui/panels.js"></script>
 <script src="js/ui/alerts.js"></script>

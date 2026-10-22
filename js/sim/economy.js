@@ -7,7 +7,7 @@ VM.Eco = (function () {
 
   function cap(city) {
     const E = VM.CFG.ECON, S = VM.CFG.SPEC[city.spec], b = city.buildings;
-    return Math.round(E.baseCap * S.cap * (1 + 0.08 * b.farm + 0.05 * b.market + 0.05 * b.temple));
+    return Math.min(E.maxPop, Math.round(E.baseCap * S.cap * (1 + 0.08 * b.farm + 0.05 * b.market + 0.05 * b.temple)));
   }
 
   function upkeepOf(city) {
@@ -80,8 +80,8 @@ VM.Eco = (function () {
       f.broke = false;
       if (f.gold < 0) {                                  // broke: troops desert instead of being paid
         f.gold = 0; f.broke = true;
-        for (const city of cities) for (const k in city.garrison) city.garrison[k] = Math.floor(city.garrison[k] * (1 - E.desertion * dd));
-        for (const a of state.armies) if (a.owner === f.id) for (const k in a.troops) a.troops[k] = Math.floor(a.troops[k] * (1 - E.desertion * dd));
+        for (const city of cities) VM.War.hurt(state, city.garrison, VM.War.carryOf(city), troopsOf(city.garrison) * E.desertion * dd);
+        for (const a of state.armies) if (a.owner === f.id) VM.War.hurt(state, a.troops, VM.War.carryOf(a), VM.Armies.sizeOf(a) * E.desertion * dd);
       }
       const wasStarving = f.starving;
       if (f.food <= 0 && netFood < 0) { f.food = 0; f.starving = true; f.foodSec = 0; }
