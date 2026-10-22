@@ -9,7 +9,7 @@
     cityView: null,
     openCity(id) {
       if (!VM.City3D.open(id)) { VM.Panels.toast('The 3D view is not available on this device'); VM.Audio.play('error'); return; }
-      ui.cityView = id; ui.speed = 1; document.body.classList.add('in3d'); VM.Audio.play('pick');      // the 2x and 4x speeds are for testing: inside a city time runs at normal speed
+      ui.cityView = id; ui.speed = 1; ui.panelMin = matchMedia('(max-width: 720px)').matches; document.body.classList.add('in3d'); VM.Audio.play('pick');      // the 2x and 4x speeds are for testing: inside a city time runs at normal speed; on a phone the details start folded away so the city is visible
     },
     closeCity() { if (ui.cityView === null) return; VM.City3D.close(); ui.cityView = null; document.body.classList.remove('in3d'); if (VM.MapTerrain) VM.MapTerrain.markDirty(); },
     onTap(h) {
@@ -58,7 +58,8 @@
       VM.Alerts.process(); overlay(); VM.Tutorial.update(); moodTick(dt);
       const m = Math.floor(ui.state.time / 30); if (m !== ui.lastSave && !ui.state.over) { ui.lastSave = m; save(); }
     }
-    if (ui.cityView !== null) { VM.City3D.frame(dt); const tb = document.getElementById('top').getBoundingClientRect().bottom; if (tb !== ui.topBottom) { ui.topBottom = tb; document.documentElement.style.setProperty('--topb', tb + 'px'); } }      // the Back button sits under the top bar, however many rows it wraps to
+    const tb = document.getElementById('top').getBoundingClientRect().bottom; if (tb !== ui.topBottom) { ui.topBottom = tb; document.documentElement.style.setProperty('--topb', tb + 'px'); }      // things that sit under the top bar follow it, however many rows it wraps to
+    if (ui.cityView !== null) VM.City3D.frame(dt);
     else VM.MapView.render();
     if (ui.running) { VM.Panels.update(); VM.Sheets.update(); }
   }

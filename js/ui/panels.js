@@ -52,6 +52,7 @@ VM.Panels = (function () {
       case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
       case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
       case 'view3d': ui.openCity(+d.city); break;
+      case 'panelToggle': ui.panelMin = !ui.panelMin; lastHTML = ''; break;
       case 'backmap': ui.closeCity(); break;
       case 'goto': ui.centerOn(+d.city); break;
     }
@@ -82,7 +83,7 @@ VM.Panels = (function () {
   function cityHTML(c) {
     const st = ui.state, me = st.player, N = st.map.nodes[c.id], S = VM.CFG.SPEC[c.spec], f = st.factions[c.owner], s = c.stats;
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c);
-    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span>${ui.cityView === c.id ? `<button data-act="backmap" class="btn sm">← Back to map</button>` : `<button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button>`}</div>`;
+    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span><button data-act="panelToggle" class="tog" title="Show or hide the details">${ui.panelMin ? '▴' : '▾'}</button>${ui.cityView === c.id ? `<button data-act="backmap" class="btn sm">← Back to map</button>` : `<button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button>`}</div>`;
     h += `<div class="row"><span class="dot" style="background:${f.color}"></span>${f.name}${mine ? ' (you)' : ''}${c.besieged ? ' · <span class="bad">UNDER SIEGE</span>' : (c.contested ? ' · <span class="bad">CONTESTED</span>' : '')}</div>`;
     h += `<div class="row">Population <b>${num(c.pop)}</b> / ${num(s.cap)}</div>`;
     if (wmax > 0) h += `<div class="row">Wall <b>${num(c.wallHp)}</b> / ${num(wmax)}${bar(c.wallHp / wmax, 'wall')}</div>`;
@@ -144,7 +145,7 @@ VM.Panels = (function () {
 
   function armyHTML(a) {
     const st = ui.state, o = st.officers[a.officer], f = st.factions[a.owner], mine = a.owner === st.player, N = st.map.nodes, n = VM.Armies.sizeOf(a);
-    let h = `<div class="ph"><b>Army of ${f.name}</b><span class="sub">${num(n)} troops</span><button data-act="close" class="x">✕</button></div>`;
+    let h = `<div class="ph"><b>Army of ${f.name}</b><span class="sub">${num(n)} troops</span><button data-act="panelToggle" class="tog" title="Show or hide the details">${ui.panelMin ? '▴' : '▾'}</button><button data-act="close" class="x">✕</button></div>`;
     h += `<div class="row dim">${officerLine(o)} · loyalty ${Math.round(o.loyalty)}</div>`;
     h += `<div class="row">${troopList(a.troops)}</div>`;
     h += `<div class="row">Morale <b>${Math.round(a.morale)}</b>${bar(a.morale / 100, a.morale < 30 ? 'low' : '')}</div>`;
@@ -192,7 +193,7 @@ VM.Panels = (function () {
     const army = ui.selectedArmy !== null ? st.armies.find(a => a.id === ui.selectedArmy) : null;
     if (ui.selectedArmy !== null && !army) ui.selectedArmy = null;
     if (army) h = armyHTML(army); else if (ui.selectedCity >= 0) h = cityHTML(st.cities[ui.selectedCity]);
-    panel.classList.toggle('open', !!h);
+    panel.classList.toggle('open', !!h); panel.classList.toggle('min', !!ui.panelMin);
     if (h !== lastHTML && !(document.activeElement && panel.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT') && h && lastHTML)) { panel.innerHTML = h; lastHTML = h; }
   }
 
