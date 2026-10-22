@@ -30,7 +30,11 @@ VM.Title = (function () {
     $('countSel').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (b) { count = +b.dataset.n; roll(false); } });
     $('diffSel').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { difficulty = b.dataset.d; ui.state.difficulty = difficulty; render(); } });
     $('rerollBtn').addEventListener('click', () => roll(false));
-    $('startBtn').addEventListener('click', () => { VM.Audio.init(); VM.Audio.play('horn'); box.classList.remove('on'); ui.state.aiOn = true; ui.start(); });
+    $('campBtn').addEventListener('click', showCampaign);
+    $('campBack').addEventListener('click', () => { $('campaign').classList.remove('on'); box.classList.add('on'); });
+    $('campList').addEventListener('click', e => { const b = e.target.closest('[data-h]'); if (b) { house = +b.dataset.h; preview(); campRender(); } });
+    $('campGo').addEventListener('click', beginCampaign);
+    $('startBtn').addEventListener('click', () => { if (ui.state.story) roll(true); VM.Audio.init(); VM.Audio.play('horn'); box.classList.remove('on'); ui.state.aiOn = true; ui.start(); });
     $('tutBtn').addEventListener('click', () => { VM.Audio.init(); startTutorial(); });
     $('contBtn').addEventListener('click', () => {
       try { const saved = VM.Sim.load(localStorage.getItem('vexmarch.save')); if (saved.version !== VM.CFG.VERSION || saved.over) throw new Error('old or finished save'); if (saved.tutorial) saved.aiOn = true; ui.setState(saved); VM.MapView.fit(); box.classList.remove('on'); VM.Audio.init(); ui.start(); }
@@ -43,7 +47,27 @@ VM.Title = (function () {
     ui.setState(VM.Tutorial.createWorld()); VM.MapView.fit(); box.classList.remove('on'); ui.start(); VM.Tutorial.begin();
   }
 
-  function show() { box.classList.add('on'); render(); $('tutBtn').classList.toggle('pulse', !VM.Tutorial.done()); }
+  // ---- the campaign: choose a house, read who they are, begin ----
+  let house = 1;
+  function showCampaign() {
+    box.classList.remove('on'); $('campaign').classList.add('on'); preview(); campRender();
+  }
+  function preview() { ui.setState(VM.Story.create({ player: house, difficulty })); VM.MapView.fit(); }
+  function campRender() {
+    const D = VM.StoryData, tx = VM.Story.tx, ko = VM.Story.lang() === 'ko', nm = id => tx({ en: VM.CFG.FACTIONS[id].name, ko: VM.Story.koOf(VM.CFG.FACTIONS[id].name) });
+    $('campTag').textContent = tx(D.HISTORY.intro[2]);
+    $('campList').innerHTML = D.FACTIONS.map(f => `<button class="fac${f.id === house ? ' on' : ''}" data-h="${f.id}"><span class="dot" style="background:${VM.CFG.FACTIONS[f.id].color}"></span><b>${nm(f.id)}</b><small>${tx(f.title)}</small></button>`).join('');
+    const f = D.FACTIONS[house - 1], cast = D.OFFICERS.filter(o => o.house === house);
+    $('campInfo').innerHTML = `<p><b>${tx(f.ruler)}</b> · ${tx(f.title)}</p><p>${tx(f.creed)}</p><p class="dim">${ko ? '상처' : 'The wound'}: ${tx(f.wound)}</p><p class="dim">${ko ? '위험' : 'The danger'}: ${tx(f.danger)}</p>` +
+      `<p class="dim">${ko ? '장수' : 'Officers'}: ${cast.map(o => (ko ? o.ko : o.name) + ' (' + tx(o.role) + ')').join(' · ')}</p>`;
+    if (VM.I18N && VM.I18N.flush) VM.I18N.flush();
+  }
+  function beginCampaign() {
+    VM.Audio.init(); VM.Audio.play('horn');
+    ui.setState(VM.Story.create({ player: house, difficulty })); VM.MapView.fit(); $('campaign').classList.remove('on'); ui.start();
+  }
+
+  function show() { if (ui.state && ui.state.story) roll(false); box.classList.add('on'); render(); $('tutBtn').classList.toggle('pulse', !VM.Tutorial.done()); }
 
   return { init, show, roll, startTutorial };
 })();

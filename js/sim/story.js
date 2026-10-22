@@ -62,6 +62,7 @@ VM.Story = (function () {
     s.events = []; s.nextEvent = 0;
     s.story = { campaign: true, house: player, fired: {}, chronicle: [], queue: [], seen: 0, flags: {} };
     VM.Eco.refresh(s);
+    opening(s);
     return s;
   }
 
@@ -163,5 +164,17 @@ VM.Story = (function () {
     for (const t of tiesOf(dead.key)) { if (t[0] !== 'kin') continue; const o = officer(state, t[1] === dead.key ? t[2] : t[1]); if (o && o.owner > 0) o.loyalty = clamp(o.loyalty - 15, 0, 100); }
   }
 
-  return { create, buildMap, step, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
+  // who a key stands for: an officer, one of the six rulers, or the prince: { en, ko }
+  function whoIs(state, key) {
+    const o = D().OFFICERS.find(x => x.key === key); if (o) return { en: o.name, ko: o.ko };
+    const f = D().FACTIONS.find(x => x.rulerKey === key); if (f) return f.ruler;
+    return key === D().PRINCE.key ? D().PRINCE.name : { en: key, ko: key };
+  }
+  // the ties of an officer, for the officers' list: [{ label, who }]
+  function tiesView(state, o) {
+    if (!o.key) return [];
+    return tiesOf(o.key).map(t => { const first = t[1] === o.key; return { label: D().TIE_LABEL[t[0]][first ? 0 : 1], who: whoIs(state, first ? t[2] : t[1]), key: first ? t[2] : t[1] }; });
+  }
+
+  return { create, buildMap, step, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
 })();

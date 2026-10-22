@@ -43,6 +43,7 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/i18n.js`, `js/lang_ko.js` | Language layer and the Korean table |
 | `js/ads.js`, `js/ads_env.js` | AdMob banner (Android) and its settings |
 | `js/view3d/layout.js`, `js/view3d/city3d.js` | The 3D city: layout as data, Three.js renderer |
+| `js/data/story.js`, `js/sim/story.js`, `js/ui/story.js` | The campaign: history, houses, fixed map, officers and their ties, beats, endings (English and Korean), and the story pages (`docs/STORY.md`) |
 | `js/view3d/terrain.js` | The 3D ground under the strategy map (height field, water, forests, roads, territory texture, camera, projection) |
 | `js/view3d/struct_models.js` | Nightfall's textured building models (wall, tent, well, smithy, range, tree, fence, campfire; `tools/extract_structs.js`) |
 | `js/view3d/crowd.js`, `js/view3d/crowd_clips.js` | The animated soldiers: simple figures skinned in the shader from a texture of baked clips (`tools/extract_crowd.js` rebuilds the data from Nightfall Settlement) |

@@ -61,7 +61,7 @@
     const tb = document.getElementById('top').getBoundingClientRect().bottom; if (tb !== ui.topBottom) { ui.topBottom = tb; document.documentElement.style.setProperty('--topb', tb + 'px'); }      // things that sit under the top bar follow it, however many rows it wraps to
     if (ui.cityView !== null) VM.City3D.frame(dt);
     else VM.MapView.render();
-    if (ui.running) { VM.Panels.update(); VM.Sheets.update(); }
+    if (ui.running) { VM.Panels.update(); VM.Sheets.update(); VM.StoryUI.update(); }
   }
   // One broken frame must never stop the game: the next frame is always scheduled, and an error is reported once instead of freezing everything
   let errShown = false;
@@ -75,13 +75,15 @@
   const $menu = document.getElementById('menuBtn');
   const exitToMenu = () => { save(); ui.closeCity(); ui.running = false; ui.sheet = null; document.getElementById('sheet').classList.remove('open'); ui.selectedArmy = null; ui.selectedCity = -1; document.getElementById('panel').classList.remove('open'); document.getElementById('hud').style.visibility = 'hidden'; document.body.classList.add('titlemode'); VM.Tutorial.finish(false); VM.Title.show(); };
   // The menu button pauses the game and offers Resume, Settings and Save and exit (the exit used to be the button itself)
+  ui.exitToMenu = exitToMenu;
   const $pm = document.getElementById('pauseMenu');
   const closePause = () => { if (!$pm.classList.contains('on')) return; $pm.classList.remove('on'); ui.speed = ui.prevSpeed === undefined ? 1 : ui.prevSpeed; };
-  $menu.addEventListener('click', () => { if (!ui.running || $pm.classList.contains('on')) return; ui.prevSpeed = ui.speed; ui.speed = 0; $pm.classList.add('on'); });
+  $menu.addEventListener('click', () => { if (!ui.running || $pm.classList.contains('on')) return; ui.prevSpeed = ui.speed; ui.speed = 0; $pm.classList.add('on'); document.getElementById('pmChron').style.display = ui.state.story ? '' : 'none'; });
   $pm.addEventListener('click', e => {
     const b = e.target.closest('[data-pm]'); if (!b) { if (e.target === $pm) closePause(); return; }
     if (b.dataset.pm === 'resume') closePause();
     else if (b.dataset.pm === 'settings') { closePause(); document.getElementById('setBtn').click(); }
+    else if (b.dataset.pm === 'chronicle') { closePause(); VM.StoryUI.chronicle(); }
     else { $pm.classList.remove('on'); exitToMenu(); }
   });
   addEventListener('keydown', e => {
@@ -95,7 +97,7 @@
   document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
   VM.City3D.init(document.getElementById('city3d'), ui);
   VM.UIPrefs.apply(); VM.I18N.start();
-  VM.Panels.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
+  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
   addEventListener('pointerdown', () => VM.Audio.init(), { once: true }); addEventListener('keydown', () => VM.Audio.init(), { once: true });
   document.getElementById('hud').style.visibility = 'hidden';
   VM.Title.roll(false); VM.Title.show();

@@ -64,6 +64,11 @@ VM.Sheets = (function () {
     for (const o of mine) {
       const busy = o.role !== 'idle' || o.travel || o.searching, since = st.time - o.gift;
       h += `<div class="card2"><div class="row between"><b>${o.name}</b><span class="dim">${o.trait}</span></div>`;
+      const info = VM.Story && st.story ? VM.Story.officerInfo(o) : null;
+      if (info) {
+        h += `<div class="row dim">${VM.Story.tx(info.role)}. ${VM.Story.tx(info.bio)}</div>`;
+        const ties = VM.Story.tiesView(st, o); if (ties.length) h += `<div class="row dim">` + ties.map(t => `${VM.Story.tx(t.label)}: ${VM.Story.tx(t.who)}`).join(' · ') + `</div>`;
+      }
       h += `<div class="row dim">Cmd ${o.command} · Might ${o.might} · Pol ${o.politics} · Int ${o.intellect} · ${VM.War.abilityOf(o)}</div>`;
       h += `<div class="row">Loyalty <b>${Math.round(o.loyalty)}</b>${bar(o.loyalty / 100, o.loyalty < VM.CFG.OFFICERS.warnBelow ? 'low' : '')}</div>`;
       h += `<div class="row dim">${statusOf(o)}</div><div class="row">`;

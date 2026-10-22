@@ -207,5 +207,8 @@ var LANG_KO = {
 "The army must be in a city": "군대가 도시 안에 있어야 합니다", "They were rewarded recently": "얼마 전에 이미 포상했습니다",
 "You have no officer to make the offer": "제안을 전할 장수가 없습니다", "Ability is recharging": "능력을 아직 쓸 수 없습니다",
 "Wanderers": "재야의 장수", "Old or finished save": "오래되었거나 끝난 저장 파일입니다",
-"Armies must belong to you.": "아군끼리만 합칠 수 있습니다."
+"Armies must belong to you.": "아군끼리만 합칠 수 있습니다.",
+"Campaign": "캠페인", "Skirmish": "스커미시", "Begin": "시작", "Back": "뒤로", "Choose your house": "가문을 고르세요", "The Sundering": "분열의 시대", "Chronicle": "연대기", "Close": "닫기", "Continue": "계속", "Main menu": "메인 메뉴", "Timeline": "연표"
 };
+// the names of the campaign's places, officers and houses
+(function () { const N = typeof VM !== 'undefined' && VM.StoryData && VM.StoryData.NAMES_KO; if (N) for (const k in N) LANG_KO[k] = N[k]; })();

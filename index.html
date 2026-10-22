@@ -25,9 +25,11 @@
   <div id="sheet"></div>
   <div id="lesson"></div>
   <div id="toast"></div>
-  <div id="pauseMenu"><div><h2>Paused</h2><button data-pm="resume" class="btn">Resume</button><button data-pm="settings" class="btn">Settings</button><button data-pm="exit" class="btn">Save and go to the main menu</button></div></div>
+  <div id="pauseMenu"><div><h2>Paused</h2><button data-pm="resume" class="btn">Resume</button><button data-pm="chronicle" class="btn" id="pmChron">Chronicle</button><button data-pm="settings" class="btn">Settings</button><button data-pm="exit" class="btn">Save and go to the main menu</button></div></div>
+  <div id="story"><div class="card"><h2 id="storyT"></h2><div id="storyB"></div><div class="btns"><button id="storyBtn" class="go">Continue</button></div></div></div>
   <div id="over"><div><h2 id="overT"></h2><p id="overP"></p><button id="overBtn">Main menu</button></div></div>
 </div>
+<div id="campaign" class="screen"><div class="card"><h1>The Sundering</h1><p class="tag" id="campTag"></p><div class="lbl">Choose your house</div><div id="campList"></div><div id="campInfo"></div><div class="btns"><button id="campGo" class="go">Begin</button><button id="campBack">Back</button></div></div></div>
 <div id="title" class="screen">
   <div class="card">
     <h1>Vexmarch</h1>
@@ -38,10 +40,11 @@
     <div id="countSel"><button data-n="4">4 factions</button><button data-n="5">5 factions</button><button data-n="6">6 factions</button></div>
     <div class="lbl">Rival AI</div>
     <div id="diffSel"><button data-d="easy">Easy</button><button data-d="normal">Normal</button><button data-d="hard">Hard</button></div>
-    <div class="btns"><button id="startBtn" class="go">Start</button><button id="tutBtn">Tutorial</button><button id="rerollBtn">New map</button><button id="contBtn">Continue</button></div>
+    <div class="btns"><button id="campBtn" class="go">Campaign</button><button id="startBtn">Skirmish</button><button id="tutBtn">Tutorial</button><button id="rerollBtn">New map</button><button id="contBtn">Continue</button></div>
   </div>
 </div>
 <script src="js/data/config.js"></script>
+<script src="js/data/story.js"></script>
 <script src="js/sim/rng.js"></script>
 <script src="js/sim/economy.js"></script>
 <script src="js/sim/armies.js"></script>
@@ -51,6 +54,7 @@
 <script src="js/sim/world.js"></script>
 <script src="js/sim/commands.js"></script>
 <script src="js/sim/tick.js"></script>
+<script src="js/sim/story.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="js/view3d/layout.js"></script>
 <script src="js/view3d/struct_models.js"></script>
@@ -67,6 +71,7 @@
 <script src="js/ui/alerts.js"></script>
 <script src="js/ui/sheets.js"></script>
 <script src="js/ui/tutorial.js"></script>
+<script src="js/ui/story.js"></script>
 <script src="js/ui/title.js"></script>
 <script src="js/main.js"></script>
 <script src="js/ads_env.js"></script>
