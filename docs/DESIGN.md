@@ -136,7 +136,9 @@ Entering a node transitions to a small 3D scene (iris/fade first, continuous zoo
 ### 9.3 Armies in 3D (later)
 Armies are formations of instanced, animated low-poly soldiers (one figure for every soldier: the numbers are small enough to count) plus siege gear. During a siege they animate toward the walls. The visual is cosmetic; the sim decides the outcome whether or not it is watched.
 
-### 9.4 Walk mode (optional extra, much later)
+### 9.4 Walk mode (built)
+Press **Walk** in the panel of one of your own cities (`js/view3d/walk.js`). WASD/arrows (Shift runs), Q/E or dragging to look, a thumb stick on phones, F/Enter to talk, Esc to leave. You can talk to the officers standing in the city (story role, bio and ties in a campaign, a line by trait, a Gift button) and to townsfolk, and look at buildings. Collisions are circles taken from the city layout; the avatar stays inside the walls. Tested by `tools/ui_walk.js`.
+
 Third-person hero walking a city, like Nightfall and Deepward. **The strategy clock is paused while walking.** It has no effect on the sim: it is an optional way to look around and talk to people. **Joining wars is out of scope for now**; the hero will be a separate system that can attach to the sim later.
 
 ## 10. Look, sound, UI

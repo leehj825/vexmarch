@@ -11,7 +11,7 @@
       if (!VM.City3D.open(id)) { VM.Panels.toast('The 3D view is not available on this device'); VM.Audio.play('error'); return; }
       ui.cityView = id; ui.speed = 1; ui.panelMin = matchMedia('(max-width: 720px)').matches; document.body.classList.add('in3d'); VM.Audio.play('pick');      // the 2x and 4x speeds are for testing: inside a city time runs at normal speed; on a phone the details start folded away so the city is visible
     },
-    closeCity() { if (ui.cityView === null) return; VM.City3D.close(); ui.cityView = null; document.body.classList.remove('in3d'); if (VM.MapTerrain) VM.MapTerrain.markDirty(); },
+    closeCity() { if (ui.cityView === null) return; VM.Walk.stop(); VM.City3D.close(); ui.cityView = null; document.body.classList.remove('in3d'); if (VM.MapTerrain) VM.MapTerrain.markDirty(); },
     onTap(h) {
       if (!ui.running) return;
       if (h && h.kind === 'army') { ui.selectedArmy = h.id; ui.selectedCity = -1; return; }
@@ -54,7 +54,7 @@
   function step(now) {
     const dt = Math.min(1, (now - last) / 1000); last = now;
     if (ui.running) {
-      VM.Sim.update(ui.state, dt, ui.speed);
+      VM.Sim.update(ui.state, dt, ui.walking ? 0 : ui.speed);
       VM.Alerts.process(); overlay(); VM.Tutorial.update(); moodTick(dt);
       const m = Math.floor(ui.state.time / 30); if (m !== ui.lastSave && !ui.state.over) { ui.lastSave = m; save(); }
     }
@@ -97,7 +97,7 @@
   document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
   VM.City3D.init(document.getElementById('city3d'), ui);
   VM.UIPrefs.apply(); VM.I18N.start();
-  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
+  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Walk.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
   addEventListener('pointerdown', () => VM.Audio.init(), { once: true }); addEventListener('keydown', () => VM.Audio.init(), { once: true });
   document.getElementById('hud').style.visibility = 'hidden';
   VM.Title.roll(false); VM.Title.show();

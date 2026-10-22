@@ -62,7 +62,7 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 
 - Delivered: four soldier types with their own silhouettes (shield and sword, long spear, bow and quiver, riders on horses) in the proportions of the army's troops, siege engines, armies marching on the roads into and out of the city (seen from 140 map units away, easing along the road as the sim moves them), armies in battle meeting in one line with defenders facing attackers, arrow volleys, clash sparks, stone shots from engines, and fallen soldiers that follow the army's casualties. Still cosmetic: the sim decides every outcome. Follow-up: armies stop and fight a hostile city on their path instead of passing it; the 3D scene shows a wave-by-wave assault with ladders, defenders fighting back, a breach scene, and a conquest scene when a city falls. 13 layout tests and 62 browser checks (worst case 23 draw calls, about 25k triangles). Later: the soldiers were replaced by simple animated figures that play the clips of Nightfall Settlement and Deepward (see DESIGN, Animated crowd).
 
-## Phase 9 — Walk mode (optional extra)
+## Phase 9 — Walk mode (done)
 - Third-person hero walking the city, clock paused while active. No combat and no war participation.
 
 ## Phase 10 — Optional flavour

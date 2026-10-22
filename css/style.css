@@ -135,3 +135,18 @@ body.in3d #lesson { top: calc(96px + env(safe-area-inset-top)); }
 @media (max-width: 720px) { #hint3d { display: none; } body.in3d #panel { max-height: 36vh; } }
 .nowrap { white-space: nowrap; }
 input.num { width: 52px; padding: 3px 4px; margin: 0 3px; background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 190, 0.35); border-radius: 4px; font-size: 12px; text-align: center; }
+
+/* ---- walk mode ---- */
+#walkUI { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 8; }
+#walkUI.on { display: block; }
+body.walk #panel, body.walk #mapctl { display: none !important; }
+#walkStop { position: absolute; top: calc(var(--topb, 48px) + 8px); right: 12px; pointer-events: auto; }
+#walkAct { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); display: none; pointer-events: auto; padding: 10px 22px; font-size: 16px; }
+#walkHint { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; font-size: 12px; color: #d8d2c0; text-shadow: 0 1px 3px #000; padding: 0 12px; }
+#walkLabels .wl { position: absolute; left: 0; top: 0; font-size: 12px; color: #fff; background: rgba(10, 8, 14, 0.6); padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
+#joy { position: absolute; left: 22px; bottom: 56px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); pointer-events: auto; touch-action: none; display: none; }
+#joy i { position: absolute; left: 40px; top: 40px; width: 40px; height: 40px; border-radius: 50%; background: rgba(255, 255, 255, 0.45); }
+@media (pointer: coarse) { #joy { display: block; } #walkHint { display: none; } }
+#talk { display: none; position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); width: min(440px, calc(100vw - 24px)); background: rgba(18, 14, 24, 0.94); border: 1px solid #6a5a3a; border-radius: 10px; padding: 12px 14px; pointer-events: auto; font-size: 13px; }
+#talk.on { display: block; }
+#talk .tk { font-size: 16px; margin-bottom: 4px; } #talk .say { margin: 8px 0; font-style: italic; color: #f2d27a; } #talk .row { margin-top: 8px; }

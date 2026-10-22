@@ -211,4 +211,22 @@ var LANG_KO = {
 "Campaign": "캠페인", "Skirmish": "스커미시", "Begin": "시작", "Back": "뒤로", "Choose your house": "가문을 고르세요", "The Sundering": "분열의 시대", "Chronicle": "연대기", "Close": "닫기", "Continue": "계속", "Main menu": "메인 메뉴", "Timeline": "연표"
 };
 // the names of the campaign's places, officers and houses
+// ---- walk mode ----
+Object.assign(LANG_KO, {
+"Walk": "걷기", "■ Stop walking": "■ 걷기 멈춤", "You can only walk in your own cities": "자신의 도시에서만 걸을 수 있습니다",
+"WASD or the stick to walk · Shift runs · drag to look · F to talk · Esc to stop": "WASD 또는 스틱으로 이동 · Shift 달리기 · 드래그로 시점 · F 대화 · Esc 종료",
+"Talk to": "대화:", "Look at": "살펴보기:", "The barracks. {0} soldiers are quartered in the city.": "병영입니다. 도시에 병사 {0}명이 머물고 있습니다.", "The market stalls. Trade here is at level {0}.": "시장 가판대입니다. 교역 수준 {0}.", "The temple. Its level is {0}; the faithful are calm.": "신전입니다. 수준 {0}, 신자들은 평온합니다.", "The keep. {0} people live under its walls.": "성채입니다. 성벽 아래 {0}명이 삽니다.", "Townsperson": "마을 사람", "Close": "닫기", "A gift is given": "선물을 건넸습니다",
+"Say the word and I will ride out at dawn. Waiting is for old men.": "명만 내리십시오. 새벽에 출진하겠습니다. 기다림은 늙은이들의 몫입니다.",
+"Let us count the grain and the spears before we count the glory.": "영광을 세기 전에 곡식과 창부터 세어 봅시다.",
+"My house is yours. Ask, and it is done.": "제 가문은 당신의 것입니다. 명하시면 이루겠습니다.",
+"A full treasury keeps an army faithful. Not that I am thinking of my own purse.": "곳간이 차야 군이 충성합니다. 제 주머니를 생각하는 건 아닙니다만.",
+"I have never turned my back on a wall, and I do not mean to begin now.": "성벽 앞에서 등을 보인 적이 없고, 지금도 그럴 생각이 없습니다.",
+"Some doors open better when no one hears the hinge.": "어떤 문은 경첩 소리가 안 날 때 더 잘 열리는 법입니다.",
+"The city is quiet. I hope it stays so.": "도시가 조용합니다. 계속 그랬으면 좋겠군요.",
+"The harvest looks good this year.": "올해는 수확이 좋을 것 같습니다.", "They say the enemy is gathering beyond the hills.": "적이 언덕 너머에 모이고 있다더군요.",
+"Taxes are heavy, but the walls are strong.": "세금은 무겁지만 성벽은 튼튼합니다.", "My son joined the guard last spring.": "아들이 지난봄에 수비대에 들어갔습니다.",
+"Is it true the ruler walks among us?": "통치자께서 우리 사이를 걷고 계시다는 게 사실입니까?", "Peace is a fine thing. May it last.": "평화는 좋은 것이지요. 오래가길.", "The market was busy today.": "오늘 시장이 붐볐습니다.",
+"The supply depot, where grain is stored for the army.": "군량을 쌓아 두는 보급소입니다.", "The smithy rings with hammers.": "대장간에 망치 소리가 울립니다.",
+"The town well. The water is cold and sweet.": "마을 우물입니다. 물이 차고 답니다.", "A monument to the city's past glory.": "도시의 지난 영광을 기리는 기념비입니다."
+});
 (function () { const N = typeof VM !== 'undefined' && VM.StoryData && VM.StoryData.NAMES_KO; if (N) for (const k in N) LANG_KO[k] = N[k]; })();
