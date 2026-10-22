@@ -24,6 +24,7 @@ VM.Officers = (function () {
     if (o.role === 'governor') { const c = state.cities.find(x => x.governor === o.id); if (c && c.stats) t += clamp((c.stats.prosperity - 0.8) * 20, -10, 8); }
     if (o.role === 'commander') { const a = state.armies.find(x => x.id === o.army); if (a) t += a.morale > 70 ? 3 : (a.morale < 30 ? -8 : 0); }
     if (o.role === 'idle' && o.idleDays > C.idleAfter) t += C.idlePenalty;
+    if (VM.Story && state.story) t += VM.Story.loyaltyMod(state, o);
     return t;
   }
 

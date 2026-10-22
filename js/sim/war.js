@@ -171,7 +171,8 @@ VM.War = (function () {
     const r = VM.RNG.next(state);
     o.army = null; o.role = 'idle';
     if (r < W().fateDead) { o.owner = -1; o.loc = null; VM.Eco.pushEvent(state, { type: 'officerDied', officer: o.id, owner: from }); return; }
-    if (r < W().fateCaptured && victor !== 0) {
+    const bonus = VM.Story && state.story ? VM.Story.tieBonus(state, o, victor) : 0;
+    if (r < W().fateCaptured + bonus && victor !== 0) {
       o.owner = victor; o.loyalty = 40; const c = nearestOwnCity(state, o.loc, victor, -1); o.loc = c >= 0 ? c : o.loc;
       VM.Eco.pushEvent(state, { type: 'officerCaptured', officer: o.id, owner: victor, from }); return;
     }
@@ -239,7 +240,7 @@ VM.War = (function () {
       if (a.retreat > 0 || !a.fighting.length) continue;
       const mods = armyMods(state, a), ro = roleOpts(state, a);
       for (const eid of a.fighting) {
-        const e = byId.get(eid), p = power(a.troops, e.troops, ro) * mods / a.fighting.length;
+        const e = byId.get(eid), p = power(a.troops, e.troops, ro) * mods * (VM.Story && state.story ? VM.Story.rivalMult(state, a, e) : 1) / a.fighting.length;
         add(incoming, e.id, p); add(enemyPow, e.id, p); add(outPow, a.id, p);
       }
     }

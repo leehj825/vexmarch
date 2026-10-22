@@ -12,6 +12,7 @@ VM.Sim = (function () {
     VM.AI.step(state);
     VM.Eco.step(state, dd);
     state.time += dd;
+    if (state.story && VM.Story) VM.Story.step(state);
   }
 
   // Advance by a number of in-game days (headless runs and tests).
