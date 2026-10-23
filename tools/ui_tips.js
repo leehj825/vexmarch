@@ -19,7 +19,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     const tipText = () => ev(() => document.getElementById('tip').textContent);
     const press = (sel, type) => ev(o => { const e = document.querySelector(o.sel), r = e.getBoundingClientRect(); e.dispatchEvent(new PointerEvent('pointerdown', { pointerType: o.type, bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); }, { sel, type });
     const release = (sel, type) => ev(o => { const e = document.querySelector(o.sel), r = e.getBoundingClientRect(); e.dispatchEvent(new PointerEvent('pointerup', { pointerType: o.type, bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); }, { sel, type });
-    const sel = '#panel [data-tip]:not(button)';
+    const sel = '#panel .st[data-tip]';
     ok(await ev(() => document.querySelectorAll('#panel [data-tip]').length) >= 8, 'the city panel carries tips');
     ok(await ev(() => !/Choose how many of the garrison|Stores food so armies/.test(document.getElementById('panel').textContent)), 'the long descriptions are gone from the panel');
     if (touch) {

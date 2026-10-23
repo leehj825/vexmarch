@@ -10,7 +10,10 @@ VM.Tips = (function () {
 
   function show(el) {
     const text = el.getAttribute('data-tip'); if (!text) return;
-    cur = el; box.textContent = text; box.classList.add('on');
+    cur = el; box.textContent = '';
+    const tr = s => (VM.I18N && VM.I18N.tr ? VM.I18N.tr(s) : s), lines = text.split('\n');
+    lines.forEach((ln, i) => { const d = document.createElement(i === 0 && lines.length > 1 ? 'b' : 'span'); d.textContent = tr(ln); box.appendChild(d); if (i < lines.length - 1) box.appendChild(document.createElement('br')); });
+    box.classList.add('on');
     const r = el.getBoundingClientRect(), b = box.getBoundingClientRect(), M = 8;
     let x = r.left + r.width / 2 - b.width / 2, y = r.top - b.height - 10;
     if (y < M) y = r.bottom + 10;                                              // no room above: below

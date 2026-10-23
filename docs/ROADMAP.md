@@ -75,6 +75,9 @@ Animated crowd, Nightfall-style city look, city growth stages, ÷10 population/s
 ## Tips (done)
 `js/ui/tips.js`: a hold (touch) or hover (mouse) on anything with `data-tip` shows a short popup; a held press is not also a click. The city and army panels, the Officers and Diplomacy sheets and the top bar now show short labels with dotted underlines and small (i) marks, and the explanations moved into tips (about 50 texts, all in Korean too). `tools/ui_tips.js`: 19 checks. To add one: `VM.Panels.T('Label', 'Explanation')` or `data-tip="..."`.
 
+## Icons (done)
+The city and army panels, the Officers, Diplomacy and Alerts sheets and the top bar are made of icons, meters, pips and generated officer portraits instead of words, the same on phone and desktop. Names, numbers and costs stay as text; everything else (labels, descriptions, the reason a button is disabled) is a tip: hold or hover an icon and its name and explanation appear (first line the name, then the text). `js/ui/icons.js` holds the set and helpers (`VM.Icons.t / stat / btn / meter / pips / portrait`, `VM.Icons.MAP` for troops, buildings, policies, orders, traits, roles and event types); `tools/ui_icons.js` checks that every icon exists and every icon button has a tip. Still text: Settings, the title and campaign screens, story pages, the walk-mode buttons and the toasts.
+
 ## Next (proposed order)
 1. More beats, a gameplay trait and special victory per house. 2. A ruler with stats and choices. 3. Native review of the Korean text. 4. Diplomacy extras (marriages, hostages, asking an ally for help). (Android APK verification and phone performance checks are parked.)
 

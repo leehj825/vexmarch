@@ -30,7 +30,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     while (await p.locator('#story.on').count()) { await p.click('#storyBtn'); await p.waitForTimeout(200); }
     // officers' bios
     await p.click('#offBtn'); await p.waitForTimeout(300);
-    const sheet = await p.locator('#sheet').innerText();
+    const sheet = await p.locator('#sheet').innerText() + ' ' + await p.evaluate(() => [...document.querySelectorAll('#sheet [data-tip]')].map(e => e.getAttribute('data-tip')).join(' '));
     ok(sheet.includes(lang === 'ko' ? '케스트럴 마로' : 'Kestrel Marrow') && sheet.includes(lang === 'ko' ? '수비대장의 딸' : 'Warden'), 'officers show their names and biographies');
     ok(sheet.includes(lang === 'ko' ? '혈육' : 'Kin of'), 'and their ties'); await p.click('#sheet [data-act="sheetClose"]');
     // the chronicle, from the pause menu

@@ -36,7 +36,7 @@ VM.Diplo = (function () {
   function setOp(state, a, b, v) { const d = ensure(state); (d.opinion[a] = d.opinion[a] || {})[b] = clamp(v, -100, 100); }
   const addOp = (state, a, b, v) => setOp(state, a, b, op(state, a, b) + v);
   const trust = (state, f) => ensure(state).trust[f] || 0;
-  function log(state, text) { const d = ensure(state); d.log.push({ t: state.time, text }); if (d.log.length > 30) d.log.shift(); }
+  function log(state, text, kind, a, b) { const d = ensure(state); d.log.push({ t: state.time, text, kind, a, b }); if (d.log.length > 30) d.log.shift(); }
 
   // ---- strength and character ----
   function power(state, f) {
@@ -108,7 +108,7 @@ VM.Diplo = (function () {
     const d = ensure(state); d.allies.push({ a, b, since: state.time });
     addOp(state, a, b, 10); addOp(state, b, a, 10);
     d.offers = d.offers.filter(o => o.kind !== 'alliance' || (![a, b].includes(o.from) && ![a, b].includes(o.to)));
-    VM.Eco.pushEvent(state, { type: 'allied', a, b }); log(state, `${state.factions[a].name} and ${state.factions[b].name} allied`);
+    VM.Eco.pushEvent(state, { type: 'allied', a, b }); log(state, `${state.factions[a].name} and ${state.factions[b].name} allied`, 'allied', a, b);
   }
   function breakAlliance(state, f) {
     const p = pactOf(state, f); if (!p) return fail('no alliance to break');
@@ -118,7 +118,7 @@ VM.Diplo = (function () {
     for (const x of state.factions) if (!x.neutral && x.alive && x.id !== f) addOp(state, x.id, f, x.id === other ? D().breakOpinionAlly : D().breakOpinion);
     d.cool[key(f, other)] = state.time + D().breakCool;
     for (const o of state.officers) if (o.owner === f) VM.Officers.bump(state, o.id, o.trait === 'Loyal' ? -12 : -5);
-    VM.Eco.pushEvent(state, { type: 'allyBroken', by: f, other }); log(state, `${state.factions[f].name} broke the pact with ${state.factions[other].name}`);
+    VM.Eco.pushEvent(state, { type: 'allyBroken', by: f, other }); log(state, `${state.factions[f].name} broke the pact with ${state.factions[other].name}`, 'broken', f, other);
     return { ok: true };
   }
   function gift(state, from, to, gold) {
@@ -178,7 +178,7 @@ VM.Diplo = (function () {
     sf.gold += wf.gold; sf.food += wf.food; wf.gold = 0; wf.food = 0; wf.alive = false; wf.merged = S;
     d.offers = d.offers.filter(o => o.from !== W && o.to !== W);
     d.mergeCool[S] = state.time + D().mergeCool;
-    VM.Eco.pushEvent(state, { type: 'merged', from: W, owner: S }); log(state, `${wf.name} joined ${sf.name}`);
+    VM.Eco.pushEvent(state, { type: 'merged', from: W, owner: S }); log(state, `${wf.name} joined ${sf.name}`, 'merged', W, S);
     VM.Eco.refresh(state);
     if (W === state.player && !state.aiAll) state.over = { type: 'merged', winner: S, t: state.time };
     else VM.War.checkOver(state);

@@ -301,4 +301,27 @@ Object.assign(LANG_KO, {
 "Settings": "설정", "Pause (space)": "일시정지 (스페이스)", "Menu": "메뉴", "North up": "북쪽을 위로", "Turn left": "왼쪽으로 회전", "Turn right": "오른쪽으로 회전", "Tilt up": "위로 기울이기", "Tilt down": "아래로 기울이기",
 "Not enough gold": "골드가 부족합니다", "They will not hear you yet": "아직 당신의 말을 들으려 하지 않습니다", "Already has an ally": "이미 동맹이 있습니다"
 });
+// ---- icon tips ----
+Object.assign(LANG_KO, {
+"Date": "날짜", "Yours": "당신의 도시", "{0} made, {1} eaten": "{0} 생산, {1} 소비", "Low tax": "낮은 세율", "Normal tax": "보통 세율", "High tax": "높은 세율",
+"Level {0}: {1} gold, {2} days": "{0}단계: 금 {1}, {2}일", "Build a depot": "보급소 건설", "{0} gold each": "개당 금 {0}", "Price": "가격", "Gold for each soldier.": "병사 한 명당 드는 금입니다.",
+"Recruit {0}": "{0}명 모병", "Taking": "데려갈 인원", "Soldiers that go with the army.": "군대와 함께 가는 병사입니다.", "Speed": "속도", "The army moves at the speed of its slowest troops.": "군대는 가장 느린 병종의 속도로 움직입니다.",
+"Take none": "모두 빼기", "Take all": "모두 데려가기", "All": "전체", "Troops": "병력", "Soldiers in the army.": "군대의 병사 수입니다.", "Command": "지휘", "How well they lead an army. It adds to the army's strength.": "군대를 얼마나 잘 이끄는지입니다. 군대의 전투력에 더해집니다.",
+"Personal strength. Decides who wins a duel and how hard a charge hits.": "개인의 힘입니다. 일기토의 승패와 돌격의 위력을 좌우합니다.", "Politics": "정치", "How well they govern a city. A good governor earns more and keeps order.": "도시를 얼마나 잘 다스리는지입니다. 좋은 태수는 더 벌고 질서를 지킵니다.",
+"Intellect": "지력", "Cunning. Helps with fire attacks and with finding wanderers.": "지략입니다. 화공과 떠도는 인재 탐색에 도움이 됩니다.", "Location": "위치", "On the road": "이동 중", "Heading to": "목적지", "In the army": "군대 안", "In the city": "도시 안",
+"Gift": "선물", "A gift raises their loyalty.": "선물을 주면 충성도가 오릅니다.", "Search": "탐색", "Look for wandering officers near this city.": "이 도시 근처에서 떠도는 장수를 찾습니다.", "Send to": "보내기", "Go": "가기",
+"Wandering officers you know of": "알고 있는 떠돌이 장수", "Wanderers drift between nodes; send an idle officer to search a city to find more.": "떠돌이는 거점 사이를 떠돕니다. 한가한 장수를 도시로 보내 탐색하면 더 찾을 수 있습니다.",
+"Recruit": "모병", "Offer them a place.": "자리를 제안합니다.", "Near": "근처", "Story": "이야기", "Show on the map": "지도에서 보기", "Approve": "승인", "Refuse": "거절",
+"At war with you.": "당신과 전쟁 중입니다.", "Cities": "도시", "Opinion of you": "당신에 대한 평가", "Pause the game automatically for": "자동으로 게임을 멈출 경우", "Pause the game when this happens.": "이런 일이 생기면 게임을 멈춥니다.",
+"Newest first. Hold an item to read it.": "최신순입니다. 항목을 길게 눌러 읽으세요.", "Offers an alliance": "동맹을 제안", "Asks you to bend the knee": "무릎 꿇기를 요구", "Allies do not fight each other.": "동맹은 서로 싸우지 않습니다.",
+"If you accept, your game ends here; refuse, and you fight on.": "받아들이면 게임이 끝나고, 거절하면 계속 싸웁니다.", "Open for days": "남은 기간(일)", "Days left to answer.": "답할 수 있는 남은 일수입니다.", "Expires in days": "남은 기간(일)",
+"Enemy": "적", "Ally": "동맹", "Oath-breaker": "맹약 파기자", "Break the pact?": "동맹을 깨시겠습니까?", "You will lose trust.": "신뢰를 잃게 됩니다.", "Garrison": "수비대", "Cost": "비용", "Orders": "명령",
+"Under siege": "포위됨", "Enemy armies are at the gates.": "적군이 성문 앞에 있습니다.", "Contested": "분쟁 중", "Enemy armies stand in its land and none of its own.": "적군이 영토에 있고 아군은 없습니다.", "Not yours": "당신의 것이 아님",
+"Your army is here and will lay siege.": "당신의 군대가 여기 있으며 포위할 것입니다.", "Routed": "패주", "Fleeing to safety.": "안전한 곳으로 도망치는 중입니다.", "In battle": "전투 중", "Besieging": "포위 중", "Supply line open": "보급선 열림", "Supply cut": "보급선 끊김", "No supply source": "보급처 없음",
+"Fed by a depot": "보급소에서 보급", "Enemy land": "적지", "The army eats more in enemy land.": "군대는 적지에서 더 많이 먹습니다.", "Supplied from": "보급 출처", "Resting": "휴식 중", "Recharging": "재충전 중", "Days until it can be used again.": "다시 쓸 수 있을 때까지 남은 일수입니다.",
+"Join with": "합치기", "Merge": "합치기", "Halt": "정지", "Disband into city": "도시로 해산", "Leader": "지휘관", "Form army": "군대 편성", "No soldiers": "병사 없음", "No free officer": "한가한 장수 없음", "Stock": "재고", "Target": "목표",
+"Food stored here.": "여기에 쌓인 식량입니다.", "The depot is filled up to this much food.": "보급소는 이만큼 식량이 찰 때까지 채워집니다.", "Lower the target by 500": "목표를 500 낮추기", "Raise the target by 500": "목표를 500 높이기", "Building…": "건설 중…", "Highest level": "최고 단계",
+"Buildings": "건물", "Not built": "미건설", "Show or hide the details": "세부 정보 보기/숨기기", "View city": "도시 보기", "Back to map": "지도로", "Walk": "걷기", "Close": "닫기", "Tax": "세금", "Governor": "태수", "Officers": "장수", "Alerts": "알림", "Diplomacy": "외교",
+"Recent": "최근", "Waiting for your answer": "답을 기다리는 중", "Accept": "수락", "Decline": "거절", "Bend the knee": "무릎 꿇기", "Fight on": "계속 싸우기", "Yes, break it": "예, 깹니다", "No": "아니오", "Break the pact": "동맹 파기", "Propose alliance": "동맹 제안", "Offer terms": "조건 제시", "Strength": "전력"
+});
 (function () { const N = typeof VM !== 'undefined' && VM.StoryData && VM.StoryData.NAMES_KO; if (N) for (const k in N) LANG_KO[k] = N[k]; })();

@@ -74,7 +74,9 @@ VM.Alerts = (function () {
       if (ev.n <= ui.lastEvent) continue;
       ui.lastEvent = ev.n;
       const d = describe(st, ev); if (!d) continue;
-      items.unshift({ n: ev.n, t: ev.t, text: d.text, cat: d.cat, urgent: d.urgent, loc: d.loc, proposal: ev.type === 'proposal' ? ev.proposal : null });
+      const N = st.map.nodes, fn = id => st.factions[id] ? st.factions[id].name : '', short = d.loc !== null ? N[d.loc].name : ev.officer !== undefined ? st.officers[ev.officer].name
+        : ev.a !== undefined ? fn(ev.a) + ' · ' + fn(ev.b) : ev.by !== undefined ? fn(ev.by) + ' · ' + fn(ev.other) : ev.from !== undefined && ev.owner !== undefined ? fn(ev.from) + ' → ' + fn(ev.owner) : ev.from !== undefined ? fn(ev.from) : '';
+      items.unshift({ n: ev.n, t: ev.t, text: d.text, cat: d.cat, urgent: d.urgent, loc: d.loc, type: ev.type, short, proposal: ev.type === 'proposal' ? ev.proposal : null });
       if (items.length > 40) items.pop();
       unread++;
       if (d.toast) VM.Panels.toast(d.text);
