@@ -19,6 +19,13 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await p.click('#facList button:nth-child(2)'); ok(await ev(() => __vm.state.player) === 2, 'picked faction 2');
     await p.click('[data-d="hard"]'); ok(await ev(() => __vm.state.difficulty) === 'hard', 'difficulty hard');
 
+    // Settings from the title screen, and only pause and play for the speed
+    await p.click('#setTitleBtn'); await p.waitForTimeout(250);
+    ok(await ev(() => { const s = document.getElementById('sheet'); return s.classList.contains('open') && getComputedStyle(s).visibility === 'visible' && /Interface/.test(s.textContent); }), 'the title screen has a Settings button that opens the settings');
+    await p.click('#sheet [data-act="sheetClose"]'); await p.waitForTimeout(150);
+    ok(await ev(() => !document.getElementById('sheet').classList.contains('open')), 'and the sheet closes again');
+    ok(await ev(() => document.querySelectorAll('#speed button[data-s]').length) === 2, 'only a pause and a play button');
+
     // Tutorial: complete every step through real UI actions where possible
     await p.click('#tutBtn'); await p.waitForTimeout(400);
     ok(await ev(() => VM.Tutorial.active()), 'tutorial started'); ok(await ev(() => __vm.state.aiOn === false), 'AI asleep during the tutorial');

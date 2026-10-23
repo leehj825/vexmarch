@@ -195,3 +195,8 @@ html.det .ir.stats .st, html[data-ui="text"] .ir.stats .st { white-space: normal
 #speed .tbw { margin-left: 4px; font-size: 12px; font-weight: 600; }
 @media (max-width: 720px) { #speed .tbw { display: none; } }
 .ph { flex-wrap: wrap; align-items: center; }
+
+/* the settings sheet can open over the title screen (the HUD behind it is hidden) */
+body.titlemode:has(#sheet.open) #hud { z-index: 45; }
+body.titlemode #sheet.open { visibility: visible; top: calc(16px + env(safe-area-inset-top)); }
+#speed button[data-s] .ic { width: 20px; height: 20px; }

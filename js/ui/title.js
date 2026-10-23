@@ -30,6 +30,7 @@ VM.Title = (function () {
     $('countSel').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (b) { count = +b.dataset.n; roll(false); } });
     $('diffSel').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { difficulty = b.dataset.d; ui.state.difficulty = difficulty; render(); } });
     $('rerollBtn').addEventListener('click', () => roll(false));
+    $('setTitleBtn').addEventListener('click', () => { ui.sheet = ui.sheet === 'settings' ? null : 'settings'; VM.Sheets.update(); });
     $('campBtn').addEventListener('click', showCampaign);
     $('campBack').addEventListener('click', () => { $('campaign').classList.remove('on'); box.classList.add('on'); });
     $('campList').addEventListener('click', e => { const b = e.target.closest('[data-h]'); if (b) { house = +b.dataset.h; preview(); campRender(); } });

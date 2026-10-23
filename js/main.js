@@ -4,7 +4,7 @@
     state: null, sheet: null, speed: 1, running: false, selectedCity: -1, selectedArmy: null, lastEvent: 0, lastSave: 0,
     draft: null,
     setState(s) { ui.draft = null; ui.overShown = false; document.getElementById('over').classList.remove('on'); ui.state = s; ui.selectedCity = -1; ui.selectedArmy = null; ui.lastEvent = s.nextEvent || 0; ui.sheet = null; if (VM.Alerts) VM.Alerts.reset(); ui.lastSave = Math.floor(s.time / 30); },
-    start() { document.body.classList.remove('titlemode'); document.getElementById('hud').style.visibility = 'visible'; ui.running = true; ui.speed = 1; VM.MapView.centerOn(ui.state.factions[ui.state.player].capital); },
+    start() { ui.sheet = null; document.body.classList.remove('titlemode'); document.getElementById('hud').style.visibility = 'visible'; ui.running = true; ui.speed = 1; VM.MapView.centerOn(ui.state.factions[ui.state.player].capital); },
     centerOn(id) { VM.MapView.centerOn(id); },
     cityView: null,
     openCity(id) {
@@ -62,7 +62,7 @@
     const tb = document.getElementById('top').getBoundingClientRect().bottom; if (tb !== ui.topBottom) { ui.topBottom = tb; document.documentElement.style.setProperty('--topb', tb + 'px'); }      // things that sit under the top bar follow it, however many rows it wraps to
     if (ui.cityView !== null) VM.City3D.frame(dt);
     else VM.MapView.render();
-    if (ui.running) { VM.Panels.update(); VM.Sheets.update(); VM.StoryUI.update(); }
+    if (ui.running) { VM.Panels.update(); VM.Sheets.update(); VM.StoryUI.update(); } else if (ui.sheet || document.getElementById('sheet').classList.contains('open')) VM.Sheets.update();
   }
   // One broken frame must never stop the game: the next frame is always scheduled, and an error is reported once instead of freezing everything
   let errShown = false;
@@ -90,7 +90,7 @@
   addEventListener('keydown', e => {
     if (!ui.running) return;
     if (e.key === ' ') { ui.speed = ui.speed === 0 ? 1 : 0; e.preventDefault(); }
-    else if (e.key === '1') ui.speed = 1; else if (e.key === '2') ui.speed = 2; else if (e.key === '3') ui.speed = 4;
+    else if (e.key === '1') ui.speed = 1;
     else if (e.key === 'Escape') { if ($pm.classList.contains('on')) closePause(); else if (ui.cityView !== null) ui.closeCity(); else { ui.selectedArmy = null; ui.selectedCity = -1; } }
   });
 

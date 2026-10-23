@@ -84,6 +84,8 @@ VM.Icons = (function () {
     bell: '<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M18.400 5.600l-2.100 2.100M7.700 16.300l-2.100 2.100"/>',
     list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.5M4 12h.5M4 18h.5"/>',
+    pause: '<path d="M8 5v14M16 5v14"/>',
+    play: '<path d="M7 4.500l12 7.500-12 7.500z"/>',
     all: '<path d="M4 12l5 5L20 6"/>',
     none: '<path d="M6 6l12 12M18 6L6 18"/>'
   };

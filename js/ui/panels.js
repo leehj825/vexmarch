@@ -227,7 +227,7 @@ VM.Panels = (function () {
     $('gold').innerHTML = `${I.svg('gold')} ${num(me.gold)} <small class="${me.income.gold < 0 ? 'bad' : 'good'}">${sgn(me.income.gold)}/d</small>`;
     $('food').innerHTML = `${I.svg('food')} ${num(me.food)} <small class="${me.income.food < 0 ? 'bad' : 'good'}">${sgn(me.income.food)}/d</small>${me.starving ? ' ' + I.svg('alert', 'bad') : ''}`;
     const ds = `${I.svg('calendar')} Y${d.year} · M${d.month} · D${d.day}`; if ($('date').innerHTML !== ds) { $('date').innerHTML = ds; $('date').setAttribute('data-tip', `Date\nYear ${d.year} · Month ${d.month} · Day ${d.day}\nOne year has 360 days. Use the speed buttons to run time faster.`); }
-    document.querySelectorAll('#speed button').forEach(b => b.classList.toggle('on', +b.dataset.s === ui.speed));
+    document.querySelectorAll('#speed button[data-s]').forEach(b => b.classList.toggle('on', b.dataset.s === '0' ? ui.speed === 0 : ui.speed > 0));
     let h = '';
     const army = ui.selectedArmy !== null ? st.armies.find(a => a.id === ui.selectedArmy) : null;
     if (ui.selectedArmy !== null && !army) ui.selectedArmy = null;

@@ -168,7 +168,7 @@ var LANG_KO = {
 // ---- tutorial ----
 "Tutorial · step {0} of {1}": "튜토리얼 · {1}단계 중 {0}단계",
 "Skip step": "단계 건너뛰기", "Leave tutorial": "튜토리얼 나가기",
-"The game runs in real time. Pause it with the II button (or Space), then press {0}x to carry on.": "게임은 실시간으로 흘러갑니다. II 버튼(또는 스페이스)으로 멈춘 뒤 {0}x를 눌러 계속하세요.",
+"The game runs in real time. Pause it with the pause button (or Space), then press play to carry on.": "게임은 실시간으로 흘러갑니다. 일시정지 버튼(또는 스페이스)으로 멈춘 뒤 재생 버튼을 눌러 계속하세요.", "Settings": "설정", "Pause\nStop the clock (space).": "일시정지", "Stop the clock (space).": "시계를 멈춥니다 (스페이스).", "Play": "재생", "Let time run.": "시간을 흐르게 합니다.", "Pause": "일시정지",
 "This is your realm. Tap your capital (the star inside the gold ring) to open it.": "여기가 당신의 영토입니다. 수도(금빛 고리 안의 별)를 눌러 열어 보세요.",
 "Food keeps people alive and lets cities grow. Build a Farm in your capital: press the Farm button in the Buildings list.": "식량은 백성을 살리고 도시를 키웁니다. 수도에 농장을 지으세요. 건물 목록의 농장 버튼을 누르면 됩니다.",
 "Troops cost gold and come from the population. Press {0} next to Infantry.": "병사는 골드가 들고 인구에서 나옵니다. 보병 옆의 {0} 버튼을 누르세요.",
