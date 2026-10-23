@@ -229,4 +229,29 @@ Object.assign(LANG_KO, {
 "The supply depot, where grain is stored for the army.": "군량을 쌓아 두는 보급소입니다.", "The smithy rings with hammers.": "대장간에 망치 소리가 울립니다.",
 "The town well. The water is cold and sweet.": "마을 우물입니다. 물이 차고 답니다.", "A monument to the city's past glory.": "도시의 지난 영광을 기리는 기념비입니다."
 });
+// ---- diplomacy ----
+Object.assign(LANG_KO, {
+"Diplomacy": "외교", "Diplomacy {0}": "외교 {0}", "allies and terms": "동맹과 조건", "Ally": "동맹", "Enemy": "적",
+"Every house is your enemy until you ally. A pact can be broken at any time, at the price of your name. A house that is much weaker may be offered terms.": "모든 가문은 동맹을 맺기 전까지 적입니다. 동맹은 언제든 깰 수 있지만 명예를 잃습니다. 훨씬 약한 가문에는 조건을 제시할 수 있습니다.",
+"Nobody is left.": "남은 세력이 없습니다.", "{a} offers you an alliance.": "{a}이(가) 동맹을 제안합니다.",
+"asks you to bend the knee and join them. If you accept, your game ends here; refuse, and you fight on.": "당신에게 무릎을 꿇고 합류하라고 요구합니다. 받아들이면 게임이 끝나고, 거절하면 계속 싸웁니다.",
+"Open for {0} days": "{0}일 동안 유효", "Accept": "수락", "Decline": "거절", "Bend the knee": "무릎 꿇기", "Fight on": "계속 싸우기",
+"{0} cities · Strength {1}": "도시 {0}개 · 전력 {1}", "Opinion of you:": "당신에 대한 평가:", "Leader:": "지도자:",
+"Hostile": "적대적", "Cold": "냉담", "Neutral": "중립", "Warm": "호의적", "Friendly": "우호적", "oath-breaker": "맹약 파기자",
+"Break the pact": "동맹 파기", "Break the pact?": "동맹을 깨시겠습니까?", "Yes, break it": "예, 깹니다", "No": "아니오", "Propose alliance": "동맹 제안", "Offer terms": "조건 제시",
+"Gift {0}g": "선물 {0}g", "Recent": "최근",
+"{a} accepts the alliance": "{a}이(가) 동맹을 받아들였습니다", "{a} thanks you": "{a}이(가) 감사해 합니다", "{a} joins you": "{a}이(가) 당신에게 합류했습니다", "{a} will fight on": "{a}은(는) 계속 싸울 것입니다",
+"The pact is broken": "동맹이 깨졌습니다",
+"{a} declines: they do not know you well enough": "{a}이(가) 거절했습니다: 당신을 충분히 알지 못합니다", "{a} declines: they do not trust a breaker of oaths": "{a}이(가) 거절했습니다: 맹약을 깬 자를 믿지 않습니다",
+"{a} declines: they keep their hands free": "{a}이(가) 거절했습니다: 스스로 자유롭기를 원합니다", "{a} declines: they see no need for it": "{a}이(가) 거절했습니다: 필요성을 느끼지 않습니다",
+"they will not hear you yet": "아직 당신의 말을 들으려 하지 않습니다", "already has an ally": "이미 동맹이 있습니다", "they cannot take in another house yet": "아직 다른 가문을 받아들일 수 없습니다",
+"they are not weak enough": "충분히 약하지 않습니다", "no alliance to break": "깰 동맹이 없습니다", "that offer is no longer open": "그 제안은 더 이상 유효하지 않습니다", "that faction is gone": "그 세력은 사라졌습니다",
+"they were given a gift not long ago": "얼마 전에 선물을 받았습니다", "no such faction": "그런 세력이 없습니다",
+"Diplomatic offers and betrayals": "외교 제안과 배신",
+"{a} offers you an alliance": "{a}이(가) 동맹을 제안합니다", "{a} asks you to bend the knee and join them": "{a}이(가) 무릎을 꿇고 합류하라고 요구합니다",
+"You are now allied with {a}": "이제 {a}와(과) 동맹입니다", "{a} and {b} have allied": "{a}와(과) {b}이(가) 동맹을 맺었습니다",
+"{a} has broken the pact with you!": "{a}이(가) 당신과의 동맹을 깼습니다!", "You broke the pact with {a}": "{a}와(과)의 동맹을 깼습니다", "{a} broke the pact with {b}": "{a}이(가) {b}와(과)의 동맹을 깼습니다",
+"{a} has joined {b}": "{a}이(가) {b}에 합류했습니다", "Absorbed": "흡수됨", "(ally)": "(동맹)",
+"You bent the knee to {a}. Your people and officers live on under their banner, and the war is over for you.": "당신은 {a}에게 무릎을 꿇었습니다. 백성과 장수들은 그 깃발 아래 살아가며, 당신의 전쟁은 끝났습니다."
+});
 (function () { const N = typeof VM !== 'undefined' && VM.StoryData && VM.StoryData.NAMES_KO; if (N) for (const k in N) LANG_KO[k] = N[k]; })();

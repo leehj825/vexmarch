@@ -118,6 +118,9 @@ VM.Story = (function () {
         }
       }
       if (e.type === 'officerCaptured') { const o = state.officers[e.officer], d = D().OFFICERS.find(x => x.key === o.key); if (d) note(state, `${d.name} was taken by ${state.factions[e.owner].name}.`, `${d.ko}이(가) ${koOf(state.factions[e.owner].name)}에게 사로잡혔다.`); }
+      if (e.type === 'allied' && (e.a === me || e.b === me)) { const o = e.a === me ? e.b : e.a; note(state, `A pact was sworn with ${state.factions[o].name}.`, `${koOf(state.factions[o].name)}와(과) 맹약을 맺었다.`); }
+      if (e.type === 'allyBroken' && (e.by === me || e.other === me)) { const o = e.by === me ? e.other : e.by; note(state, e.by === me ? `The pact with ${state.factions[o].name} was broken by your hand.` : `${state.factions[o].name} broke its oath to you.`, e.by === me ? `${koOf(state.factions[o].name)}와(과)의 맹약을 스스로 깨뜨렸다.` : `${koOf(state.factions[o].name)}이(가) 당신과의 맹세를 저버렸다.`); }
+      if (e.type === 'merged' && e.from !== me) note(state, `${state.factions[e.from].name} bent the knee to ${state.factions[e.owner].name}.`, `${koOf(state.factions[e.from].name)}이(가) ${koOf(state.factions[e.owner].name)}에게 무릎을 꿇었다.`);
       if (e.type === 'eliminated') fire(state, 'eliminated', { house: house(state, e.owner) });
     }
     // beats that wait for a time or for a pair of officers
@@ -129,6 +132,13 @@ VM.Story = (function () {
     // the end
     if (state.over && !S.ended) {
       S.ended = true;
+      if (state.over.type === 'merged') {
+        const w = state.factions[state.over.winner].name;
+        S.queue.push({ id: 'merged', t: state.time, title: { en: 'Under Another Banner', ko: '다른 깃발 아래' }, ending: 'lose', text: {
+          en: `You bent the knee to ${w}. The house does not die: its officers keep their posts, its people keep their fields, and its name is still spoken at the new court. But the realm will be remembered as the work of the one who now holds it.`,
+          ko: `당신은 ${koOf(w)}에게 무릎을 꿇었다. 가문은 죽지 않는다. 장수들은 자리를 지키고, 백성은 밭을 지키며, 그 이름은 새 궁정에서도 불린다. 그러나 이 나라는 이제 그것을 쥔 이의 업적으로 기억될 것이다.` } });
+        note(state, 'The house bent the knee.', '가문이 무릎을 꿇었다.'); return;
+      }
       const win = state.over.type === 'win' && state.over.winner === me;
       const text = win ? D().ENDINGS[S.house] : (state.over.type === 'win' ? { en: `${state.factions[state.over.winner].name} holds the whole realm. ` + D().DEFEAT.en, ko: `${koOf(state.factions[state.over.winner].name)}이(가) 온 나라를 차지했다. ` + D().DEFEAT.ko } : D().DEFEAT);
       S.queue.push({ id: win ? 'victory' : 'defeat', t: state.time, title: win ? D().FACTIONS[S.house - 1].title : { en: 'The End of the House', ko: '가문의 끝' }, text, ending: win ? 'win' : 'lose' });

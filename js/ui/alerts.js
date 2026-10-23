@@ -8,9 +8,10 @@ VM.Alerts = (function () {
     officer:  { label: 'Officers defecting', pause: true },
     proposal: { label: 'Officers asking permission', pause: true },
     battle:   { label: 'Battles joined', pause: false },
-    famine:   { label: 'Famine', pause: false }
+    famine:   { label: 'Famine', pause: false },
+    diplo:    { label: 'Diplomatic offers and betrayals', pause: true }
   };
-  const SOUND = { attacked: 'danger', battle: 'clash', rout: 'rout', destroyed: 'danger', cut: 'alert', defected: 'alert', proposal: 'alert', built: 'build', recruited: 'pick', found: 'coin', wanderer: 'click', starving: 'danger' };
+  const SOUND = { diploOffer: 'alert', allyBroken: 'danger', allied: 'coin', attacked: 'danger', battle: 'clash', rout: 'rout', destroyed: 'danger', cut: 'alert', defected: 'alert', proposal: 'alert', built: 'build', recruited: 'pick', found: 'coin', wanderer: 'click', starving: 'danger' };
   let ui, items = [], unread = 0, settings = { pause: {} };
 
   function load() {
@@ -49,6 +50,10 @@ VM.Alerts = (function () {
       case 'searchFailed': return mine ? spec(`${on(ev.officer)} found no one worth recruiting`, 'info', false, ev.city) : null;
       case 'recruited': return mine ? spec(`${on(ev.officer)} has joined you in ${N[ev.city].name}`, 'info', false, ev.city) : null;
       case 'arrived': return mine ? spec(`${on(ev.officer)} arrived in ${N[ev.city].name}`, 'info', false, ev.city, false) : null;
+      case 'diploOffer': return ev.owner === me ? spec(ev.kind === 'alliance' ? `${nm(ev.from)} offers you an alliance` : `${nm(ev.from)} asks you to bend the knee and join them`, 'diplo', true, null) : null;
+      case 'allied': return (ev.a === me || ev.b === me) ? spec(`You are now allied with ${nm(ev.a === me ? ev.b : ev.a)}`, 'info', false, null) : spec(`${nm(ev.a)} and ${nm(ev.b)} have allied`, 'info', false, null, false);
+      case 'allyBroken': return ev.other === me ? spec(`${nm(ev.by)} has broken the pact with you!`, 'diplo', true, null) : (ev.by === me ? spec(`You broke the pact with ${nm(ev.other)}`, 'info', false, null) : spec(`${nm(ev.by)} broke the pact with ${nm(ev.other)}`, 'info', false, null, false));
+      case 'merged': return ev.from === me ? null : spec(`${nm(ev.from)} has joined ${nm(ev.owner)}`, 'info', false, null, ev.owner === me);
       case 'proposal': {
         const p = state.proposals.find(x => x.id === ev.proposal); if (!p) return null;
         return spec(proposalText(state, p), 'proposal', true, p.type === 'attack' ? p.target : p.city);

@@ -37,6 +37,7 @@
       ui.overShown = true;
       const o = document.getElementById('over'); o.classList.toggle('lose', st.over.type === 'lose'); o.classList.add('on');
       VM.Audio.play(st.over.type === 'win' ? 'win' : 'lose');
+      if (st.over.type === 'merged') { document.getElementById('overT').textContent = 'Absorbed'; document.getElementById('overP').textContent = `You bent the knee to ${nm(st.over.winner)}. Your people and officers live on under their banner, and the war is over for you.`; return; }
       document.getElementById('overT').textContent = st.over.type === 'win' ? 'Victory' : 'Defeat';
       document.getElementById('overP').textContent = st.over.type === 'win' ? `All of the realm marches under your banner. It took ${Math.round(st.over.t)} days.` : (st.over.winner ? `${nm(st.over.winner)} now holds every node` : `${nm(st.player)} holds no nodes`) + '. Start again and do better.';
     }
@@ -97,7 +98,7 @@
   document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
   VM.City3D.init(document.getElementById('city3d'), ui);
   VM.UIPrefs.apply(); VM.I18N.start();
-  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Walk.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
+  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Walk.init(ui); VM.DiploUI.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
   addEventListener('pointerdown', () => VM.Audio.init(), { once: true }); addEventListener('keydown', () => VM.Audio.init(), { once: true });
   document.getElementById('hud').style.visibility = 'hidden';
   VM.Title.roll(false); VM.Title.show();

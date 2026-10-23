@@ -73,10 +73,10 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 Animated crowd, Nightfall-style city look, city growth stages, ÷10 population/soldier rescale (exact soldier counts), smarter army tactics (roles, wall defence, sorties, campaign food, retreats), 3D strategy map with terrain, pause menu, collapsible phone panel, ad-banner freeze fix, Campaign story slice (six houses, 24 officers, 12 beats, endings, chronicle, English and Korean).
 
 ## Next (proposed order)
-1. Command an army directly in battle. 2. A ruler with stats and choices; officers captured or killed. 3. More beats, a gameplay trait and special victory per house. 4. Native review of the Korean text. (Android APK verification and phone performance checks are parked.)
+1. More beats, a gameplay trait and special victory per house. 2. A ruler with stats and choices. 3. Native review of the Korean text. 4. Diplomacy extras (marriages, hostages, asking an ally for help). (Android APK verification and phone performance checks are parked.)
 
-## Phase 11 — Diplomacy (in progress; spec in `docs/DIPLOMACY.md`)
-Two states (enemy, ally), no truce; breaking a pact is always possible and costly (betray at the end); a strong faction can offer terms to a weak one to merge (the player can refuse; the AI accepts for survival). Build order: (1) state, alliance rules in war and army code, break, tests; (2) alliance proposals and AI answers; (3) merge offers, survival score, game-over by merge; (4) AI initiative and betrayal; (5) UI sheet, alerts, map marks; (6) campaign hooks and Korean; (7) balance and docs.
+## Phase 11 — Diplomacy (DONE; spec in `docs/DIPLOMACY.md`)
+Two states (enemy, ally), no truce; breaking a pact is always possible and costly (betray at the end); a strong faction can offer terms to a weak one to merge (the player can refuse; the AI accepts for survival). Delivered in this order: (1) state, alliance rules in war and army code, break, tests; (2) alliance proposals and AI answers; (3) merge offers, survival score, game-over by merge; (4) AI initiative and betrayal; (5) UI sheet, alerts, map marks; (6) campaign hooks and Korean; (7) balance and docs.
 
 ## Later / unscheduled
 Joining wars as a hero, extra scenarios and maps, unique faction bonuses.

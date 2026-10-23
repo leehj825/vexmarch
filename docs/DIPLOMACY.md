@@ -1,6 +1,6 @@
 # Diplomacy
 
-Status: **design agreed, implementation in progress** (Phase 11). This file is the spec; `docs/ROADMAP.md` tracks the build.
+Status: **built** (Phase 11): sim (`js/sim/diplo.js`), commands, AI, Diplomacy sheet (`js/ui/diplo.js`), alerts, map rings, campaign hooks and Korean. This file is the spec. Differences from the first draft are listed under "As built" at the end.
 
 ## Principles
 - **Two states only: enemy and ally.** Everybody starts as an enemy (as now). There is **no truce**: a forced pause would only let a losing faction heal. An AI that has a bigger target simply leaves you alone, which it already does by choosing targets.
@@ -56,3 +56,13 @@ Status: **design agreed, implementation in progress** (Phase 11). This file is t
 - `tools/test_diplo.js`: allied armies do not fight, besiege or capture; pass-through and supply; breaking and costs; the 90-day pact limit; merge transfer (cities, armies, officers, resources); eligibility; the AI answers (deterministic); old saves load; a 5-year AI-vs-AI run in which alliances form, someone betrays and the game still ends or stays sane.
 - `tools/ai_tournament.js` must show that the human can still win on hard after diplomacy is on.
 - Browser: `tools/ui_diplo.js` (sheet, offers, accept and decline, game-over by merge).
+
+## As built
+- Files: `js/sim/diplo.js` (rules and AI), `js/ui/diplo.js` (sheet), settings in `VM.CFG.DIPLO` (`js/data/config.js`), commands `proposeAlliance`, `breakAlliance`, `giftFaction`, `proposeMerge`, `answerOffer`.
+- Everywhere the war and army code asked "is this owner different from mine?" it now asks `VM.Diplo.hostile/friendly` (fights, sieges, capture, supply lines, passing through cities, AI targets and threats, officers' threat sense and sorties, the 3D city's "hostile" armies).
+- The AI thinks about diplomacy every 12 days per faction (staggered). It offers terms to the weakest eligible faction first, then looks for the best-liked partner. Offers to the player wait 20 days.
+- A proposal the AI answers returns `{ ok: true, accepted, why }`; a refusal is not an error. A faction that is not the player and not `aiAll` answers at once; an offer to the player is queued in `state.diplo.offers`.
+- Gifts: 100 gold (+4 opinion) or 300 (+12); the sheet offers the 100 gold one. One gift per pair per 10 days.
+- Campaign: `FACTIONS[i].diplo` (`ally`, `merge` bonuses; Kaldrath and Thornreach never bend the knee, Orsolyn allies and yields more easily), start opinions from ties between houses, chronicle notes for pacts, betrayals and merges, and a *merged* ending page ("Under Another Banner").
+- Tests: `tools/test_diplo.js` (21), `tools/ui_diplo.js` (26 checks, desktop and phone); the 30-year AI-vs-AI tournament still finishes (8 of 8 games).
+- Not done: marriage alliances, hostages, asking an ally for help, a per-house merged ending text (one shared page is used), alliance marks in the 3D city view.

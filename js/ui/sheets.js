@@ -12,6 +12,7 @@ VM.Sheets = (function () {
     box.addEventListener('click', onClick);
     box.addEventListener('change', e => { if (e.target.dataset.pause) VM.Alerts.setPause(e.target.dataset.pause, e.target.checked); });
     $('offBtn').addEventListener('click', () => toggle('officers'));
+    $('dipBtn').addEventListener('click', () => toggle('diplo'));
     $('alertBtn').addEventListener('click', () => toggle('alerts'));
     $('setBtn').addEventListener('click', () => toggle('settings'));
     box.addEventListener('input', e => { const k = e.target.dataset.vol; if (k) { VM.Audio.set(k, +e.target.value / 100); } });
@@ -43,6 +44,7 @@ VM.Sheets = (function () {
       case 'map3d': VM.UIPrefs.set('map3d', d.v); lastHTML = ''; break;
       case 'tutorial': VM.Tutorial.finish(false); ui.sheet = null; VM.Title.startTutorial(); break;
       case 'delsave': try { localStorage.removeItem('vexmarch.save'); VM.Panels.toast('Saved game deleted'); } catch (e) { /* ignore */ } break;
+      case 'dAlly': case 'dGift': case 'dMerge': case 'dBreak': case 'dBreakNo': case 'dBreakYes': case 'dAnswer': VM.DiploUI.act(d, cmd); lastHTML = ''; break;
       case 'answer': { const r = cmd({ type: 'answerProposal', proposal: +d.p, accept: d.yes === '1' }); if (r.ok && d.yes === '1') VM.Panels.toast('Approved'); break; }
     }
   }
@@ -119,12 +121,13 @@ VM.Sheets = (function () {
 
   function update() {
     const st = ui.state, n = VM.Alerts.unread() + st.proposals.length;
+    const db = $('dipBtn'), dn = VM.DiploUI.pending(); db.textContent = dn ? 'Diplomacy ' + dn : 'Diplomacy'; db.classList.toggle('hot', dn > 0); db.classList.toggle('on', ui.sheet === 'diplo');
     const ab = $('alertBtn'); ab.textContent = n ? 'Alerts ' + n : 'Alerts'; ab.classList.toggle('hot', n > 0);
     $('offBtn').classList.toggle('on', ui.sheet === 'officers'); ab.classList.toggle('on', ui.sheet === 'alerts'); $('setBtn').classList.toggle('on', ui.sheet === 'settings');
     box.classList.toggle('open', !!ui.sheet);
     if (!ui.sheet) { lastHTML = ''; return; }
     if (ui.sheet === 'alerts') VM.Alerts.read();
-    const h = ui.sheet === 'officers' ? officersHTML() : (ui.sheet === 'settings' ? settingsHTML() : alertsHTML());
+    const h = ui.sheet === 'officers' ? officersHTML() : ui.sheet === 'diplo' ? VM.DiploUI.html() : (ui.sheet === 'settings' ? settingsHTML() : alertsHTML());
     const typing = document.activeElement && box.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.type === 'range');
     if (h !== lastHTML && !typing) { box.innerHTML = h; lastHTML = h; }
   }

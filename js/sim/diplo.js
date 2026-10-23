@@ -152,7 +152,6 @@ VM.Diplo = (function () {
     if (op(state, weak, strong) >= 20) add('liked', 10);
     if (trust(state, strong) < -30) add('oathbreaker', -40);
     add('house', houseBonus(state, weak, 'merge'));
-    if (houseBonus(state, weak, 'merge') <= -100) add('pride', -100);
     return { score: parts.reduce((s, p) => s + p[1], 0), parts };
   }
   function proposeMerge(state, from, to) {

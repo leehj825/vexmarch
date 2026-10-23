@@ -159,9 +159,18 @@ test('allies are no targets for the AI and win does not count a shared realm', (
 });
 
 test('a player in a campaign: story ties move opinions at the start', () => {
-  const s = VM.Story.create({ house: 1, seed: 5 }); s.aiOn = false; VM.Diplo.ensure(s);
+  const s = VM.Story.create({ player: 1 }); s.aiOn = false; VM.Diplo.ensure(s);
   let any = false; for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) if (a !== b && VM.Diplo.op(s, a, b) !== 0) any = true;
   assert(any, 'some opinion comes from ties between houses');
+});
+
+test('campaign: a proud house never bends the knee; pacts and betrayals reach the chronicle', () => {
+  const s = VM.Story.create({ player: 2 }); s.aiOn = false; const D = VM.Diplo; D.ensure(s);
+  for (const c of s.cities) if (c.owner === 1) { c.pop = 20; for (const k in c.garrison) c.garrison[k] = 0; }
+  s.cities[s.factions[1].capital].besieged = true; D.leaderOf(s, 1).trait = 'Cautious';
+  const r = D.proposeMerge(s, 3, 1); assert(r.ok && r.accepted === false, 'Kaldrath refuses: ' + JSON.stringify(D.survival(s, 1, 3)));
+  D.proposeAlliance(s, 2, 4); D.ensure(s).allies.length || D.ensure(s).allies.push({ a: 2, b: 4, since: 0 }); VM.Eco.pushEvent(s, { type: 'allied', a: 2, b: 4 }); D.breakAlliance(s, 4);
+  VM.Sim.advance(s, 3); assert(s.story.chronicle.some(c => /oath|pact/i.test(c.en || c.text && c.text.en || JSON.stringify(c))), 'the chronicle remembers');
 });
 
 test('old saves without diplomacy state load and run', () => {
