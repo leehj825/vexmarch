@@ -75,8 +75,11 @@ Animated crowd, Nightfall-style city look, city growth stages, ÷10 population/s
 ## Next (proposed order)
 1. Command an army directly in battle. 2. A ruler with stats and choices; officers captured or killed. 3. More beats, a gameplay trait and special victory per house. 4. Native review of the Korean text. (Android APK verification and phone performance checks are parked.)
 
+## Phase 11 — Diplomacy (in progress; spec in `docs/DIPLOMACY.md`)
+Two states (enemy, ally), no truce; breaking a pact is always possible and costly (betray at the end); a strong faction can offer terms to a weak one to merge (the player can refuse; the AI accepts for survival). Build order: (1) state, alliance rules in war and army code, break, tests; (2) alliance proposals and AI answers; (3) merge offers, survival score, game-over by merge; (4) AI initiative and betrayal; (5) UI sheet, alerts, map marks; (6) campaign hooks and Korean; (7) balance and docs.
+
 ## Later / unscheduled
-Diplomacy, joining wars as a hero, extra scenarios and maps, unique faction bonuses.
+Joining wars as a hero, extra scenarios and maps, unique faction bonuses.
 
 ## Risks
 - **3D on Android:** keep draw calls low, instance everything, one city at a time.

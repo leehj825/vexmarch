@@ -163,7 +163,7 @@ None is required, and the game must fully work without one. Optional, last-phase
 
 ## 13. Out of scope (for now)
 
-Multiplayer; the hero joining wars; free-form building placement; more than 4 troop types; more than two visible resources; naval combat; a Diplomacy system (maybe later: alliances and truces).
+Multiplayer; the hero joining wars; free-form building placement; more than 4 troop types; more than two visible resources; naval combat; a truce system (diplomacy is alliances and merging only; see `docs/DIPLOMACY.md`).
 
 ## 14. Implementation notes (as built in Phase 1)
 

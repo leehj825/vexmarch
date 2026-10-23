@@ -45,6 +45,7 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/ads.js`, `js/ads_env.js` | AdMob banner (Android) and its settings |
 | `js/view3d/layout.js`, `js/view3d/city3d.js` | The 3D city: layout as data, Three.js renderer |
 | `js/data/story.js`, `js/sim/story.js`, `js/ui/story.js` | The campaign: history, houses, fixed map, officers and their ties, beats, endings (English and Korean), and the story pages (`docs/STORY.md`) |
+| `js/sim/diplo.js`, `js/ui/diplo.js` | Diplomacy: alliances, breaking pacts, merge offers to weak factions (`docs/DIPLOMACY.md`) |
 | `js/view3d/walk.js` | Walk mode: avatar, collisions, officers and townsfolk to talk to (`tools/ui_walk.js`) |
 | `js/view3d/terrain.js` | The 3D ground under the strategy map (height field, water, forests, roads, territory texture, camera, projection) |
 | `js/view3d/struct_models.js` | Nightfall's textured building models (wall, tent, well, smithy, range, tree, fence, campfire; `tools/extract_structs.js`) |
