@@ -143,7 +143,7 @@ Third-person hero walking a city, like Nightfall and Deepward. **The strategy cl
 
 ## 10. Look, sound, UI
 
-- **Icons first**: panels show icons, meters and numbers; explanations live in hold-to-read tips (`js/ui/icons.js`, `js/ui/tips.js`). Same on all screen sizes.
+- **Icons and words**: stats are icons with numbers; actions, headings, offers and statuses carry a word beside the icon. Settings > Interface and the Details button change how much text is shown; explanations live in hold-to-read tips (`js/ui/icons.js`, `js/ui/tips.js`).
 
 - **Style**: a cuter, smaller version of Deepward. Same dark ink background (`#07060a`), warm cream text (`#eee6d6`), gold accents (`#f2d27a` to `#c9963a`), red and green bars as in Deepward's HUD. Low-poly, code-built models, soft outlines.
 - **Audio**: synthesised WebAudio music and sfx, as in the other games. Calm map theme, tension layer in wars.

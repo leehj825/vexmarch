@@ -75,7 +75,10 @@ Animated crowd, Nightfall-style city look, city growth stages, ÷10 population/s
 ## Tips (done)
 `js/ui/tips.js`: a hold (touch) or hover (mouse) on anything with `data-tip` shows a short popup; a held press is not also a click. The city and army panels, the Officers and Diplomacy sheets and the top bar now show short labels with dotted underlines and small (i) marks, and the explanations moved into tips (about 50 texts, all in Korean too). `tools/ui_tips.js`: 19 checks. To add one: `VM.Panels.T('Label', 'Explanation')` or `data-tip="..."`.
 
-## Icons (done)
+## Icons and words (done)
+After the first icons-only pass the rule became: **icons for numbers you scan** (stats, bars, counts, costs) and **words for what you read or decide** (offers, buttons that do something, headings, statuses, alert sentences). Settings > Interface switches between *Icons only*, *Icons and words* (default) and *Words and labels*; a **Details** button (list icon) in the city, army and officer panels shows a label beside every stat, remembered between sessions. Words are `<span class="w">` and labels `<small class="sl">` and CSS decides what is shown (`html[data-ui]`, `html.det`), so switching needs no redraw.
+
+### Icons
 The city and army panels, the Officers, Diplomacy and Alerts sheets and the top bar are made of icons, meters, pips and generated officer portraits instead of words, the same on phone and desktop. Names, numbers and costs stay as text; everything else (labels, descriptions, the reason a button is disabled) is a tip: hold or hover an icon and its name and explanation appear (first line the name, then the text). `js/ui/icons.js` holds the set and helpers (`VM.Icons.t / stat / btn / meter / pips / portrait`, `VM.Icons.MAP` for troops, buildings, policies, orders, traits, roles and event types); `tools/ui_icons.js` checks that every icon exists and every icon button has a tip. Still text: Settings, the title and campaign screens, story pages, the walk-mode buttons and the toasts.
 
 ## Next (proposed order)

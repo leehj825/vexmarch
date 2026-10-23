@@ -52,6 +52,7 @@ VM.Panels = (function () {
       case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
       case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
       case 'view3d': ui.openCity(+d.city); break;
+      case 'detailsToggle': VM.UIPrefs.set('det', !VM.UIPrefs.get('det')); lastHTML = ''; break;
       case 'panelToggle': ui.panelMin = !ui.panelMin; lastHTML = ''; break;
       case 'backmap': ui.closeCity(); break;
       case 'walk': if (!VM.Walk.start()) toast('You can only walk in your own cities'); break;
@@ -112,110 +113,111 @@ VM.Panels = (function () {
   const I = VM.Icons, M = VM.Icons.MAP;
   const tipOf = (label, tip) => esc(tip ? label + '\n' + tip : label);
   const TAXN = { low: 'Low tax', normal: 'Normal tax', high: 'High tax' };
-  const traitIcon = t => TRAIT_TIP[t] ? I.t(M.trait[t], t, TRAIT_TIP[t]) : '';
+  const traitIcon = t => TRAIT_TIP[t] ? I.t(M.trait[t], t, TRAIT_TIP[t], '', true) : '';
   const stats4 = o => I.stat('star', o.command, 'Command', 'How well they lead an army. It adds to the army\'s strength.') + I.stat('fist', o.might, 'Might', 'Personal strength. Decides who wins a duel and how hard a charge hits.')
     + I.stat('scroll', o.politics, 'Politics', 'How well they govern a city. A good governor earns more and keeps order.') + I.stat('bulb', o.intellect, 'Intellect', 'Cunning. Helps with fire attacks and with finding wanderers.');
   const loyal = o => I.stat('heart', Math.round(o.loyalty), 'Loyalty', TIPS.loyalty) + I.meter(o.loyalty / 100);
-  const officerRow = (o, color) => `<div class="ir">${I.portrait(o.name, color, 30)}<b>${o.name}</b>${traitIcon(o.trait)}${stats4(o)}${loyal(o)}</div>`;
-  const hbtn = (name, label, attrs, cls) => I.btn(name, label, attrs, 'sm ' + (cls || ''));
+  const officerRow = (o, color) => `<div class="ir">${I.portrait(o.name, color, 30)}<b>${o.name}</b>${traitIcon(o.trait)}</div><div class="ir stats">${stats4(o)}${loyal(o)}</div>`;
+  const hbtn = (name, label, attrs, cls, word) => I.btn(name, label, attrs, 'sm ' + (cls || ''), undefined, word);
+  const detBtn = () => hbtn('list', 'Details', { 'data-act': 'detailsToggle' }, 'tog' + (VM.UIPrefs.get('det') ? ' on' : ''));
   const costTip = (a, b, c) => `Level {0}: {1} gold, {2} days`.replace('{0}', a).replace('{1}', b).replace('{2}', c);
 
   function cityHTML(c) {
     const st = ui.state, me = st.player, N = st.map.nodes[c.id], S = VM.CFG.SPEC[c.spec], f = st.factions[c.owner], s = c.stats;
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c), here = st.armies.filter(a => a.at === c.id && a.owner === me);
-    let h = `<div class="ph"><b>${N.name}</b>${I.t(M.spec[c.spec] || 'house', S.label)}<span class="sub"></span>`
-      + hbtn(ui.panelMin ? 'down' : 'up', 'Show or hide the details', { 'data-act': 'panelToggle' }, 'tog');
-    h += ui.cityView === c.id ? `${mine ? hbtn('walk', 'Walk', { 'data-act': 'walk' }) : ''}${hbtn('back', 'Back to map', { 'data-act': 'backmap' })}` : `${hbtn('eye', 'View city', { 'data-act': 'view3d', 'data-city': c.id })}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}`;
-    h += `</div><div class="ir"><span class="dot" style="background:${f.color}"></span><span>${f.name}</span>${mine ? I.t('star', 'Yours') : (VM.Diplo.allied(st, c.owner, me) ? I.t('handshake', 'Ally', 'Allies do not fight each other.') : '')}`
-      + `${c.besieged ? I.t('swords', 'Under siege', 'Enemy armies are at the gates.', 'bad') : (c.contested ? I.t('alert', 'Contested', 'Enemy armies stand in its land and none of its own.', 'bad') : '')}</div>`;
-    h += `<div class="ir">${I.stat('pop', `${num(c.pop)}<small class="dim">/${num(s.cap)}</small>`, 'Population', TIPS.pop)}`;
+    let h = `<div class="ph"><b>${N.name}</b>${I.t(M.spec[c.spec] || 'house', S.label, '', '', true)}<span class="sub"></span>`
+      + detBtn() + hbtn(ui.panelMin ? 'down' : 'up', 'Show or hide the details', { 'data-act': 'panelToggle' }, 'tog');
+    h += ui.cityView === c.id ? `${mine ? hbtn('walk', 'Walk', { 'data-act': 'walk' }, '', true) : ''}${hbtn('back', 'Back to map', { 'data-act': 'backmap' }, '', true)}` : `${hbtn('eye', 'View city', { 'data-act': 'view3d', 'data-city': c.id }, '', true)}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}`;
+    h += `</div><div class="ir"><span class="dot" style="background:${f.color}"></span><span>${f.name}</span>${mine ? I.t('star', 'You', 'Your city.', '', true) : (VM.Diplo.allied(st, c.owner, me) ? I.t('handshake', 'Ally', 'Allies do not fight each other.', '', true) : '')}`
+      + `${c.besieged ? I.t('swords', 'Under siege', 'Enemy armies are at the gates.', 'bad', true) : (c.contested ? I.t('alert', 'Contested', 'Enemy armies stand in its land and none of its own.', 'bad', true) : '')}</div>`;
+    h += `<div class="ir stats">${I.stat('pop', `${num(c.pop)}<small class="dim">/${num(s.cap)}</small>`, 'Population', TIPS.pop)}`;
     if (wmax > 0) h += `<span class="st">${I.t('wall', 'Wall', TIPS.wall)}${I.meter(c.wallHp / wmax, 'wall')}<small class="dim">${num(c.wallHp)}</small></span>`;
     h += `${I.stat('helmet', num(VM.Eco.troopsOf(c.garrison)), 'Garrison', TIPS.garrison)}`;
     for (const k of Object.keys(VM.CFG.TROOPS)) if (c.garrison[k] >= 0.5) h += I.stat(M.troop[k], num(c.garrison[k]), VM.CFG.TROOPS[k].label, '', 'dim');
     h += `</div>`;
-    if (!mine) return h + `<div class="ir">${here.length ? I.t('siege', 'Your army is here and will lay siege.') : I.t('info', 'Not yours', TIPS.siegeHere)}</div>`;
-    h += `<div class="ir">${I.stat('trend', s.prosperity.toFixed(2), 'Prosperity', TIPS.prosperity)}${I.stat('shield', s.security.toFixed(2), 'Security', TIPS.security)}`
+    if (!mine) return h + `<div class="ir">${here.length ? I.t('siege', 'Your army is here and will lay siege.', '', '', true) : I.t('info', 'Not yours', TIPS.siegeHere, '', true)}</div>`;
+    h += `<div class="ir stats">${I.stat('trend', s.prosperity.toFixed(2), 'Prosperity', TIPS.prosperity)}${I.stat('shield', s.security.toFixed(2), 'Security', TIPS.security)}`
       + `${I.stat('gold', sgn(s.gold - s.upkeep) + '<small class="dim">/d</small>', 'Gold', TIPS.gold)}`
-      + `<span class="st" data-tip="${tipOf('Food', TIPS.food + '\n' + '{0} made, {1} eaten'.replace('{0}', num(s.foodProd)).replace('{1}', num(s.foodCons)))}">${I.svg('food')}<b>${sgn(s.foodProd - s.foodCons)}</b><small class="dim">/d</small></span></div>`;
-    h += `<div class="ir">${I.t('coins', 'Tax', TIPS.tax)}` + ['low', 'normal', 'high'].map((k, i) => `<button class="ibtn sm${c.tax === k ? ' on' : ''}" data-act="tax" data-city="${c.id}" data-tax="${k}" data-tip="${tipOf(TAXN[k], TIPS.tax)}">${I.svg('coins')}${I.pips(i + 1, 3)}</button>`).join('') + `</div>`;
+      + `<span class="st" data-tip="${tipOf('Food', TIPS.food + '\n' + '{0} made, {1} eaten'.replace('{0}', num(s.foodProd)).replace('{1}', num(s.foodCons)))}">${I.svg('food')}<small class="sl">Food</small><b>${sgn(s.foodProd - s.foodCons)}</b><small class="dim">/d</small></span></div>`;
+    h += `<div class="ir">${I.t('coins', 'Tax', TIPS.tax, '', true)}` + ['low', 'normal', 'high'].map((k, i) => `<button class="ibtn sm${c.tax === k ? ' on' : ''}" data-act="tax" data-city="${c.id}" data-tax="${k}" data-tip="${tipOf(TAXN[k], TIPS.tax)}">${I.svg('coins')}${I.pips(i + 1, 3)}${I.w(VM.CFG.TAX[k].label)}</button>`).join('') + `</div>`;
     const offs = st.officers.filter(o => o.owner === me && o.army === null);
-    h += `<div class="ir">${I.t('crown', 'Governor', TIPS.governor)}<select id="govSel" data-city="${c.id}"><option value="">(none)</option>` + offs.map(o => `<option value="${o.id}"${c.governor === o.id ? ' selected' : ''}>${o.name} · ${o.politics}</option>`).join('') + `</select>`;
+    h += `<div class="ir">${I.t('crown', 'Governor', TIPS.governor, '', true)}<select id="govSel" data-city="${c.id}"><option value="">(none)</option>` + offs.map(o => `<option value="${o.id}"${c.governor === o.id ? ' selected' : ''}>${o.name} · ${o.politics}</option>`).join('') + `</select>`;
     if (c.governor !== null) { const g = st.officers[c.governor]; h += `${traitIcon(g.trait)}${loyal(g)}`; }
     h += `</div>`;
-    if (c.governor !== null) h += `<div class="ir">` + VM.Officers.POLICIES.map(k => `<button class="ibtn sm${c.policy === k ? ' on' : ''}" data-act="policy" data-city="${c.id}" data-mode="${k}" data-tip="${tipOf(k[0].toUpperCase() + k.slice(1), POLICY_TIP[k])}">${I.svg(M.policy[k])}</button>`).join('') + `</div>`;
-    h += `<div class="sec">${I.t('house', 'Buildings')}</div><div class="ir">`;
+    if (c.governor !== null) h += `<div class="ir">` + VM.Officers.POLICIES.map(k => `<button class="ibtn sm${c.policy === k ? ' on' : ''}" data-act="policy" data-city="${c.id}" data-mode="${k}" data-tip="${tipOf(k[0].toUpperCase() + k.slice(1), POLICY_TIP[k])}">${I.svg(M.policy[k])}${I.w(k[0].toUpperCase() + k.slice(1))}</button>`).join('') + `</div>`;
+    h += `<div class="sec">${I.t('house', 'Buildings', '', '', true)}</div><div class="ir">`;
     for (const k of Object.keys(VM.CFG.BUILD)) {
       const B = VM.CFG.BUILD[k], lvl = c.buildings[k], building = c.build && c.build.type === k;
       let act;
       if (building) act = `<span class="st dim" data-tip="${tipOf('Building…')}">${I.svg('clock')}<b>${Math.ceil(c.build.left)}</b></span>`;
       else if (lvl >= VM.CFG.MAX_BUILD_LEVEL) act = `<span class="st dim" data-tip="${tipOf('Highest level')}">${I.svg('star')}</span>`;
       else act = `<button class="ibtn sm" data-act="build" data-city="${c.id}" data-b="${k}" data-tip="${tipOf(B.label, costTip(lvl + 1, B.cost[lvl], B.days[lvl]))}"${c.build || fac.gold < B.cost[lvl] ? ' disabled' : ''}>${I.svg('plus')}${I.svg('gold')}<b>${B.cost[lvl]}</b></button>`;
-      h += `<div class="tile">${I.t(M.build[k], B.label)}${I.pips(lvl, VM.CFG.MAX_BUILD_LEVEL)}${act}</div>`;
+      h += `<div class="tile">${I.t(M.build[k], B.label, '', '', true)}${I.pips(lvl, VM.CFG.MAX_BUILD_LEVEL)}${act}</div>`;
     }
-    h += `</div><div class="sec">${I.t('crate', 'Forward depot', TIPS.depot)}</div><div class="ir">`;
-    if (!c.depot) h += `<span class="dim">${I.t('crate', 'Not built')}</span><button class="ibtn sm" data-act="depot" data-city="${c.id}" data-tip="${tipOf('Build a depot')}"${fac.gold < VM.CFG.WAR.depotCost ? ' disabled' : ''}>${I.svg('plus')}${I.svg('gold')}<b>${VM.CFG.WAR.depotCost}</b></button>`;
+    h += `</div><div class="sec">${I.t('crate', 'Forward depot', TIPS.depot, '', true)}</div><div class="ir">`;
+    if (!c.depot) h += `<span class="dim">${I.t('crate', 'Not built', '', '', true)}</span><button class="ibtn sm" data-act="depot" data-city="${c.id}" data-tip="${tipOf('Build a depot')}"${fac.gold < VM.CFG.WAR.depotCost ? ' disabled' : ''}>${I.svg('plus')}${I.svg('gold')}<b>${VM.CFG.WAR.depotCost}</b></button>`;
     else h += `${I.stat('crate', num(c.depot.food), 'Stock', 'Food stored here.')}<span class="dim">${I.svg('go')}</span>${I.stat('food', num(c.depot.target), 'Target', 'The depot is filled up to this much food.')}${hbtn('minus', 'Lower the target by 500', { 'data-act': 'depotTarget', 'data-city': c.id, 'data-n': -500 })}${hbtn('plus', 'Raise the target by 500', { 'data-act': 'depotTarget', 'data-city': c.id, 'data-n': 500 })}`;
-    h += `</div><div class="sec">${I.t('pop', 'Recruit', TIPS.recruit)}</div>`;
+    h += `</div><div class="sec">${I.t('pop', 'Recruit', TIPS.recruit, '', true)}</div>`;
     for (const k of Object.keys(VM.CFG.TROOPS)) {
       const cost = VM.Eco.troopCost(c, k);
-      h += `<div class="ir between"><span class="ir">${I.t(M.troop[k], VM.CFG.TROOPS[k].label, '{0} gold each'.replace('{0}', Math.round(cost)))}${I.stat('gold', Math.round(cost), 'Price', 'Gold for each soldier.', 'dim')}</span><span>` +
+      h += `<div class="ir between"><span class="ir">${I.t(M.troop[k], VM.CFG.TROOPS[k].label, '{0} gold each'.replace('{0}', Math.round(cost)), '', true)}${I.stat('gold', Math.round(cost), 'Price', 'Gold for each soldier.', 'dim')}</span><span>` +
         [1, 5, 10].map(n => `<button class="ibtn sm" data-act="recruit" data-city="${c.id}" data-t="${k}" data-n="${n}" data-tip="${tipOf('Recruit {0}'.replace('{0}', n))}"><b>+${n}</b></button>`).join('') + `</span></div>`;
     }
     const free = st.officers.filter(o => o.owner === me && o.army === null && o.loc === c.id && c.governor !== o.id);
-    h += `<div class="sec">${I.t('flag', 'Form an army', TIPS.form)}</div>`;
-    if (!VM.Eco.troopsOf(c.garrison)) h += `<div class="ir dim">${I.t('helmet', 'No soldiers', 'Recruit troops to form an army from the garrison.')}</div>`;
-    else if (!free.length) h += `<div class="ir dim">${I.t('crown', 'No free officer', 'No free officer in this city (the governor cannot lead an army).')}</div>`;
+    h += `<div class="sec">${I.t('flag', 'Form an army', TIPS.form, '', true)}</div>`;
+    if (!VM.Eco.troopsOf(c.garrison)) h += `<div class="ir dim">${I.t('helmet', 'No soldiers', 'Recruit troops to form an army from the garrison.', '', true)}</div>`;
+    else if (!free.length) h += `<div class="ir dim">${I.t('crown', 'No free officer', 'No free officer in this city (the governor cannot lead an army).', '', true)}</div>`;
     else {
       const d = draftFor(c); let total = 0, speed = Infinity;
       for (const k of Object.keys(VM.CFG.TROOPS)) {
         const have = Math.floor(c.garrison[k] + 1e-9); if (have < 1) continue;
         const n = d.take[k] || 0; total += n; if (n > 0) speed = Math.min(speed, VM.CFG.TROOPS[k].speed);
-        h += `<div class="ir between"><span class="ir">${I.t(M.troop[k], VM.CFG.TROOPS[k].label)}<small class="dim">${num(have)}</small></span><span class="nowrap">` +
+        h += `<div class="ir between"><span class="ir">${I.t(M.troop[k], VM.CFG.TROOPS[k].label, '', '', true)}<small class="dim">${num(have)}</small></span><span class="nowrap">` +
           [-5, -1].map(x => `<button class="ibtn sm" data-act="draft" data-t="${k}" data-n="${x}"><b>${x < 0 ? '−' + (-x) : '+' + x}</b></button>`).join('') +
           `<input type="number" class="num" min="0" max="${have}" value="${n}" data-draft="${k}">` +
           [1, 5].map(x => `<button class="ibtn sm" data-act="draft" data-t="${k}" data-n="${x}"><b>+${x}</b></button>`).join('') +
-          hbtn('all', 'All', { 'data-act': 'draftAll', 'data-t': k }) + `</span></div>`;
+          hbtn('all', 'All', { 'data-act': 'draftAll', 'data-t': k }, '', true) + `</span></div>`;
       }
-      h += `<div class="ir">${I.stat('helmet', num(total), 'Taking', 'Soldiers that go with the army.')}${total > 0 ? I.stat('go', speed, 'Speed', 'The army moves at the speed of its slowest troops.', 'dim') : ''}${hbtn('all', 'Take all', { 'data-act': 'draftAll', 'data-t': '*' })}${hbtn('none', 'Take none', { 'data-act': 'draftNone' })}</div>`;
-      h += `<div class="ir">${I.t('star', 'Leader')}<select id="formOfficer">` + free.map(o => `<option value="${o.id}">${o.name} · ${o.command}</option>`).join('') + `</select><button class="ibtn" data-act="form" data-city="${c.id}" data-tip="${tipOf('Form army')}"${total < 1 ? ' disabled' : ''}>${I.svg('flag')}</button></div>`;
+      h += `<div class="ir stats">${I.stat('helmet', num(total), 'Taking', 'Soldiers that go with the army.')}${total > 0 ? I.stat('go', speed, 'Speed', 'The army moves at the speed of its slowest troops.', 'dim') : ''}${hbtn('all', 'Take all', { 'data-act': 'draftAll', 'data-t': '*' }, '', true)}${hbtn('none', 'Take none', { 'data-act': 'draftNone' }, '', true)}</div>`;
+      h += `<div class="ir">${I.t('star', 'Leader', '', '', true)}<select id="formOfficer">` + free.map(o => `<option value="${o.id}">${o.name} · ${o.command}</option>`).join('') + `</select><button class="ibtn" data-act="form" data-city="${c.id}" data-tip="${tipOf('Form army')}"${total < 1 ? ' disabled' : ''}>${I.svg('flag')}${I.w('Form army')}</button></div>`;
     }
     return h;
   }
 
   function armyHTML(a) {
     const st = ui.state, o = st.officers[a.officer], f = st.factions[a.owner], mine = a.owner === st.player, N = st.map.nodes, n = VM.Armies.sizeOf(a);
-    let h = `<div class="ph"><span class="dot" style="background:${f.color}"></span><b>${f.name}</b>${I.stat('helmet', num(n), 'Troops', 'Soldiers in the army.')}<span class="sub"></span>${hbtn(ui.panelMin ? 'down' : 'up', 'Show or hide the details', { 'data-act': 'panelToggle' }, 'tog')}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}</div>`;
+    let h = `<div class="ph"><span class="dot" style="background:${f.color}"></span><b>${f.name}</b>${I.stat('helmet', num(n), 'Troops', 'Soldiers in the army.')}<span class="sub"></span>${detBtn()}${hbtn(ui.panelMin ? 'down' : 'up', 'Show or hide the details', { 'data-act': 'panelToggle' }, 'tog')}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}</div>`;
     h += officerRow(o, f.color);
-    h += `<div class="ir">` + Object.keys(VM.CFG.TROOPS).filter(k => a.troops[k] >= 0.5).map(k => I.stat(M.troop[k], num(a.troops[k]), VM.CFG.TROOPS[k].label)).join('') + `${I.stat('banner', Math.round(a.morale), 'Morale', TIPS.morale)}${I.meter(a.morale / 100)}</div>`;
-    h += `<div class="ir">${I.t('pin', 'Location')}<span>${a.at !== null ? N[a.at].name : N[a.edge.to].name}</span>${a.at === null ? I.t('go', 'On the road') : ''}${a.dest !== null && !a.routed ? I.t('go', 'Heading to') + `<b>${N[a.dest].name}</b>` : ''}</div>`;
-    if (a.routed) h += `<div class="ir bad">${I.t('back', 'Routed', 'Fleeing to safety.')}</div>`;
-    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle')}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
-    else if (VM.War.sieging(a) && VM.Diplo.hostile(st, a.owner, st.cities[a.at].owner)) h += `<div class="ir bad">${I.t('siege', 'Besieging')}<b>${N[a.at].name}</b></div>`;
+    h += `<div class="ir stats">` + Object.keys(VM.CFG.TROOPS).filter(k => a.troops[k] >= 0.5).map(k => I.stat(M.troop[k], num(a.troops[k]), VM.CFG.TROOPS[k].label)).join('') + `${I.stat('banner', Math.round(a.morale), 'Morale', TIPS.morale)}${I.meter(a.morale / 100)}</div>`;
+    h += `<div class="ir">${I.t('pin', 'Location')}<span>${a.at !== null ? N[a.at].name : N[a.edge.to].name}</span>${a.at === null ? I.t('go', 'On the road', '', '', true) : ''}${a.dest !== null && !a.routed ? I.t('go', 'Heading to', '', '', true) + `<b>${N[a.dest].name}</b>` : ''}</div>`;
+    if (a.routed) h += `<div class="ir bad">${I.t('back', 'Routed', 'Fleeing to safety.', '', true)}</div>`;
+    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
+    else if (VM.War.sieging(a) && VM.Diplo.hostile(st, a.owner, st.cities[a.at].owner)) h += `<div class="ir bad">${I.t('siege', 'Besieging', '', '', true)}<b>${N[a.at].name}</b></div>`;
     const s = a.supply;
     if (s) {
       const days = n > 0 ? a.rations / (n * VM.CFG.ECON.foodPerHead) : 0;
-      h += `<div class="ir">${s.line === 'ok' ? `<span class="good">${I.t('link', 'Supply line open', TIPS.supply)}</span>` : `<span class="bad">${I.t('unlink', s.line === 'cut' ? 'Supply cut' : 'No supply source', TIPS.supply)}</span>`}`;
-      if (s.depot != null) h += I.t('crate', 'Fed by a depot', N[s.depot].name);
+      h += `<div class="ir">${s.line === 'ok' ? `<span class="good">${I.t('link', 'Supply line open', TIPS.supply, '', true)}</span>` : `<span class="bad">${I.t('unlink', s.line === 'cut' ? 'Supply cut' : 'No supply source', TIPS.supply, '', true)}</span>`}`;
+      if (s.depot != null) h += I.t('crate', 'Fed by a depot', N[s.depot].name, '', true);
       else if (s.foreign) h += I.stat('food', '×' + s.mult, 'Enemy land', 'The army eats more in enemy land.', 'warn');
-      h += `${I.stat('bread', days.toFixed(1), 'Rations', TIPS.rations, s.starving ? 'bad' : '')}${I.t('house', 'Supplied from', N[a.home].name)}</div>`;
+      h += `${I.stat('bread', days.toFixed(1), 'Rations', TIPS.rations, s.starving ? 'bad' : '')}${I.t('house', 'Supplied from', N[a.home].name)}<span class="dim w">${N[a.home].name}</span></div>`;
     }
     if (!mine) return h;
-    h += `<div class="ir">` + VM.Officers.ORDERS.map(k => `<button class="ibtn sm${a.order === k ? ' on' : ''}" data-act="order" data-army="${a.id}" data-mode="${k}" data-tip="${tipOf(k[0].toUpperCase() + k.slice(1), ORDER_TIP[k])}">${I.svg(M.order[k])}</button>`).join('') + (a.rest ? I.t('zzz', 'Resting') : '') + `</div>`;
+    h += `<div class="ir">` + VM.Officers.ORDERS.map(k => `<button class="ibtn sm${a.order === k ? ' on' : ''}" data-act="order" data-army="${a.id}" data-mode="${k}" data-tip="${tipOf(k[0].toUpperCase() + k.slice(1), ORDER_TIP[k])}">${I.svg(M.order[k])}${I.w(k[0].toUpperCase() + k.slice(1))}</button>`).join('') + (a.rest ? I.t('zzz', 'Resting', '', '', true) : '') + `</div>`;
     const kind = VM.War.abilityOf(o), wait = Math.max(0, a.abilityReady - st.time);
-    h += `<div class="ir"><button class="ibtn" data-act="ability" data-army="${a.id}" data-tip="${tipOf(ABILITY[kind], TIPS.ability)}"${wait > 0 || a.routed ? ' disabled' : ''}>${I.svg(M.ability[kind])}</button>${wait > 0 ? I.stat('clock', Math.ceil(wait), 'Recharging', 'Days until it can be used again.', 'dim') : ''}</div>`;
+    h += `<div class="ir"><button class="ibtn" data-act="ability" data-army="${a.id}" data-tip="${tipOf(ABILITY[kind], TIPS.ability)}"${wait > 0 || a.routed ? ' disabled' : ''}>${I.svg(M.ability[kind])}${I.w(ABILITY[kind])}</button>${wait > 0 ? I.stat('clock', Math.ceil(wait), 'Recharging', 'Days until it can be used again.', 'dim') : ''}</div>`;
     const home = a.at !== null && st.cities[a.at].owner === a.owner && !a.fighting.length && !a.routed ? st.cities[a.at] : null;
     if (home) {
-      h += `<div class="sec">${I.t('house', N[home.id].name, TIPS.xfer)}</div>`;
+      h += `<div class="sec">${I.t('house', N[home.id].name, TIPS.xfer, '', true)}</div>`;
       for (const k of Object.keys(VM.CFG.TROOPS)) {
         const inArmy = Math.floor((a.troops[k] || 0) + 1e-9), inCity = Math.floor(home.garrison[k] + 1e-9); if (inArmy < 1 && inCity < 1) continue;
-        h += `<div class="ir between"><span class="ir">${I.t(M.troop[k], VM.CFG.TROOPS[k].label)}${I.stat('flag', num(inArmy), 'In the army')}${I.stat('house', num(inCity), 'In the city')}</span><span class="nowrap">` +
+        h += `<div class="ir between"><span class="ir">${I.t(M.troop[k], VM.CFG.TROOPS[k].label, '', '', true)}${I.stat('flag', num(inArmy), 'In the army')}${I.stat('house', num(inCity), 'In the city')}</span><span class="nowrap">` +
           [-5, -1, 1, 5].map(x => `<button class="ibtn sm" data-act="xfer" data-army="${a.id}" data-t="${k}" data-n="${x}"${(x < 0 ? inArmy : inCity) < 1 ? ' disabled' : ''}><b>${x < 0 ? '−' + (-x) : '+' + x}</b></button>`).join('') + `</span></div>`;
       }
       const mates = st.armies.filter(x => x.owner === a.owner && x.id !== a.id && x.at === a.at && !x.fighting.length && !x.routed);
-      if (mates.length) h += `<div class="ir">${I.t('merge', 'Join with')}<select id="mergeWith"><option value="">(choose)</option>` + mates.map(x => `<option value="${x.id}">${st.officers[x.officer].name} · ${num(VM.Armies.sizeOf(x))}</option>`).join('') + `</select>${hbtn('merge', 'Merge', { 'data-act': 'merge', 'data-army': a.id })}</div>`;
+      if (mates.length) h += `<div class="ir">${I.t('merge', 'Join with', '', '', true)}<select id="mergeWith"><option value="">(choose)</option>` + mates.map(x => `<option value="${x.id}">${st.officers[x.officer].name} · ${num(VM.Armies.sizeOf(x))}</option>`).join('') + `</select>${hbtn('merge', 'Merge', { 'data-act': 'merge', 'data-army': a.id }, '', true)}</div>`;
     }
-    h += `<div class="ir">${hbtn('stop', 'Halt', { 'data-act': 'stop', 'data-army': a.id })}`
-      + `<button class="ibtn sm" data-act="disband" data-army="${a.id}" data-tip="${tipOf('Disband into city')}"${a.at === null || st.cities[a.at].owner !== a.owner || a.fighting.length ? ' disabled' : ''}>${I.svg('disband')}</button>${I.t('info', 'Orders', TIPS.armyHelp)}</div>`;
+    h += `<div class="ir">${hbtn('stop', 'Halt', { 'data-act': 'stop', 'data-army': a.id }, '', true)}`
+      + `<button class="ibtn sm" data-act="disband" data-army="${a.id}" data-tip="${tipOf('Disband into city')}"${a.at === null || st.cities[a.at].owner !== a.owner || a.fighting.length ? ' disabled' : ''}>${I.svg('disband')}${I.w('Disband into city')}</button>${I.t('info', 'Orders', TIPS.armyHelp)}</div>`;
     return h;
   }
 

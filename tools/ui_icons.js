@@ -36,7 +36,18 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await check('the diplomacy sheet', async () => { await p.click('#dipBtn'); });
     await check('the alerts sheet', async () => { await ev(() => VM.Eco.pushEvent(__vm.state, { type: 'attacked', owner: 1, city: __vm.state.factions[1].capital, besieged: true })); await p.waitForTimeout(300); await p.click('#alertBtn'); });
     ok(await ev(() => document.querySelectorAll('#sheet .alert svg.ic').length) >= 1, 'alerts have icons');
-    ok(await ev(() => { const t = document.getElementById('top').innerText; return !/Gold|Food|Year/.test(t); }), 'the top bar has no words');
+    ok(await ev(() => { const t = document.getElementById('res').innerText; return !/Gold|Food|Year/.test(t); }), 'the gold, food and date have no words');
+    // words and labels: Details shows the stat labels; Icons only hides the words; Words and labels shows both
+    await ev(() => { __vm.selectedCity = __vm.state.factions[1].capital; document.getElementById('sheet').classList.remove('open'); __vm.sheet = null; }); await p.waitForTimeout(300);
+    const vis = sel => ev(s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none'; }, sel);
+    ok(await vis('#panel .w') && !(await vis('#panel .sl')), 'by default: words are shown, stat labels are not');
+    await p.click('#panel [data-act="detailsToggle"]'); await p.waitForTimeout(200);
+    ok(await vis('#panel .sl'), 'the Details button shows the stat labels');
+    await p.click('#panel [data-act="detailsToggle"]'); await p.waitForTimeout(200);
+    ok(!(await vis('#panel .sl')), 'and hides them again');
+    await ev(() => VM.UIPrefs.set('ui', 'icons')); ok(!(await vis('#panel .w')), 'Icons only hides the words');
+    await ev(() => VM.UIPrefs.set('ui', 'text')); ok(await vis('#panel .w') && await vis('#panel .sl'), 'Words and labels shows both');
+    await ev(() => VM.UIPrefs.set('ui', 'mixed'));
     ok(!errs.length, 'no console errors: ' + errs.join(' | '));
     await ctx.close();
   }

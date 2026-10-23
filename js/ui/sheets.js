@@ -39,6 +39,8 @@ VM.Sheets = (function () {
       case 'send': { const sel = $('send-' + d.o); if (!sel || sel.value === '') { VM.Panels.toast('Choose a city first'); break; } const r = cmd({ type: 'sendOfficer', officer: +d.o, to: +sel.value }); if (r.ok) VM.Panels.toast(`On the road: ${r.days} days`); break; }
       case 'recruitO': { const r = cmd({ type: 'recruitOfficer', officer: +d.o }); if (r.ok) VM.Panels.toast(r.joined ? 'They accepted your offer!' : 'They refused and moved on'); break; }
       case 'center': ui.centerOn(+d.loc); break;
+      case 'detailsToggle': VM.UIPrefs.set('det', !VM.UIPrefs.get('det')); lastHTML = ''; break;
+      case 'uimode': VM.UIPrefs.set('ui', d.v); lastHTML = ''; break;
       case 'pauseToggle': VM.Alerts.setPause(d.k, !VM.Alerts.settings().pause[d.k]); lastHTML = ''; break;
       case 'mute': VM.Audio.toggleMute(); lastHTML = ''; break;
       case 'lang': VM.I18N.set(d.l); lastHTML = ''; break;
@@ -62,7 +64,7 @@ VM.Sheets = (function () {
 
   function officersHTML() {
     const st = ui.state, me = st.player, fac = st.factions[me], N = st.map.nodes, I = VM.Icons, M = I.MAP, P = VM.Panels, esc = I.esc;
-    let h = `<div class="ph">${I.t('pop', 'Officers')}<span class="dot" style="background:${fac.color}"></span><b>${fac.name}</b><span class="sub"></span>${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
+    let h = `<div class="ph">${I.t('pop', 'Officers', '', '', true)}<span class="dot" style="background:${fac.color}"></span><b>${fac.name}</b><span class="sub"></span>${I.btn('list', 'Details', { 'data-act': 'detailsToggle' }, 'sm' + (VM.UIPrefs.get('det') ? ' on' : ''))}${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
     const mine = st.officers.filter(o => o.owner === me);
     const cities = st.cities.filter(c => c.owner === me), C = VM.CFG.OFFICERS;
     for (const o of mine) {
@@ -73,38 +75,38 @@ VM.Sheets = (function () {
         const ties = VM.Story.tiesView(st, o); if (ties.length) story += '\n' + ties.map(t => `${VM.Story.tx(t.label)}: ${VM.Story.tx(t.who)}`).join(' · ');
       }
       const role = o.travel ? 'go' : o.searching ? 'search' : (M.role[o.role] || 'zzz');
-      h += `<div class="card2"><div class="ir"><span class="icw"${story ? ` data-tip="${esc(story)}"` : ''}>${I.portrait(o.name, fac.color, 38)}</span><b>${o.name}</b>${I.t(role, statusOf(o))}${P.traitIcon(o.trait)}${story ? I.t('info', 'Story', story.split('\n').slice(1).join('\n')) : ''}</div>`;
-      h += `<div class="ir">${P.stats4(o)}${P.loyal(o)}</div><div class="ir">`;
-      h += `<button class="ibtn sm" data-act="gift" data-o="${o.id}" data-tip="${esc('Gift\nA gift raises their loyalty.')}"${since < C.giftCooldown || fac.gold < C.giftCost ? ' disabled' : ''}>${I.svg('gift')}${I.svg('gold')}<b>${C.giftCost}</b></button>`;
+      h += `<div class="card2"><div class="ir"><span class="icw"${story ? ` data-tip="${esc(story)}"` : ''}>${I.portrait(o.name, fac.color, 38)}</span><b>${o.name}</b>${P.traitIcon(o.trait)}${story ? I.t('info', 'Story', story.split('\n').slice(1).join('\n')) : ''}</div><div class="ir">${I.t(role, statusOf(o), '', '', true)}</div>`;
+      h += `<div class="ir stats">${P.stats4(o)}${P.loyal(o)}</div><div class="ir">`;
+      h += `<button class="ibtn sm" data-act="gift" data-o="${o.id}" data-tip="${esc('Gift\nA gift raises their loyalty.')}"${since < C.giftCooldown || fac.gold < C.giftCost ? ' disabled' : ''}>${I.svg('gift')}${I.w('Gift')}${I.svg('gold')}<b>${C.giftCost}</b></button>`;
       if (o.role === 'idle' && !o.travel && !o.searching && o.army === null) {
-        h += `<button class="ibtn sm" data-act="search" data-o="${o.id}" data-tip="${esc('Search\nLook for wandering officers near this city.')}"${fac.gold < C.searchCost || st.cities[o.loc].owner !== me ? ' disabled' : ''}>${I.svg('search')}${I.svg('gold')}<b>${C.searchCost}</b></button>`;
-        h += `${I.t('go', 'Send to')}<select id="send-${o.id}"><option value="">…</option>` + cities.filter(c => c.id !== o.loc).map(c => `<option value="${c.id}">${N[c.id].name}</option>`).join('') + `</select>${I.btn('go', 'Go', { 'data-act': 'send', 'data-o': o.id }, 'sm')}`;
+        h += `<button class="ibtn sm" data-act="search" data-o="${o.id}" data-tip="${esc('Search\nLook for wandering officers near this city.')}"${fac.gold < C.searchCost || st.cities[o.loc].owner !== me ? ' disabled' : ''}>${I.svg('search')}${I.w('Search')}${I.svg('gold')}<b>${C.searchCost}</b></button>`;
+        h += `${I.t('go', 'Send to', '', '', true)}<select id="send-${o.id}"><option value="">…</option>` + cities.filter(c => c.id !== o.loc).map(c => `<option value="${c.id}">${N[c.id].name}</option>`).join('') + `</select>${I.btn('go', 'Go', { 'data-act': 'send', 'data-o': o.id }, 'sm', undefined, true)}`;
       }
       h += `</div></div>`;
     }
     const w = VM.Officers.wanderersFor(st, me);
-    h += `<div class="sec">${I.t('search', 'Wandering officers you know of', 'Wanderers drift between nodes; send an idle officer to search a city to find more.')}</div>`;
-    for (const o of w) h += `<div class="card2"><div class="ir">${I.portrait(o.name, '#888', 34)}<b>${o.name}</b>${P.traitIcon(o.trait)}${I.t('pin', 'Near', N[o.loc].name)}<span class="dim">${N[o.loc].name}</span></div><div class="ir">${P.stats4(o)}<button class="ibtn sm" data-act="recruitO" data-o="${o.id}" data-tip="${esc('Recruit\nOffer them a place.')}"${fac.gold < VM.Officers.recruitCost(o) ? ' disabled' : ''}>${I.svg('plus')}${I.svg('gold')}<b>${VM.Officers.recruitCost(o)}</b></button></div></div>`;
+    h += `<div class="sec">${I.t('search', 'Wandering officers you know of', 'Wanderers drift between nodes; send an idle officer to search a city to find more.', '', true)}</div>`;
+    for (const o of w) h += `<div class="card2"><div class="ir">${I.portrait(o.name, '#888', 34)}<b>${o.name}</b>${P.traitIcon(o.trait)}${I.t('pin', 'Near', N[o.loc].name)}<span class="dim">${N[o.loc].name}</span></div><div class="ir stats">${P.stats4(o)}<button class="ibtn sm" data-act="recruitO" data-o="${o.id}" data-tip="${esc('Recruit\nOffer them a place.')}"${fac.gold < VM.Officers.recruitCost(o) ? ' disabled' : ''}>${I.svg('plus')}${I.w('Recruit')}${I.svg('gold')}<b>${VM.Officers.recruitCost(o)}</b></button></div></div>`;
     return h;
   }
 
   function alertsHTML() {
     const st = ui.state, I = VM.Icons, M = I.MAP, esc = I.esc;
-    let h = `<div class="ph">${I.t('bell', 'Alerts')}<span class="sub"></span>${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
+    let h = `<div class="ph">${I.t('bell', 'Alerts', '', '', true)}<span class="sub"></span>${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
     const S = VM.Alerts.settings();
-    h += `<div class="ir">${I.t('stop', 'Pause the game automatically for')}` + Object.keys(VM.Alerts.CATS).map(k => `<button class="ibtn sm${S.pause[k] ? ' on' : ''}" data-act="pauseToggle" data-k="${k}" data-tip="${esc(VM.Alerts.CATS[k].label + '\nPause the game when this happens.')}">${I.svg(M.alert[k] || 'info')}</button>`).join('') + `</div>`;
+    h += `<div class="ir">${I.t('stop', 'Pause the game automatically for', '', '', true)}` + Object.keys(VM.Alerts.CATS).map(k => `<button class="ibtn sm${S.pause[k] ? ' on' : ''}" data-act="pauseToggle" data-k="${k}" data-tip="${esc(VM.Alerts.CATS[k].label + '\nPause the game when this happens.')}">${I.svg(M.alert[k] || 'info')}</button>`).join('') + `</div>`;
     if (st.proposals.length) {
-      h += `<div class="sec">${I.t('ask', 'Waiting for your answer')}</div>`;
+      h += `<div class="sec">${I.t('ask', 'Waiting for your answer', '', '', true)}</div>`;
       for (const p of st.proposals) {
         const o = st.officers[p.officer], N = st.map.nodes, att = p.type === 'attack', tgt = att ? p.target : p.city;
-        h += `<div class="card2"><div class="ir" data-tip="${esc(VM.Alerts.proposalText(st, p))}">${I.portrait(o.name, '#888', 28)}<b>${o.name}</b>${I.svg(att ? 'swords' : 'wall')}<b>${N[tgt].name}</b>${att ? I.stat('helmet', Math.round(VM.Eco.troopsOf(st.cities[tgt].garrison)), 'Garrison') : I.stat('gold', p.cost, 'Cost')}${I.stat('clock', Math.ceil(p.expires - st.time), 'Expires in days', 'Days left to answer.', 'dim')}</div>`
-          + `<div class="ir">${I.btn('all', 'Approve', { 'data-act': 'answer', 'data-p': p.id, 'data-yes': '1' }, 'sm')}${I.btn('none', 'Refuse', { 'data-act': 'answer', 'data-p': p.id, 'data-yes': '0' }, 'sm')}</div></div>`;
+        h += `<div class="card2"><div class="ir" data-tip="${esc(VM.Alerts.proposalText(st, p))}">${I.portrait(o.name, '#888', 28)}<b>${o.name}</b>${I.svg(att ? 'swords' : 'wall')}<span class="w">${att ? 'asks to attack' : 'asks to build a wall in'}</span><b>${N[tgt].name}</b>${att ? I.stat('helmet', Math.round(VM.Eco.troopsOf(st.cities[tgt].garrison)), 'Garrison') : I.stat('gold', p.cost, 'Cost')}${I.stat('clock', Math.ceil(p.expires - st.time), 'Expires in days', 'Days left to answer.', 'dim')}</div>`
+          + `<div class="ir">${I.btn('all', 'Approve', { 'data-act': 'answer', 'data-p': p.id, 'data-yes': '1' }, 'sm', undefined, true)}${I.btn('none', 'Refuse', { 'data-act': 'answer', 'data-p': p.id, 'data-yes': '0' }, 'sm', undefined, true)}</div></div>`;
       }
     }
-    h += `<div class="sec">${I.t('calendar', 'Recent', 'Newest first. Hold an item to read it.')}</div>`;
+    h += `<div class="sec">${I.t('calendar', 'Recent', 'Newest first. Hold an item to read it.', '', true)}</div>`;
     const items = VM.Alerts.items();
     if (!items.length) h += `<div class="ir dim">${I.svg('info')}</div>`;
-    for (const a of items) h += `<div class="alert ir${a.urgent ? ' urgent' : ''}" data-tip="${esc(a.text)}"><span class="st dim">${I.svg('calendar')}<b>${Math.floor(a.t)}</b></span>${I.svg(M.event[a.type] || M.alert[a.cat] || 'info', a.urgent ? 'bad' : '')}<span>${a.short || ''}</span>${a.loc !== null ? I.btn('pin', 'Show on the map', { 'data-act': 'center', 'data-loc': a.loc }, 'sm') : ''}</div>`;
+    for (const a of items) h += `<div class="alert ir${a.urgent ? ' urgent' : ''}" data-tip="${esc(a.text)}"><span class="st dim">${I.svg('calendar')}<b>${Math.floor(a.t)}</b></span>${I.svg(M.event[a.type] || M.alert[a.cat] || 'info', a.urgent ? 'bad' : '')}<span class="w">${a.text}</span><span class="ws">${a.short || ''}</span>${a.loc !== null ? I.btn('pin', 'Show on the map', { 'data-act': 'center', 'data-loc': a.loc }, 'sm') : ''}</div>`;
     return h;
   }
 
@@ -115,6 +117,7 @@ VM.Sheets = (function () {
     h += `<div class="row"><button data-act="mute" class="chip${A.get('mute') ? ' on' : ''}">${A.get('mute') ? 'Sound off' : 'Sound on'}</button></div>`;
     h += `<div class="sec">Language</div><div class="row">` + VM.I18N.NAMES.map(([l, n]) => `<button data-act="lang" data-l="${l}" class="chip${VM.I18N.lang === l ? ' on' : ''}" translate="no">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Text size</div><div class="row">` + [['small', 'Small'], ['normal', 'Normal'], ['large', 'Large']].map(([v, n]) => `<button data-act="size" data-v="${v}" class="chip${VM.UIPrefs.get('size') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
+    h += `<div class="sec">Interface</div><div class="row">` + [['icons', 'Icons only'], ['mixed', 'Icons and words'], ['text', 'Words and labels']].map(([v, n]) => `<button data-act="uimode" data-v="${v}" class="chip${(VM.UIPrefs.get('ui') || 'mixed') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Map</div><div class="row">` + [['on', '3D terrain'], ['off', 'Flat map']].map(([v, n]) => `<button data-act="map3d" data-v="${v}" class="chip${(VM.UIPrefs.get('map3d') || 'on') === v ? ' on' : ''}">${n}</button>`).join('') + `</div><div class="row dim">The map style changes the next time the game starts.</div>`;
     h += `<div class="sec">Help</div><div class="row"><button data-act="tutorial" class="btn">Replay the tutorial</button></div>`;
     h += `<div class="row"><button data-act="delsave" class="btn">Delete saved game</button></div>`;
@@ -125,8 +128,9 @@ VM.Sheets = (function () {
   function update() {
     const st = ui.state, n = VM.Alerts.unread() + st.proposals.length;
     const db = $('dipBtn'), dn = VM.DiploUI.pending(), badge = c => c ? `<i class="badge">${c}</i>` : '';
-    const dh = VM.Icons.svg('handshake') + badge(dn); if (db.dataset.h !== dh) { db.dataset.h = dh; db.innerHTML = dh; } db.classList.toggle('hot', dn > 0); db.classList.toggle('on', ui.sheet === 'diplo');
-    const ab = $('alertBtn'), ah = VM.Icons.svg('bell') + badge(n); if (ab.dataset.h !== ah) { ab.dataset.h = ah; ab.innerHTML = ah; } ab.classList.toggle('hot', n > 0);
+    const dh = VM.Icons.svg('handshake') + VM.Icons.w('Diplomacy', 'tbw') + badge(dn); if (db.dataset.h !== dh) { db.dataset.h = dh; db.innerHTML = dh; } db.classList.toggle('hot', dn > 0); db.classList.toggle('on', ui.sheet === 'diplo');
+    const ab = $('alertBtn'), ah = VM.Icons.svg('bell') + VM.Icons.w('Alerts', 'tbw') + badge(n); if (ab.dataset.h !== ah) { ab.dataset.h = ah; ab.innerHTML = ah; } ab.classList.toggle('hot', n > 0);
+    const oh = VM.Icons.svg('pop') + VM.Icons.w('Officers', 'tbw'); if ($('offBtn').dataset.h !== oh) { $('offBtn').dataset.h = oh; $('offBtn').innerHTML = oh; }
     $('offBtn').classList.toggle('on', ui.sheet === 'officers'); ab.classList.toggle('on', ui.sheet === 'alerts'); $('setBtn').classList.toggle('on', ui.sheet === 'settings');
     box.classList.toggle('open', !!ui.sheet);
     if (!ui.sheet) { lastHTML = ''; return; }

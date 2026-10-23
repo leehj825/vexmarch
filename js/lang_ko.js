@@ -324,4 +324,11 @@ Object.assign(LANG_KO, {
 "Buildings": "건물", "Not built": "미건설", "Show or hide the details": "세부 정보 보기/숨기기", "View city": "도시 보기", "Back to map": "지도로", "Walk": "걷기", "Close": "닫기", "Tax": "세금", "Governor": "태수", "Officers": "장수", "Alerts": "알림", "Diplomacy": "외교",
 "Recent": "최근", "Waiting for your answer": "답을 기다리는 중", "Accept": "수락", "Decline": "거절", "Bend the knee": "무릎 꿇기", "Fight on": "계속 싸우기", "Yes, break it": "예, 깹니다", "No": "아니오", "Break the pact": "동맹 파기", "Propose alliance": "동맹 제안", "Offer terms": "조건 제시", "Strength": "전력"
 });
+// ---- words and labels ----
+Object.assign(LANG_KO, {
+"Details": "자세히", "You": "나", "Your city.": "당신의 도시입니다.", "Interface": "화면 표시", "Icons only": "아이콘만", "Icons and words": "아이콘+글자", "Words and labels": "글자와 라벨 모두",
+"asks to attack": "공격 허가를 요청", "asks to build a wall in": "성벽 건설 허가를 요청", "Low": "낮음", "Normal": "보통", "High": "높음", "Manual": "수동", "Develop": "개발", "Fortify": "요새화", "Hold": "대기", "Defend": "방어", "Reinforce": "증원", "Raid": "습격",
+"Charge": "돌격", "Fire attack": "화공", "Rally": "독려", "Food": "식량", "Gold": "골드", "Pause the game automatically for": "자동으로 게임을 멈출 경우", "Walk": "걷기", "View city": "도시 보기", "Back to map": "지도로", "Taking": "데려갈 인원",
+"Infantry": "보병", "Spearmen": "창병", "Cavalry": "기병", "Archers": "궁병", "Siege engines": "공성 병기", "Farm": "농장", "Market": "시장", "Barracks": "병영", "Temple": "신전", "Capital": "수도"
+});
 (function () { const N = typeof VM !== 'undefined' && VM.StoryData && VM.StoryData.NAMES_KO; if (N) for (const k in N) LANG_KO[k] = N[k]; })();

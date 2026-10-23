@@ -83,6 +83,7 @@ VM.Icons = (function () {
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
     bell: '<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M18.400 5.600l-2.100 2.100M7.700 16.300l-2.100 2.100"/>',
+    list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.5M4 12h.5M4 18h.5"/>',
     all: '<path d="M4 12l5 5L20 6"/>',
     none: '<path d="M6 6l12 12M18 6L6 18"/>'
   };
@@ -96,12 +97,13 @@ VM.Icons = (function () {
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   const svg = (name, cls) => `<svg class="ic${cls ? ' ' + cls : ''}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
   // an icon that tells what it is when held or hovered: name on the first line, then the explanation
-  const t = (name, label, tip, cls) => `<span class="icw${cls ? ' ' + cls : ''}" data-tip="${esc(tip ? label + '\n' + tip : label)}">${svg(name)}</span>`;
+  const w = (label, cls) => `<span class="w${cls ? ' ' + cls : ''}">${label}</span>`;                       // a word: shown in the Icons + words and Words modes, hidden in Icons only
+  const t = (name, label, tip, cls, word) => `<span class="icw${cls ? ' ' + cls : ''}" data-tip="${esc(tip ? label + '\n' + tip : label)}">${svg(name)}${word ? w(label) : ''}</span>`;
   // a number or short text next to an icon, the pair sharing one tip
-  const stat = (name, value, label, tip, cls) => `<span class="st${cls ? ' ' + cls : ''}" data-tip="${esc(tip ? label + '\n' + tip : label)}">${svg(name)}<b>${value}</b></span>`;
-  const btn = (name, label, attrs, cls, tip) => {
+  const stat = (name, value, label, tip, cls) => `<span class="st${cls ? ' ' + cls : ''}" data-tip="${esc(tip ? label + '\n' + tip : label)}">${svg(name)}<small class="sl">${label}</small><b>${value}</b></span>`;   // the label shows when Details is on
+  const btn = (name, label, attrs, cls, tip, word) => {
     let a = ''; for (const k in attrs || {}) a += ` ${k}="${esc(attrs[k])}"`;
-    return `<button class="ibtn${cls ? ' ' + cls : ''}"${a} data-tip="${esc(tip ? label + '\n' + tip : label)}" aria-label="${esc(label)}">${svg(name)}</button>`;
+    return `<button class="ibtn${cls ? ' ' + cls : ''}"${a} data-tip="${esc(tip ? label + '\n' + tip : label)}" aria-label="${esc(label)}">${svg(name)}${word ? w(label) : ''}</button>`;
   };
   // a small meter: fraction 0..1, colour class low/mid/high chosen by fraction unless given
   const meter = (frac, cls) => { const f = Math.max(0, Math.min(1, frac)); return `<span class="mt ${cls || (f < 0.3 ? 'low' : f < 0.6 ? 'mid' : 'high')}"><i style="width:${(f * 100).toFixed(0)}%"></i></span>`; };
@@ -130,5 +132,5 @@ VM.Icons = (function () {
     return `<svg class="pt" width="${w}" height="${w}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="${bg}"/><path d="M3 24c0-5 4-8 9-8s9 3 9 8z" fill="${color || '#888'}"/><rect x="10.500" y="13" width="3" height="3.500" fill="${skin}"/><ellipse cx="12" cy="10" rx="4" ry="4.600" fill="${skin}"/><g fill="${hair}">${hairShape}</g><circle cx="10.200" cy="10.200" r=".6" fill="#1a1210"/><circle cx="13.800" cy="10.200" r=".6" fill="#1a1210"/></svg>`;
   }
   if (typeof document !== 'undefined' && document.body) sprite();
-  return { MAP, portrait, S, sprite, svg, t, stat, btn, meter, pips, esc, has: n => !!S[n] };
+  return { MAP, portrait, S, sprite, svg, w, t, stat, btn, meter, pips, esc, has: n => !!S[n] };
 })();

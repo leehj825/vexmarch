@@ -24,29 +24,29 @@ VM.DiploUI = (function () {
   function html() {
     const st = ui.state, D = VM.Diplo, me = st.player, C = VM.CFG.DIPLO, I = VM.Icons, M = I.MAP, esc = I.esc, P = VM.Panels; D.ensure(st);
     const dot = f => `<span class="dot" style="background:${f.color}"></span>`;
-    let h = `<div class="ph">${I.t('handshake', 'Diplomacy', TIPS.intro)}<span class="sub"></span>${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
+    let h = `<div class="ph">${I.t('handshake', 'Diplomacy', TIPS.intro, '', true)}<span class="sub"></span>${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
     for (const o of offers()) {
       const f = st.factions[o.from], al = o.kind === 'alliance';
-      h += `<div class="card2 hot"><div class="ir">${dot(f)}<b>${f.name}</b>${I.t(al ? 'handshake' : 'crown', al ? 'Offers an alliance' : 'Asks you to bend the knee', al ? 'Allies do not fight each other.' : 'If you accept, your game ends here; refuse, and you fight on.')}`
-        + `${I.stat('clock', Math.ceil(o.until - st.time), 'Open for days', 'Days left to answer.', 'dim')}${I.btn('all', al ? 'Accept' : 'Bend the knee', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '1' }, 'sm')}${I.btn('none', al ? 'Decline' : 'Fight on', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '0' }, 'sm')}</div></div>`;
+      h += `<div class="card2 hot"><div class="ir">${dot(f)}<b>${f.name}</b>${I.t(al ? 'handshake' : 'crown', al ? 'Offers an alliance' : 'Asks you to bend the knee', al ? 'Allies do not fight each other.' : 'If you accept, your game ends here; refuse, and you fight on.', '', true)}`
+        + `${I.stat('clock', Math.ceil(o.until - st.time), 'Open for days', 'Days left to answer.', 'dim')}</div><div class="ir">${I.btn('all', al ? 'Accept' : 'Bend the knee', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '1' }, 'sm', undefined, true)}${I.btn('none', al ? 'Decline' : 'Fight on', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '0' }, 'sm', undefined, true)}</div></div>`;
     }
     const ally = D.allyOf(st, me), facs = st.factions.filter(f => !f.neutral && f.id !== me && f.alive), top = Math.max(1, ...st.factions.filter(f => !f.neutral && f.alive).map(f => D.power(st, f.id)));
     for (const f of facs) {
       const isAlly = ally === f.id, cities = st.cities.filter(c => c.owner === f.id).length, o = D.op(st, f.id, me), why = D.whyNot(st, me, f.id), merge = D.canMerge(st, me, f.id);
       const mood = o <= -10 ? 'faceBad' : o < 10 ? 'faceOk' : 'faceGood';
-      h += `<div class="card2"><div class="ir">${dot(f)}<b>${f.name}</b>${isAlly ? I.t('handshake', 'Ally', 'Allies do not fight each other.', 'good') : I.t('swords', 'Enemy', 'At war with you.', 'bad')}${D.trust(st, f.id) < -30 ? I.t('unlink', 'Oath-breaker', TIPS.oath, 'bad') : ''}${P.traitIcon(D.traitOf(st, f.id))}</div>`;
-      h += `<div class="ir">${I.stat('house', cities, 'Cities')}<span class="st" data-tip="${esc('Strength\n' + TIPS.strength + '\n' + num(D.power(st, f.id)))}">${I.svg('helmet')}${I.meter(D.power(st, f.id) / top)}<b>${num(D.power(st, f.id))}</b></span>`
+      h += `<div class="card2"><div class="ir">${dot(f)}<b>${f.name}</b>${isAlly ? I.t('handshake', 'Ally', 'Allies do not fight each other.', 'good', true) : I.t('swords', 'Enemy', 'At war with you.', 'bad', true)}${D.trust(st, f.id) < -30 ? I.t('unlink', 'Oath-breaker', TIPS.oath, 'bad', true) : ''}${P.traitIcon(D.traitOf(st, f.id))}</div>`;
+      h += `<div class="ir stats">${I.stat('house', cities, 'Cities')}<span class="st" data-tip="${esc('Strength\n' + TIPS.strength + '\n' + num(D.power(st, f.id)))}">${I.svg('helmet')}${I.meter(D.power(st, f.id) / top)}<b>${num(D.power(st, f.id))}</b></span>`
         + `<span class="st" data-tip="${esc('Opinion of you\n' + TIPS.opinion + '\n' + feel(o))}">${I.svg(mood)}<b>${Math.round(o)}</b></span></div><div class="ir">`;
-      if (isAlly) h += ui.confirmBreak === f.id ? `${I.t('unlink', 'Break the pact?', 'You will lose trust.', 'bad')}${I.btn('all', 'Yes, break it', { 'data-act': 'dBreakYes' }, 'sm')}${I.btn('none', 'No', { 'data-act': 'dBreakNo' }, 'sm')}` : I.btn('unlink', 'Break the pact', { 'data-act': 'dBreak', 'data-f': f.id }, 'sm', TIPS.breakIt);
-      else h += I.btn('handshake', 'Propose alliance', Object.assign({ 'data-act': 'dAlly', 'data-f': f.id }, why ? { disabled: '' } : {}), 'sm', why ? why.charAt(0).toUpperCase() + why.slice(1) : TIPS.ally);
-      h += `<button class="ibtn sm" data-act="dGift" data-f="${f.id}" data-tip="${esc('Gift\n' + TIPS.gift)}"${st.factions[me].gold < C.giftSmall ? ' disabled' : ''}>${I.svg('gift')}${I.svg('gold')}<b>${C.giftSmall}</b></button>`;
-      if (!merge) h += I.btn('scroll', 'Offer terms', { 'data-act': 'dMerge', 'data-f': f.id }, 'sm', TIPS.merge);
+      if (isAlly) h += ui.confirmBreak === f.id ? `${I.t('unlink', 'Break the pact?', 'You will lose trust.', 'bad', true)}${I.btn('all', 'Yes, break it', { 'data-act': 'dBreakYes' }, 'sm', undefined, true)}${I.btn('none', 'No', { 'data-act': 'dBreakNo' }, 'sm', undefined, true)}` : I.btn('unlink', 'Break the pact', { 'data-act': 'dBreak', 'data-f': f.id }, 'sm', TIPS.breakIt, true);
+      else h += I.btn('handshake', 'Propose alliance', Object.assign({ 'data-act': 'dAlly', 'data-f': f.id }, why ? { disabled: '' } : {}), 'sm', why ? why.charAt(0).toUpperCase() + why.slice(1) : TIPS.ally, true);
+      h += `<button class="ibtn sm" data-act="dGift" data-f="${f.id}" data-tip="${esc('Gift\n' + TIPS.gift)}"${st.factions[me].gold < C.giftSmall ? ' disabled' : ''}>${I.svg('gift')}${I.w('Gift')}${I.svg('gold')}<b>${C.giftSmall}</b></button>`;
+      if (!merge) h += I.btn('scroll', 'Offer terms', { 'data-act': 'dMerge', 'data-f': f.id }, 'sm', TIPS.merge, true);
       h += `</div></div>`;
     }
     const log = st.diplo.log.slice(-6).reverse();
     if (log.length) {
-      h += `<div class="sec">${I.t('calendar', 'Recent')}</div>`;
-      for (const l of log) { const A = l.a ? st.factions[l.a] : null, B = l.b ? st.factions[l.b] : null; h += `<div class="alert ir" data-tip="${esc(l.text)}"><span class="st dim">${I.svg('calendar')}<b>${Math.floor(l.t)}</b></span>${I.svg(l.kind === 'allied' ? 'handshake' : l.kind === 'broken' ? 'unlink' : 'crown')}${A ? dot(A) + A.name : ''}${B ? '<span class="dim">' + I.svg('go') + '</span>' + dot(B) + B.name : ''}</div>`; }
+      h += `<div class="sec">${I.t('calendar', 'Recent', '', '', true)}</div>`;
+      for (const l of log) { const A = l.a ? st.factions[l.a] : null, B = l.b ? st.factions[l.b] : null; h += `<div class="alert ir" data-tip="${esc(l.text)}"><span class="st dim">${I.svg('calendar')}<b>${Math.floor(l.t)}</b></span>${I.svg(l.kind === 'allied' ? 'handshake' : l.kind === 'broken' ? 'unlink' : 'crown')}${A ? dot(A) + A.name : ''}${B ? '<span class="dim">' + I.svg('go') + '</span>' + dot(B) + B.name : ''}<span class="w dim">${l.text}</span></div>`; }
     }
     return h;
   }
