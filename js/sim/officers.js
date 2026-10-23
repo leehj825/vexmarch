@@ -172,8 +172,8 @@ VM.Officers = (function () {
 
   // ---------------- Governors ----------------
   function threatened(state, c) {
-    for (const a of state.armies) if (a.owner !== c.owner && hops(state, VM.Armies.zoneOf(a), c.id) <= O().sense) return true;
-    for (const x of state.cities) if (x.owner !== c.owner && x.owner !== 0 && hops(state, x.id, c.id) <= O().sense) return true;
+    for (const a of state.armies) if (VM.Diplo.hostile(state, a.owner, c.owner) && hops(state, VM.Armies.zoneOf(a), c.id) <= O().sense) return true;
+    for (const x of state.cities) if (VM.Diplo.hostile(state, x.owner, c.owner) && x.owner !== 0 && hops(state, x.id, c.id) <= O().sense) return true;
     return false;
   }
 
@@ -248,7 +248,7 @@ VM.Officers = (function () {
   // An officer inside his own walled city under siege chooses between holding the walls with the garrison and riding out to fight the besiegers in the open:
   // out if he is clearly the stronger, or if the gate is about to fall; behind the walls otherwise. How sure he must be depends on his nature.
   function decideSortie(state, a, city) {
-    const foes = state.armies.filter(e => e.owner !== a.owner && e.at === city.id && !e.routed && VM.War.sieging(e));
+    const foes = state.armies.filter(e => VM.Diplo.hostile(state, e.owner, a.owner) && e.at === city.id && !e.routed && VM.War.sieging(e));
     if (!foes.length || city.wallHp <= 0) { a.sortie = false; return; }
     const o = state.officers[a.officer], foe = { troops: {} };
     for (const e of foes) for (const k in e.troops) foe.troops[k] = (foe.troops[k] || 0) + e.troops[k];
@@ -265,7 +265,7 @@ VM.Officers = (function () {
     if (here && here.owner === a.owner) decideSortie(state, a, here);
     if (a.order === 'hold') return;
     const weary = !!VM.War.retreatReason(state, a);                    // the food would run out, or the men have lost heart (how far they are pushed depends on the officer)
-    if (!weary && !a.rest && here && here.owner !== a.owner && VM.War.sieging(a)) return;     // a hostile city in the way is being fought: stay until it falls
+    if (!weary && !a.rest && here && VM.Diplo.hostile(state, here.owner, a.owner) && VM.War.sieging(a)) return;     // a hostile city in the way is being fought: stay until it falls
     if (weary || a.rest) {                                            // fall back and recover
       a.rest = a.morale < 85 || !!(s && s.line !== 'ok');
       if (a.dest !== null && state.cities[a.dest].owner === a.owner) return;       // already on its way to a friendly city
@@ -278,7 +278,7 @@ VM.Officers = (function () {
       a.station = st; if (st < 0) return;
       let threat = null, td = Infinity;
       for (const e of state.armies) {
-        if (e.owner === a.owner || e.routed) continue;
+        if (VM.Diplo.friendly(state, e.owner, a.owner) || e.routed) continue;
         const d = hops(state, st, VM.Armies.zoneOf(e)); if (d <= C.sense && d < td) { td = d; threat = e; }
       }
       if (threat && strengthRatio(state, a, threat) >= oddsFor(C.odds, o.trait)) goto(state, a, VM.Armies.zoneOf(threat));
@@ -295,11 +295,11 @@ VM.Officers = (function () {
       return;
     }
     if (a.order === 'raid') {
-      if (here && here.owner !== a.owner && VM.War.sieging(a)) return;       // already laying siege
+      if (here && VM.Diplo.hostile(state, here.owner, a.owner) && VM.War.sieging(a)) return;       // already laying siege
       if (a.dest !== null) return;
       let best = -1, bs = Infinity;
       for (const c of state.cities) {
-        if (c.owner === a.owner) continue;
+        if (VM.Diplo.friendly(state, c.owner, a.owner)) continue;
         const d = hops(state, originOf(a), c.id); if (d > C.sense * 1.6) continue;
         if (siegeRatio(state, a, c) < oddsFor(C.raidOdds, o.trait)) continue;
         if (d < bs) { bs = d; best = c.id; }
@@ -335,7 +335,7 @@ VM.Officers = (function () {
       if (state.proposals.some(p => p.army === a.id)) continue;
       let best = null, bd = Infinity;
       for (const c of state.cities) {
-        if (c.owner === me) continue;
+        if (VM.Diplo.friendly(state, c.owner, me)) continue;
         const d = hops(state, a.at, c.id); if (d > C.sense * 1.1 || d >= bd) continue;
         if (siegeRatio(state, a, c) >= (o.trait === 'Rash' ? 1.2 : 1.6)) { bd = d; best = c.id; }
       }

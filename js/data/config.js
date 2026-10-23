@@ -123,6 +123,14 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Diplomacy (docs/DIPLOMACY.md): two states, enemy and ally; a strong faction may offer terms (merge) to a weak one
+  DIPLO: {
+    allyAt: 25, mergeAt: 50, mergeRatio: 3, mergeCool: 60, refuseCool: 30, mergeRefuseCool: 60, breakCool: 90, offerDays: 20,
+    decay: 0.15, drift: 0.1, driftMax: 60, trustHeal: 0.05, breakTrust: -30, breakOpinion: -30, breakOpinionAlly: -60, captureOpinion: -15,
+    giftSmall: 100, giftBig: 300, giftOpinion: 4, giftEvery: 10, aiEvery: 12,
+    betrayAge: 90, betrayRatio: 3, betrayShare: 0.45, betrayLeft: 2, popWeight: 0.1,
+    mergeTrait: { Cautious: 20, Greedy: 10, Schemer: 10, Loyal: 0, Rash: -30, Brave: -35, none: 0 }
+  },
   AI: {
     // odds = how many times stronger than a target's defence the AI wants to be before it attacks (it relaxes 10% a year without gains).
     // Measured over 20 to 30 games after the version 6 rescale (mixed levels): easy wins about 5 to 7% of games, normal and hard about 23 to 30% each (fair share is 20%).

@@ -63,8 +63,8 @@ VM.War = (function () {
     const friendly = new Set(), enemy = {};
     for (const a of state.armies) {
       const z = VM.Armies.zoneOf(a), c = state.cities[z];
-      if (a.owner === c.owner) { if (!a.routed) friendly.add(z); } else if (c.owner !== 0) enemy[z] = true;
-      if (a.owner !== c.owner && a.at !== null) c.besieged = true;
+      if (VM.Diplo.friendly(state, a.owner, c.owner)) { if (!a.routed) friendly.add(z); } else if (c.owner !== 0) enemy[z] = true;
+      if (VM.Diplo.hostile(state, a.owner, c.owner) && a.at !== null) c.besieged = true;
     }
     for (const c of state.cities) if (c.owner !== 0 && enemy[c.id] && !friendly.has(c.id)) c.contested = true;
     for (const c of state.cities) {
@@ -77,7 +77,7 @@ VM.War = (function () {
   // ---- Supply: food reaches an army along a road line from a city of its own; enemy armies on the line cut it ----
   function lineCut(state, a, route) {
     for (const e of state.armies) {
-      if (e.owner === a.owner || e.routed) continue;
+      if (VM.Diplo.friendly(state, e.owner, a.owner) || e.routed) continue;
       if (e.at !== null) { if (route.includes(e.at)) return true; continue; }
       for (let i = 0; i < route.length - 1; i++) {
         const u = route[i], v = route[i + 1];
@@ -100,7 +100,7 @@ VM.War = (function () {
         if (!best || d < best.d) best = { d, origin: o, city: c.id };
       }
       const route = best ? VM.Armies.path(state, best.origin, best.city) : null;
-      const zoneOwner = state.cities[VM.Armies.zoneOf(a)].owner, foreign = zoneOwner !== a.owner;
+      const zoneOwner = state.cities[VM.Armies.zoneOf(a)].owner, foreign = !VM.Diplo.friendly(state, zoneOwner, a.owner);
       const line = !route ? 'none' : (lineCut(state, a, route) ? 'cut' : 'ok');
       // A forward depot with stock close by feeds the army at the normal rate, even deep in enemy land.
       let depot = null;
@@ -192,6 +192,7 @@ VM.War = (function () {
     f.alive = false;
     for (const a of state.armies.filter(x => x.owner === f.id)) { state.officers[a.officer].army = null; state.armies.splice(state.armies.indexOf(a), 1); }
     for (const o of state.officers) if (o.owner === f.id) { o.owner = 0; o.role = 'idle'; o.army = null; }
+    VM.Diplo.drop(state, f.id);
     VM.Eco.pushEvent(state, { type: 'eliminated', owner: f.id });
   }
 
@@ -203,6 +204,7 @@ VM.War = (function () {
     if (city.governor !== null) { state.officers[city.governor].role = 'idle'; city.governor = null; }
     for (const o of state.officers) if (o.owner === old && o.loc === city.id && o.army === null && old !== 0) fate(state, o, by, old);
     VM.Eco.pushEvent(state, { type: 'captured', city: city.id, owner: by, from: old });
+    VM.Diplo.onCapture(state, city, by, old);
     for (const a of state.armies) if (a.owner === by && a.at === city.id) VM.Officers.bump(state, a.officer, 10);
     if (old !== 0 && !state.cities.some(c => c.owner === old)) eliminate(state, state.factions[old]);
     checkOver(state);
@@ -226,7 +228,7 @@ VM.War = (function () {
     const ps = new Map(armies.map(a => [a.id, pos(state, a)]));
     for (let i = 0; i < armies.length; i++) for (let j = i + 1; j < armies.length; j++) {
       const a = armies[i], b = armies[j];
-      if (a.owner === b.owner || a.routed || b.routed) continue;
+      if (VM.Diplo.friendly(state, a.owner, b.owner) || a.routed || b.routed) continue;
       if (dist(ps.get(a.id), ps.get(b.id)) > W().contact) continue;
       if (inWalls(state, a) || inWalls(state, b)) continue;                    // the wall is between them: see the siege below
       if (a.retreat <= 0) a.fighting.push(b.id);
@@ -247,7 +249,7 @@ VM.War = (function () {
     // A besieged city: its garrison, and the armies inside it that stay behind the walls, shoot from the wall tops and hold the gate. Besiegers hit the gate with
     // their numbers or their engines; when it falls everybody fights in the open.
     const sieges = {};
-    for (const a of armies) if (sieging(a) && state.cities[a.at].owner !== a.owner) (sieges[a.at] = sieges[a.at] || []).push(a);
+    for (const a of armies) if (sieging(a) && VM.Diplo.hostile(state, a.owner, state.cities[a.at].owner)) (sieges[a.at] = sieges[a.at] || []).push(a);
     for (const cid in sieges) {
       const city = state.cities[cid], list = sieges[cid], walled = city.wallHp > 0;
       const holders = walled ? armies.filter(h => h.owner === city.owner && h.at === city.id && inWalls(state, h)) : [];
@@ -310,7 +312,7 @@ VM.War = (function () {
     }
     for (const c of state.cities) {
       if (c.besieged && VM.Eco.troopsOf(c.garrison) <= W().captureMin) {
-        const hostile = state.armies.find(a => a.at === c.id && a.owner !== c.owner && sieging(a) && !a.fighting.length);
+        const hostile = state.armies.find(a => a.at === c.id && VM.Diplo.hostile(state, a.owner, c.owner) && sieging(a) && !a.fighting.length);
         const defended = state.armies.some(a => a.owner === c.owner && a.at === c.id);
         if (hostile && !defended) capture(state, c, hostile.owner);
       }
@@ -324,7 +326,7 @@ VM.War = (function () {
       const s = a.supply;
       if (s && s.starving) { a.morale = Math.max(0, a.morale - W().starveDrain * dd); hurt(state, a.troops, carryOf(a), VM.Armies.sizeOf(a) * W().desert * dd); }
       else if (s && s.line !== 'ok' && !s.depot) a.morale = Math.max(0, a.morale - W().cutDrain * dd);
-      else if (!sieging(a) || !state.cities[a.at].besieged || state.cities[a.at].owner === a.owner) a.morale = Math.min(100, a.morale + W().recover * dd);
+      else if (!sieging(a) || !state.cities[a.at].besieged || VM.Diplo.friendly(state, a.owner, state.cities[a.at].owner)) a.morale = Math.min(100, a.morale + W().recover * dd);
     }
   }
 
@@ -367,7 +369,7 @@ VM.War = (function () {
     if (a.routed) return { ok: false, reason: 'army is routed' };
     const o = state.officers[a.officer], kind = abilityOf(o);
     const target = a.at !== null ? state.cities[a.at] : null;
-    const inBattle = a.fighting.length > 0 || (sieging(a) && target.owner !== a.owner && (total(target.garrison) > 0 || target.wallHp > 0));
+    const inBattle = a.fighting.length > 0 || (sieging(a) && VM.Diplo.hostile(state, a.owner, target.owner) && (total(target.garrison) > 0 || target.wallHp > 0));
     if (kind === 'rally') a.morale = Math.min(100, a.morale + 30);
     else {
       if (!inBattle) return { ok: false, reason: 'no battle to use it in' };
@@ -391,5 +393,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity };
+  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity, checkOver };
 })();

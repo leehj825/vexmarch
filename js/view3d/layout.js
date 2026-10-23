@@ -55,7 +55,7 @@ VM.CityLayout = (function () {
     for (const a of state.armies) {
       const atNode = a.at === id, onRoad = !atNode && a.edge && (a.edge.to === id || a.edge.from === id);
       if (!atNode && !onRoad) continue;
-      const hostile = a.owner !== city.owner, size = VM.Armies.sizeOf(a);
+      const hostile = VM.Diplo.hostile(state, a.owner, city.owner), size = VM.Armies.sizeOf(a);
       if (atNode && !hostile && besiegedBy && W.inWalls(state, a)) { for (const k in inside) inside[k] += Math.round(a.troops[k] || 0); continue; }
       let ang = main, d, moving = null;
       if (atNode) {
