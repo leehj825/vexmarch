@@ -15,11 +15,11 @@
   <div id="top">
     <div id="res">
       <span id="who"><i id="fdot" class="dot"></i><b id="fname"></b></span>
-      <span id="gold"></span><span id="food"></span><span id="date"></span>
+      <span id="gold" data-tip="Your treasury, and how much you earn or lose each day."></span><span id="food" data-tip="Your food stock, and the daily balance. If it runs out, your people and armies starve."></span><span id="date" data-tip="One year has 360 days. Use the speed buttons to run time faster."></span>
     </div>
-    <div id="speed"><button id="offBtn" class="wide">Officers</button><button id="dipBtn" class="wide">Diplomacy</button><button id="alertBtn" class="wide">Alerts</button><button id="setBtn" title="Settings">⚙</button><button data-s="0" title="Pause (space)">II</button><button data-s="1">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button id="menuBtn" title="Menu">☰</button></div>
+    <div id="speed"><button id="offBtn" class="wide" data-tip="Your officers: governors and army leaders, with their skills and loyalty.">Officers</button><button id="dipBtn" class="wide" data-tip="Alliances, gifts and terms with the other houses.">Diplomacy</button><button id="alertBtn" class="wide" data-tip="News of battles, losses and requests, and what pauses the game.">Alerts</button><button id="setBtn" data-tip="Settings">⚙</button><button data-s="0" data-tip="Pause (space)">II</button><button data-s="1">1x</button><button data-s="2">2x</button><button data-s="4">4x</button><button id="menuBtn" data-tip="Menu">☰</button></div>
   </div>
-  <div id="mapctl"><button data-mc="north" title="North up">⌖</button><button data-mc="left" title="Turn left">⟲</button><button data-mc="right" title="Turn right">⟳</button><button data-mc="up" title="Tilt up">⇧</button><button data-mc="down" title="Tilt down">⇩</button></div>
+  <div id="mapctl"><button data-mc="north" data-tip="North up">⌖</button><button data-mc="left" data-tip="Turn left">⟲</button><button data-mc="right" data-tip="Turn right">⟳</button><button data-mc="up" data-tip="Tilt up">⇧</button><button data-mc="down" data-tip="Tilt down">⇩</button></div>
   <div id="hint3d">Drag to look around · two fingers to pan and zoom</div>
   <div id="panel"></div>
   <div id="sheet"></div>
@@ -73,6 +73,7 @@
 <script src="js/ui/alerts.js"></script>
 <script src="js/ui/sheets.js"></script>
 <script src="js/ui/tutorial.js"></script>
+<script src="js/ui/tips.js"></script>
 <script src="js/ui/diplo.js"></script>
 <script src="js/ui/story.js"></script>
 <script src="js/ui/title.js"></script>

@@ -15,7 +15,7 @@ npm test              # tools/test_diplo.js (alliances, betrayal, merge offers),
 npm run tournament   # AI-vs-AI games: node tools/ai_tournament.js [seeds] [years] [levels]
 npm run ui:test       # browser smoke test (needs Playwright: PLAYWRIGHT=/path/to/playwright)
 npm run ui:test3d     # browser test of the 3D city view (needs Playwright)
-# more browser tests: tools/ui_map3d.js, ui_story.js, ui_walk.js, ui_diplo.js, ui_ads.js (run with node, PLAYWRIGHT=...)
+# more browser tests: tools/ui_map3d.js, ui_story.js, ui_walk.js, ui_diplo.js, ui_tips.js, ui_ads.js (run with node, PLAYWRIGHT=...)
 npm run i18n:check    # lists texts still in English when the game runs in Korean
 npm run balance       # node tools/balance.js [seed] [years]: yearly economy tables for low/normal/high tax
 ```
@@ -46,6 +46,7 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/view3d/layout.js`, `js/view3d/city3d.js` | The 3D city: layout as data, Three.js renderer |
 | `js/data/story.js`, `js/sim/story.js`, `js/ui/story.js` | The campaign: history, houses, fixed map, officers and their ties, beats, endings (English and Korean), and the story pages (`docs/STORY.md`) |
 | `js/sim/diplo.js`, `js/ui/diplo.js` | Diplomacy: alliances, breaking pacts, merge offers to weak factions (`docs/DIPLOMACY.md`) |
+| `js/ui/tips.js` | Hold-to-read tips: any element with `data-tip` shows a short explanation while touched (or hovered); the wordy panel text lives in tips (`tools/ui_tips.js`) |
 | `js/view3d/walk.js` | Walk mode: avatar, collisions, officers and townsfolk to talk to (`tools/ui_walk.js`) |
 | `js/view3d/terrain.js` | The 3D ground under the strategy map (height field, water, forests, roads, territory texture, camera, projection) |
 | `js/view3d/struct_models.js` | Nightfall's textured building models (wall, tent, well, smithy, range, tree, fence, campfire; `tools/extract_structs.js`) |

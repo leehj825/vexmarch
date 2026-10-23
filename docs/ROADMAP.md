@@ -72,6 +72,9 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 ## Since Phase 9 (done)
 Animated crowd, Nightfall-style city look, city growth stages, ÷10 population/soldier rescale (exact soldier counts), smarter army tactics (roles, wall defence, sorties, campaign food, retreats), 3D strategy map with terrain, pause menu, collapsible phone panel, ad-banner freeze fix, Campaign story slice (six houses, 24 officers, 12 beats, endings, chronicle, English and Korean).
 
+## Tips (done)
+`js/ui/tips.js`: a hold (touch) or hover (mouse) on anything with `data-tip` shows a short popup; a held press is not also a click. The city and army panels, the Officers and Diplomacy sheets and the top bar now show short labels with dotted underlines and small (i) marks, and the explanations moved into tips (about 50 texts, all in Korean too). `tools/ui_tips.js`: 19 checks. To add one: `VM.Panels.T('Label', 'Explanation')` or `data-tip="..."`.
+
 ## Next (proposed order)
 1. More beats, a gameplay trait and special victory per house. 2. A ruler with stats and choices. 3. Native review of the Korean text. 4. Diplomacy extras (marriages, hostages, asking an ally for help). (Android APK verification and phone performance checks are parked.)
 

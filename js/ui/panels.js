@@ -79,30 +79,56 @@ VM.Panels = (function () {
   }
   const POLICY_TIP = { manual: 'You decide everything here.', develop: 'The governor builds, sets taxes and keeps a small garrison, saving a gold reserve.', fortify: 'Walls first, then archers and a larger garrison.', recruit: 'Barracks first, then a large standing garrison to draw armies from.' };
   const ORDER_TIP = { hold: 'Stays where it is.', defend: 'Guards its station and meets intruders when the odds suit the officer.', reinforce: 'Marches to your cities that are under attack.', raid: 'Seeks weak hostile towns nearby, falls back to rest when worn down or cut off.' };
+  const TRAIT_TIP = { Rash: 'Eager to fight. Attacks on worse odds and holds out less in a siege.', Cautious: 'Careful. Wants clear odds before attacking and pulls back early when worn down.', Loyal: 'Steadfast. Loyalty drops less and rises faster.', Greedy: 'Loves gold. Loyalty falls if the treasury is empty and a gift pleases them.', Brave: 'Fights on when others would retreat and takes risks.', Schemer: 'Clever and ambitious. A little less loyal, and hard to trust.' };
+  const traitSpan = t => TRAIT_TIP[t] ? `<span data-tip="${esc(TRAIT_TIP[t])}">${t}</span>` : t;
+  const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const T = (label, tip) => `<span data-tip="${esc(tip)}">${label}</span>`;                       // a label with a hold-to-read explanation (js/ui/tips.js)
+  const info = tip => `<i class="info" data-tip="${esc(tip)}">i</i>`;
+  const TIPS = {
+    pop: 'People living here. Taxes and recruits come from them. The number after the slash is how many the city can hold; farms, markets and a temple raise it.',
+    wall: 'The wall slows an attacker and lets your archers shoot down from it. Siege engines break it fastest. When it falls, the enemy storms the gate.',
+    garrison: 'Soldiers stationed in the city. They defend it and are the pool you draw armies from.',
+    prosperity: 'How well the city does: markets, a calm population and a temple raise it. It multiplies the gold the city earns.',
+    security: 'How safe the people feel. It falls while an enemy stands nearby and when the city is devastated, and it lowers tax income and growth.',
+    gold: 'Gold the city earns each day, minus the upkeep of its soldiers and buildings.',
+    food: 'Food grown each day minus the food eaten by the people and soldiers. If it stays negative, the faction starves.',
+    tax: 'Higher tax brings more gold but slows growth and lowers contentment. Low tax does the opposite.',
+    governor: 'A governor runs the city by the policy you choose, so you do not have to micromanage it. A governor cannot lead an army.',
+    depot: 'Stores food so armies near here eat at the normal rate while in enemy land. Fill it before a campaign.',
+    recruit: 'Training costs gold and takes people from the population. Recruits join the garrison.',
+    form: 'Choose how many of the garrison go with the army, pick a free officer to lead it, then form it. The army marches out and eats its own rations.',
+    siegeHere: 'Select one of your armies, then tap this node to march on it.',
+    morale: 'An army that loses morale breaks and runs. Battles, hunger and a cut supply line wear it down; rest in a friendly city restores it.',
+    loyalty: 'How loyal the officer is to you. Low loyalty can make them desert; a gift raises it.',
+    supply: 'Food reaches an army along a road line from its home city. If an enemy army stands on that line, the supply is cut and the army starves.',
+    rations: 'How many days the army can eat from the food it carries.',
+    xfer: "Move recruits between the army and the city's garrison. Only possible while the army stands in your own city.",
+    armyHelp: 'Tap a node to march there (right-click works too). Moving out of a battle costs morale. Tap empty ground to deselect.',
+    ability: 'The officer\'s special move, used in battle or a siege. It needs time to recharge.'
+  };
   const ABILITY = { charge: 'Charge', fire: 'Fire attack', rally: 'Rally' };
 
   function cityHTML(c) {
     const st = ui.state, me = st.player, N = st.map.nodes[c.id], S = VM.CFG.SPEC[c.spec], f = st.factions[c.owner], s = c.stats;
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c);
-    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span><button data-act="panelToggle" class="tog" title="Show or hide the details">${ui.panelMin ? '▴' : '▾'}</button>${ui.cityView === c.id ? `${c.owner === ui.state.player ? `<button data-act="walk" class="btn sm">Walk</button>` : ''}<button data-act="backmap" class="btn sm">← Back to map</button>` : `<button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button>`}</div>`;
+    let h = `<div class="ph"><b>${N.name}</b><span class="sub">${S.label}</span><button data-act="panelToggle" class="tog" data-tip="Show or hide the details">${ui.panelMin ? '▴' : '▾'}</button>${ui.cityView === c.id ? `${c.owner === ui.state.player ? `<button data-act="walk" class="btn sm">Walk</button>` : ''}<button data-act="backmap" class="btn sm">← Back to map</button>` : `<button data-act="view3d" data-city="${c.id}" class="btn sm">View city</button><button data-act="close" class="x">✕</button>`}</div>`;
     h += `<div class="row"><span class="dot" style="background:${f.color}"></span>${f.name}${mine ? ' (you)' : (VM.Diplo.allied(st, c.owner, me) ? ' (ally)' : '')}${c.besieged ? ' · <span class="bad">UNDER SIEGE</span>' : (c.contested ? ' · <span class="bad">CONTESTED</span>' : '')}</div>`;
-    h += `<div class="row">Population <b>${num(c.pop)}</b> / ${num(s.cap)}</div>`;
-    if (wmax > 0) h += `<div class="row">Wall <b>${num(c.wallHp)}</b> / ${num(wmax)}${bar(c.wallHp / wmax, 'wall')}</div>`;
-    h += `<div class="row">Garrison <b>${num(VM.Eco.troopsOf(c.garrison))}</b> <span class="dim">${troopList(c.garrison)}</span></div>`;
+    h += `<div class="row">${T('Population', TIPS.pop)} <b>${num(c.pop)}</b> / ${num(s.cap)}</div>`;
+    if (wmax > 0) h += `<div class="row">${T('Wall', TIPS.wall)} <b>${num(c.wallHp)}</b> / ${num(wmax)}${bar(c.wallHp / wmax, 'wall')}</div>`;
+    h += `<div class="row">${T('Garrison', TIPS.garrison)} <b>${num(VM.Eco.troopsOf(c.garrison))}</b> <span class="dim">${troopList(c.garrison)}</span></div>`;
     if (!mine) {
       const here = st.armies.filter(a => a.at === c.id && a.owner === me);
-      return h + `<div class="row dim">${here.length ? 'Your army is here and will lay siege.' : 'Select one of your armies, then tap this node to march on it.'}</div>`;
+      return h + `<div class="row dim">${here.length ? 'Your army is here and will lay siege.' : 'Not yours.' + info(TIPS.siegeHere)}</div>`;
     }
-    h += `<div class="row">Prosperity <b>${s.prosperity.toFixed(2)}</b> · Security ${s.security.toFixed(2)}</div>`;
-    h += `<div class="row">Gold <b>${sgn(s.gold - s.upkeep)}</b>/day · Food ${sgn(s.foodProd - s.foodCons)}/day <span class="dim">(${num(s.foodProd)} made, ${num(s.foodCons)} eaten)</span></div>`;
-    h += `<div class="row">Tax ` + ['low', 'normal', 'high'].map(k => `<button data-act="tax" data-city="${c.id}" data-tax="${k}" class="chip${c.tax === k ? ' on' : ''}">${VM.CFG.TAX[k].label}</button>`).join('') + `</div>`;
+    h += `<div class="row">${T('Prosperity', TIPS.prosperity)} <b>${s.prosperity.toFixed(2)}</b> · ${T('Security', TIPS.security)} ${s.security.toFixed(2)}</div>`;
+    h += `<div class="row">${T('Gold', TIPS.gold)} <b>${sgn(s.gold - s.upkeep)}</b>/day · ${T('Food', TIPS.food)} ${sgn(s.foodProd - s.foodCons)}/day <span class="dim">(${num(s.foodProd)} made, ${num(s.foodCons)} eaten)</span></div>`;
+    h += `<div class="row">${T('Tax', TIPS.tax)} ` + ['low', 'normal', 'high'].map(k => `<button data-act="tax" data-city="${c.id}" data-tax="${k}" class="chip${c.tax === k ? ' on' : ''}">${VM.CFG.TAX[k].label}</button>`).join('') + `</div>`;
     const offs = st.officers.filter(o => o.owner === me && o.army === null);
-    h += `<div class="row">Governor <select id="govSel" data-city="${c.id}"><option value="">(none)</option>` + offs.map(o => `<option value="${o.id}"${c.governor === o.id ? ' selected' : ''}>${o.name} · Pol ${o.politics}</option>`).join('') + `</select></div>`;
+    h += `<div class="row">${T('Governor', TIPS.governor)} <select id="govSel" data-city="${c.id}"><option value="">(none)</option>` + offs.map(o => `<option value="${o.id}"${c.governor === o.id ? ' selected' : ''}>${o.name} · Pol ${o.politics}</option>`).join('') + `</select></div>`;
     if (c.governor !== null) {
       const g = st.officers[c.governor];
-      h += `<div class="row dim">${g.name} · ${g.trait} · loyalty ${Math.round(g.loyalty)}</div>`;
-      h += `<div class="row">Policy ` + VM.Officers.POLICIES.map(k => `<button data-act="policy" data-city="${c.id}" data-mode="${k}" class="chip${c.policy === k ? ' on' : ''}" title="${POLICY_TIP[k]}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + `</div>`;
-      h += `<div class="row dim">${POLICY_TIP[c.policy]}</div>`;
+      h += `<div class="row dim">${g.name} · ${traitSpan(g.trait)} · ${T('loyalty', TIPS.loyalty)} ${Math.round(g.loyalty)}</div>`;
+      h += `<div class="row">Policy ` + VM.Officers.POLICIES.map(k => `<button data-act="policy" data-city="${c.id}" data-mode="${k}" class="chip${c.policy === k ? ' on' : ''}" data-tip="${esc(POLICY_TIP[k])}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + `</div>`;
     }
     h += `<div class="sec">Buildings</div>`;
     for (const k of Object.keys(VM.CFG.BUILD)) {
@@ -113,22 +139,21 @@ VM.Panels = (function () {
       else act = `<button data-act="build" data-city="${c.id}" data-b="${k}" class="btn"${c.build || fac.gold < B.cost[lvl] ? ' disabled' : ''}>Lv${lvl + 1} · ${B.cost[lvl]}g · ${B.days[lvl]}d</button>`;
       h += `<div class="row between"><span>${B.label} <b>Lv${lvl}</b></span>${act}</div>`;
     }
-    h += `<div class="sec">Forward depot</div>`;
-    if (!c.depot) h += `<div class="row between"><span class="dim">Stores food so armies near here eat at the normal rate in enemy land.</span><button data-act="depot" data-city="${c.id}" class="btn"${fac.gold < VM.CFG.WAR.depotCost ? ' disabled' : ''}>Build · ${VM.CFG.WAR.depotCost}g</button></div>`;
+    h += `<div class="sec">${T('Forward depot', TIPS.depot)}</div>`;
+    if (!c.depot) h += `<div class="row between"><span class="dim">Not built</span><button data-act="depot" data-city="${c.id}" class="btn"${fac.gold < VM.CFG.WAR.depotCost ? ' disabled' : ''}>Build · ${VM.CFG.WAR.depotCost}g</button></div>`;
     else h += `<div class="row between"><span>Stock <b>${num(c.depot.food)}</b> → target ${num(c.depot.target)}</span><span><button data-act="depotTarget" data-city="${c.id}" data-n="-500" class="btn sm">−500</button><button data-act="depotTarget" data-city="${c.id}" data-n="500" class="btn sm">+500</button></span></div>`;
-    h += `<div class="sec">Recruit</div>`;
+    h += `<div class="sec">${T('Recruit', TIPS.recruit)}</div>`;
     for (const k of Object.keys(VM.CFG.TROOPS)) {
       const cost = VM.Eco.troopCost(c, k);
       h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">${Math.round(cost)}g each</span></span><span>` +
         [1, 5, 10].map(n => `<button data-act="recruit" data-city="${c.id}" data-t="${k}" data-n="${n}" class="btn sm">+${n}</button>`).join('') + `</span></div>`;
     }
     const free = st.officers.filter(o => o.owner === me && o.army === null && o.loc === c.id && c.governor !== o.id);
-    h += `<div class="sec">Form an army</div>`;
+    h += `<div class="sec">${T('Form an army', TIPS.form)}</div>`;
     if (!VM.Eco.troopsOf(c.garrison)) h += `<div class="row dim">Recruit troops to form an army from the garrison.</div>`;
     else if (!free.length) h += `<div class="row dim">No free officer in this city (the governor cannot lead an army).</div>`;
     else {
       const d = draftFor(c); let total = 0, speed = Infinity;
-      h += `<div class="row dim">Choose how many of the garrison go with the army.</div>`;
       for (const k of Object.keys(VM.CFG.TROOPS)) {
         const have = Math.floor(c.garrison[k] + 1e-9); if (have < 1) continue;
         const n = d.take[k] || 0; total += n; if (n > 0) speed = Math.min(speed, VM.CFG.TROOPS[k].speed);
@@ -146,10 +171,10 @@ VM.Panels = (function () {
 
   function armyHTML(a) {
     const st = ui.state, o = st.officers[a.officer], f = st.factions[a.owner], mine = a.owner === st.player, N = st.map.nodes, n = VM.Armies.sizeOf(a);
-    let h = `<div class="ph"><b>Army of ${f.name}</b><span class="sub">${num(n)} troops</span><button data-act="panelToggle" class="tog" title="Show or hide the details">${ui.panelMin ? '▴' : '▾'}</button><button data-act="close" class="x">✕</button></div>`;
-    h += `<div class="row dim">${officerLine(o)} · loyalty ${Math.round(o.loyalty)}</div>`;
+    let h = `<div class="ph"><b>Army of ${f.name}</b><span class="sub">${num(n)} troops</span><button data-act="panelToggle" class="tog" data-tip="Show or hide the details">${ui.panelMin ? '▴' : '▾'}</button><button data-act="close" class="x">✕</button></div>`;
+    h += `<div class="row dim">${officerLine(o)} · ${T('loyalty', TIPS.loyalty)} ${Math.round(o.loyalty)}</div>`;
     h += `<div class="row">${troopList(a.troops)}</div>`;
-    h += `<div class="row">Morale <b>${Math.round(a.morale)}</b>${bar(a.morale / 100, a.morale < 30 ? 'low' : '')}</div>`;
+    h += `<div class="row">${T('Morale', TIPS.morale)} <b>${Math.round(a.morale)}</b>${bar(a.morale / 100, a.morale < 30 ? 'low' : '')}</div>`;
     const where = a.at !== null ? 'in ' + N[a.at].name : 'on the road to ' + N[a.edge.to].name;
     h += `<div class="row">${where}${a.dest !== null && !a.routed ? ' · heading to <b>' + N[a.dest].name + '</b>' : ''}</div>`;
     if (a.routed) h += `<div class="row bad"><b>ROUTED</b> — fleeing to safety</div>`;
@@ -161,15 +186,15 @@ VM.Panels = (function () {
       let line = s.line === 'ok' ? '<span class="good">supply line open</span>' : (s.line === 'cut' ? '<span class="bad"><b>SUPPLY CUT</b></span>' : '<span class="bad">no supply source</span>');
       if (s.depot != null) line += ` · fed by depot at ${N[s.depot].name}`;
       else if (s.foreign) line += ` · enemy land: eats ${s.mult}x`;
-      h += `<div class="row">${line}</div><div class="row dim">Rations ${days.toFixed(1)} days · supplied from ${N[a.home].name}${s.starving ? ' · <span class="bad">STARVING</span>' : ''}</div>`;
+      h += `<div class="row" data-tip="${esc(TIPS.supply)}">${line}</div><div class="row dim">${T('Rations', TIPS.rations)} ${days.toFixed(1)} days · supplied from ${N[a.home].name}${s.starving ? ' · <span class="bad">STARVING</span>' : ''}</div>`;
     }
     if (!mine) return h;
-    h += `<div class="row">Orders ` + VM.Officers.ORDERS.map(k => `<button data-act="order" data-army="${a.id}" data-mode="${k}" class="chip${a.order === k ? ' on' : ''}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + `</div><div class="row dim">${ORDER_TIP[a.order]}${a.rest ? ' Resting now.' : ''}</div>`;
+    h += `<div class="row">Orders ` + VM.Officers.ORDERS.map(k => `<button data-act="order" data-army="${a.id}" data-mode="${k}" class="chip${a.order === k ? ' on' : ''}" data-tip="${esc(ORDER_TIP[k])}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('') + (a.rest ? ' <span class="dim">Resting</span>' : '') + `</div>`;
     const kind = VM.War.abilityOf(o), wait = Math.max(0, a.abilityReady - st.time);
-    h += `<div class="row"><button data-act="ability" data-army="${a.id}" class="btn"${wait > 0 || a.routed ? ' disabled' : ''}>${ABILITY[kind]}</button> <span class="dim">${wait > 0 ? 'ready in ' + Math.ceil(wait) + ' days' : 'ready'}</span></div>`;
+    h += `<div class="row"><button data-act="ability" data-army="${a.id}" data-tip="${esc(TIPS.ability)}" class="btn"${wait > 0 || a.routed ? ' disabled' : ''}>${ABILITY[kind]}</button> <span class="dim">${wait > 0 ? 'ready in ' + Math.ceil(wait) + ' days' : 'ready'}</span></div>`;
     const home = a.at !== null && st.cities[a.at].owner === a.owner && !a.fighting.length && !a.routed ? st.cities[a.at] : null;
     if (home) {
-      h += `<div class="sec">Troops in ${N[home.id].name}</div><div class="row dim">Move recruits between the army and the city's garrison.</div>`;
+      h += `<div class="sec">Troops in ${N[home.id].name}${info(TIPS.xfer)}</div>`;
       for (const k of Object.keys(VM.CFG.TROOPS)) {
         const inArmy = Math.floor((a.troops[k] || 0) + 1e-9), inCity = Math.floor(home.garrison[k] + 1e-9); if (inArmy < 1 && inCity < 1) continue;
         h += `<div class="row between"><span>${VM.CFG.TROOPS[k].label} <span class="dim">army ${num(inArmy)} · city ${num(inCity)}</span></span><span class="nowrap">` +
@@ -178,8 +203,7 @@ VM.Panels = (function () {
       const mates = st.armies.filter(x => x.owner === a.owner && x.id !== a.id && x.at === a.at && !x.fighting.length && !x.routed);
       if (mates.length) h += `<div class="row">Join with <select id="mergeWith"><option value="">(choose)</option>` + mates.map(x => `<option value="${x.id}">${st.officers[x.officer].name} · ${num(VM.Armies.sizeOf(x))}</option>`).join('') + `</select> <button data-act="merge" data-army="${a.id}" class="btn">Merge</button></div>`;
     }
-    h += `<div class="row dim">Tap a node to march there (right-click works too). Moving out of a battle costs morale. Tap empty ground to deselect.</div>`;
-    h += `<div class="row"><button data-act="stop" data-army="${a.id}" class="btn">Halt</button> <button data-act="disband" data-army="${a.id}" class="btn"${a.at === null || st.cities[a.at].owner !== a.owner || a.fighting.length ? ' disabled' : ''}>Disband into city</button></div>`;
+    h += `<div class="row"><button data-act="stop" data-army="${a.id}" class="btn">Halt</button> <button data-act="disband" data-army="${a.id}" class="btn"${a.at === null || st.cities[a.at].owner !== a.owner || a.fighting.length ? ' disabled' : ''}>Disband into city</button>${info(TIPS.armyHelp)}</div>`;
     return h;
   }
 
@@ -198,5 +222,5 @@ VM.Panels = (function () {
     if (h !== lastHTML && !(document.activeElement && panel.contains(document.activeElement) && (document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'INPUT') && h && lastHTML)) { panel.innerHTML = h; lastHTML = h; }
   }
 
-  return { init, update, toast };
+  return { init, update, toast, T, info, TIPS, traitSpan, esc, TRAIT_TIP };
 })();

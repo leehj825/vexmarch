@@ -28,6 +28,7 @@ VM.Sheets = (function () {
     lastHTML = ''; return r;
   }
 
+  const STAT = (label, tip) => VM.Panels.T(label, tip);
   function onClick(e) {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const d = b.dataset;
@@ -65,14 +66,14 @@ VM.Sheets = (function () {
     const cities = st.cities.filter(c => c.owner === me);
     for (const o of mine) {
       const busy = o.role !== 'idle' || o.travel || o.searching, since = st.time - o.gift;
-      h += `<div class="card2"><div class="row between"><b>${o.name}</b><span class="dim">${o.trait}</span></div>`;
+      h += `<div class="card2"><div class="row between"><b>${o.name}</b><span class="dim">${VM.Panels.traitSpan(o.trait)}</span></div>`;
       const info = VM.Story && st.story ? VM.Story.officerInfo(o) : null;
       if (info) {
         h += `<div class="row dim">${VM.Story.tx(info.role)}. ${VM.Story.tx(info.bio)}</div>`;
         const ties = VM.Story.tiesView(st, o); if (ties.length) h += `<div class="row dim">` + ties.map(t => `${VM.Story.tx(t.label)}: ${VM.Story.tx(t.who)}`).join(' · ') + `</div>`;
       }
-      h += `<div class="row dim">Cmd ${o.command} · Might ${o.might} · Pol ${o.politics} · Int ${o.intellect} · ${VM.War.abilityOf(o)}</div>`;
-      h += `<div class="row">Loyalty <b>${Math.round(o.loyalty)}</b>${bar(o.loyalty / 100, o.loyalty < VM.CFG.OFFICERS.warnBelow ? 'low' : '')}</div>`;
+      h += `<div class="row dim">${STAT('Cmd', 'Command: how well they lead an army. It adds to the army\'s strength.')} ${o.command} · ${STAT('Might', 'Might: personal strength. Decides who wins a duel and how hard a charge hits.')} ${o.might} · ${STAT('Pol', 'Politics: how well they govern a city. A good governor earns more and keeps order.')} ${o.politics} · ${STAT('Int', 'Intellect: cunning. Helps with fire attacks and with finding wanderers.')} ${o.intellect} · ${VM.War.abilityOf(o)}</div>`;
+      h += `<div class="row">${VM.Panels.T('Loyalty', VM.Panels.TIPS.loyalty)} <b>${Math.round(o.loyalty)}</b>${bar(o.loyalty / 100, o.loyalty < VM.CFG.OFFICERS.warnBelow ? 'low' : '')}</div>`;
       h += `<div class="row dim">${statusOf(o)}</div><div class="row">`;
       h += `<button data-act="gift" data-o="${o.id}" class="btn sm"${since < VM.CFG.OFFICERS.giftCooldown || fac.gold < VM.CFG.OFFICERS.giftCost ? ' disabled' : ''}>Gift ${VM.CFG.OFFICERS.giftCost}g</button> `;
       if (o.role === 'idle' && !o.travel && !o.searching && o.army === null) {

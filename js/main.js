@@ -98,7 +98,7 @@
   document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
   VM.City3D.init(document.getElementById('city3d'), ui);
   VM.UIPrefs.apply(); VM.I18N.start();
-  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Walk.init(ui); VM.DiploUI.init(ui); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
+  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.Walk.init(ui); VM.DiploUI.init(ui); VM.Tips.init(); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
   addEventListener('pointerdown', () => VM.Audio.init(), { once: true }); addEventListener('keydown', () => VM.Audio.init(), { once: true });
   document.getElementById('hud').style.visibility = 'hidden';
   VM.Title.roll(false); VM.Title.show();

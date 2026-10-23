@@ -53,7 +53,7 @@ VM.I18N = (function () {
     return null;
   }
 
-  const ATTRS = ['title', 'placeholder', 'aria-label'];
+  const ATTRS = ['title', 'placeholder', 'aria-label', 'data-tip'];
   function node(n) {
     if (n.nodeType === 3) {
       const v = n.data; if (done.get(n) === v) return;
