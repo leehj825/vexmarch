@@ -195,4 +195,23 @@ test('AI-vs-AI: diplomacy happens, state stays sane for five years', () => {
   console.log(`       (pacts ${pacts}, merges ${merges}, breaks ${breaks})`);
 });
 
+test('ask for help: an ally sends its idle armies to a threatened city, then goes back to its own orders; no help without a threat', () => {
+  const s = world(); VM.Diplo.ensure(s).allies.push({ a: 1, b: 2, since: 0 });
+  assert(!ex(s, 1, { type: 'askAid' }).ok, 'nothing threatens us yet');
+  const mine = s.cities.find(c => c.owner === 1), helper = army(s, 2, s.cities[capOf(s, 2)].id, { infantry: 60 });
+  mine.besieged = true;
+  const r = ex(s, 1, { type: 'askAid' }); assert(r.ok && r.sent === 1 && r.city === mine.id, JSON.stringify(r));
+  assert(helper.aid && helper.aid.city === mine.id && helper.dest === mine.id, 'the army is on its way');
+  assert(!ex(s, 1, { type: 'askAid' }).ok, 'cool-down');
+  mine.besieged = false; run(s, 3); assert(helper.aid, 'still helping');
+  run(s, VM.CFG.DIPLO.aidDays + 5); assert(!helper.aid && helper.order !== 'hold', 'back to its own orders');
+});
+
+test('an AI ally helps a partner under siege on its own', () => {
+  const s = world(); s.aiOn = true; VM.Diplo.ensure(s).allies.push({ a: 1, b: 2, since: 0 });
+  const mine = s.cities.find(c => c.owner === 1), helper = army(s, 2, s.cities[capOf(s, 2)].id, { infantry: 60 });
+  army(s, 3, mine.id, { infantry: 200 }); run(s, 3);
+  assert(helper.aid && helper.aid.for === 1, 'sent without being asked');
+});
+
 console.log(`${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);

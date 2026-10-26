@@ -105,6 +105,7 @@ VM.Commands = (function () {
     giftOfficer(state, cmd) { return VM.Officers.gift(state, cmd.faction, cmd.officer); },
     proposeAlliance(state, cmd) { return VM.Diplo.proposeAlliance(state, cmd.faction, cmd.to); },
     breakAlliance(state, cmd) { return VM.Diplo.breakAlliance(state, cmd.faction); },
+    askAid(state, cmd) { return VM.Diplo.askAid(state, cmd.faction); },
     giftFaction(state, cmd) { return VM.Diplo.gift(state, cmd.faction, cmd.to, cmd.gold); },
     proposeMerge(state, cmd) { return VM.Diplo.proposeMerge(state, cmd.faction, cmd.to); },
     answerOffer(state, cmd) { return VM.Diplo.answerOffer(state, cmd.faction, cmd.offer, !!cmd.accept); },

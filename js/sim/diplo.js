@@ -131,6 +131,30 @@ VM.Diplo = (function () {
     return { ok: true };
   }
 
+  // ---- help from an ally: its idle armies march to one of our threatened cities and stay there a while ----
+  const threatened = (state, f) => state.cities.filter(c => c.owner === f && (c.besieged || c.contested));
+  const aiding = (state, a) => !!a.aid && a.aid.until > state.time;
+  function sendAid(state, helper, needy) {
+    const p = pactOf(state, helper); if (!p || (p.a !== needy && p.b !== needy)) return fail('no alliance');
+    const d = ensure(state), ck = 'aid' + needy; if ((d.cool[ck] || 0) > state.time) return fail('they were asked not long ago');
+    const hot = threatened(state, needy)[0]; if (!hot) return fail('nothing threatens you');
+    const hc = state.cities[state.factions[helper].capital]; if (hc && hc.owner === helper && hc.besieged) return fail('they cannot spare anyone');
+    if (op(state, helper, needy) < D().aidOpinion) return fail('they do not trust you enough');
+    const free = state.armies.filter(a => a.owner === helper && !a.routed && !a.fighting.length && !a.rest && a.morale >= D().aidMorale && !aiding(state, a) && VM.Armies.sizeOf(a) > 0);
+    free.forEach(a => { a._d = a.at === null ? Infinity : VM.Armies.distance(state, a.at, hot.id); });
+    free.sort((x, y) => x._d - y._d || x.id - y.id); free.forEach(a => { delete a._d; });
+    const sent = free.slice(0, D().aidArmies); if (!sent.length) return fail('they have no army to spare');
+    for (const a of sent) { a.aid = { city: hot.id, until: state.time + D().aidDays, for: needy }; a.order = 'hold'; VM.Armies.move(state, a, hot.id); }
+    d.cool[ck] = state.time + D().aidCool;
+    VM.Eco.pushEvent(state, { type: 'aid', owner: needy, from: helper, city: hot.id, armies: sent.length });
+    log(state, `${state.factions[helper].name} sent ${sent.length} ${sent.length > 1 ? 'armies' : 'army'} to help ${state.factions[needy].name}`, 'aid', helper, needy);
+    return { ok: true, sent: sent.length, city: hot.id };
+  }
+  function askAid(state, needy) { const h = allyOf(state, needy); return h ? sendAid(state, h, needy) : fail('you have no ally'); }
+  function endAid(state) {                                              // the help ends: the army goes back to its own standing orders
+    for (const a of state.armies) if (a.aid && a.aid.until <= state.time) { a.aid = null; if (a.order === 'hold') a.order = 'defend'; }
+  }
+
   // ---- merge ----
   function canMerge(state, strong, weak) {
     if (!live(state, strong) || !live(state, weak) || strong === weak) return 'no such faction';
@@ -209,7 +233,11 @@ VM.Diplo = (function () {
     for (const f in d.trust) d.trust[f] = Math.min(0, d.trust[f] + C.trustHeal * dd);
     for (const p of d.allies) { const up = (x, y) => { if (op(state, x, y) < C.driftMax) addOp(state, x, y, C.drift * dd + C.decay * dd); }; up(p.a, p.b); up(p.b, p.a); }
     if (d.offers.length) d.offers = d.offers.filter(o => o.until > state.time);
+    endAid(state);
     if (state.over || !state.aiOn) return;
+    for (const p of d.allies.slice()) {                                  // an AI ally comes to the help of a partner whose city is under threat
+      for (const [h, n] of [[p.a, p.b], [p.b, p.a]]) { const hf = state.factions[h]; if (hf && hf.ai && (h !== state.player || state.aiAll) && live(state, n)) sendAid(state, h, n); }
+    }
     for (const f of state.factions) {
       if (f.neutral || !f.alive || !f.ai || (f.id === state.player && !state.aiAll)) continue;
       if (f.ai.dnext === undefined) f.ai.dnext = f.id * 2.5 + C.aiEvery;
@@ -248,5 +276,5 @@ VM.Diplo = (function () {
   const d0 = state => ensure(state);
 
   return { ensure, allyOf, allied, friendly, hostile, pactOf, op, addOp, trust, power, leaderOf, traitOf, allianceScore, survival, canMerge, whyNot,
-    proposeAlliance, breakAlliance, gift, proposeMerge, doMerge, answerOffer, onCapture, drop, step, think, storyOpinion };
+    proposeAlliance, sendAid, askAid, endAid, aiding, breakAlliance, gift, proposeMerge, doMerge, answerOffer, onCapture, drop, step, think, storyOpinion };
 })();

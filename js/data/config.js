@@ -129,6 +129,7 @@ VM.CFG = {
     allyAt: 25, mergeAt: 50, mergeRatio: 3, mergeCool: 60, refuseCool: 30, mergeRefuseCool: 60, breakCool: 90, offerDays: 20,
     decay: 0.15, drift: 0.1, driftMax: 60, trustHeal: 0.05, breakTrust: -30, breakOpinion: -30, breakOpinionAlly: -60, captureOpinion: -15,
     giftSmall: 100, giftBig: 300, giftOpinion: 4, giftEvery: 10, aiEvery: 12,
+    aidDays: 40, aidCool: 30, aidArmies: 2, aidMorale: 50, aidOpinion: 0,      // an ally sends up to aidArmies armies to a threatened city and keeps them there aidDays
     betrayAge: 90, betrayRatio: 3, betrayShare: 0.45, betrayLeft: 2, popWeight: 0.1,
     mergeTrait: { Cautious: 20, Greedy: 10, Schemer: 10, Loyal: 0, Rash: -30, Brave: -35, none: 0 }
   },

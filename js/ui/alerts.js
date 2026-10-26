@@ -52,6 +52,7 @@ VM.Alerts = (function () {
       case 'arrived': return mine ? spec(`${on(ev.officer)} arrived in ${N[ev.city].name}`, 'info', false, ev.city, false) : null;
       case 'diploOffer': return ev.owner === me ? spec(ev.kind === 'alliance' ? `${nm(ev.from)} offers you an alliance` : `${nm(ev.from)} asks you to bend the knee and join them`, 'diplo', true, null) : null;
       case 'allied': return (ev.a === me || ev.b === me) ? spec(`You are now allied with ${nm(ev.a === me ? ev.b : ev.a)}`, 'info', false, null) : spec(`${nm(ev.a)} and ${nm(ev.b)} have allied`, 'info', false, null, false);
+      case 'aid': return ev.owner === me ? spec(`${nm(ev.from)} sends ${ev.armies > 1 ? 'armies' : 'an army'} to help ${N[ev.city].name}`, 'diplo', false, ev.city) : (ev.from === me ? spec(`Your ${ev.armies > 1 ? 'armies go' : 'army goes'} to help ${nm(ev.owner)} at ${N[ev.city].name}`, 'info', false, ev.city) : null);
       case 'allyBroken': return ev.other === me ? spec(`${nm(ev.by)} has broken the pact with you!`, 'diplo', true, null) : (ev.by === me ? spec(`You broke the pact with ${nm(ev.other)}`, 'info', false, null) : spec(`${nm(ev.by)} broke the pact with ${nm(ev.other)}`, 'info', false, null, false));
       case 'merged': return ev.from === me ? null : spec(`${nm(ev.from)} has joined ${nm(ev.owner)}`, 'info', false, null, ev.owner === me);
       case 'proposal': {

@@ -38,7 +38,8 @@ VM.DiploUI = (function () {
       h += `<div class="ir stats">${I.stat('house', cities, 'Cities')}<span class="st" data-tip="${esc('Strength\n' + TIPS.strength + '\n' + num(D.power(st, f.id)))}">${I.svg('helmet')}${I.meter(D.power(st, f.id) / top)}<b>${num(D.power(st, f.id))}</b></span>`
         + `<span class="st" data-tip="${esc('Opinion of you\n' + TIPS.opinion + '\n' + feel(o))}">${I.svg(mood)}<b>${Math.round(o)}</b></span></div><div class="ir">`;
       if (isAlly) h += ui.confirmBreak === f.id ? `${I.t('unlink', 'Break the pact?', 'You will lose trust.', 'bad', true)}${I.btn('all', 'Yes, break it', { 'data-act': 'dBreakYes' }, 'sm', undefined, true)}${I.btn('none', 'No', { 'data-act': 'dBreakNo' }, 'sm', undefined, true)}` : I.btn('unlink', 'Break the pact', { 'data-act': 'dBreak', 'data-f': f.id }, 'sm', TIPS.breakIt, true);
-      else h += I.btn('handshake', 'Propose alliance', Object.assign({ 'data-act': 'dAlly', 'data-f': f.id }, why ? { disabled: '' } : {}), 'sm', why ? why.charAt(0).toUpperCase() + why.slice(1) : TIPS.ally, true);
+      if (isAlly) h += I.btn('shield', 'Ask for help', { 'data-act': 'dAid', 'data-f': f.id }, 'sm', 'Your ally sends its idle armies to one of your cities that is under attack.', true);
+      if (!isAlly) h += I.btn('handshake', 'Propose alliance', Object.assign({ 'data-act': 'dAlly', 'data-f': f.id }, why ? { disabled: '' } : {}), 'sm', why ? why.charAt(0).toUpperCase() + why.slice(1) : TIPS.ally, true);
       h += `<button class="ibtn sm" data-act="dGift" data-f="${f.id}" data-tip="${esc('Gift\n' + TIPS.gift)}"${st.factions[me].gold < C.giftSmall ? ' disabled' : ''}>${I.svg('gift')}${I.w('Gift')}${I.svg('gold')}<b>${C.giftSmall}</b></button>`;
       if (!merge) h += I.btn('scroll', 'Offer terms', { 'data-act': 'dMerge', 'data-f': f.id }, 'sm', TIPS.merge, true);
       h += `</div></div>`;
@@ -55,6 +56,7 @@ VM.DiploUI = (function () {
     const st = ui.state, f = +d.f, name = id => st.factions[id].name;
     switch (d.act) {
       case 'dAlly': { const r = cmd({ type: 'proposeAlliance', to: f }); if (r.ok) VM.Panels.toast(r.accepted ? `${name(f)} accepts the alliance` : `${name(f)} declines: ` + (WHY[r.why] || 'they see no need for it')); break; }
+      case 'dAid': { const r = cmd({ type: 'askAid' }); if (r.ok) VM.Panels.toast(`${name(f)} sends ${r.sent > 1 ? r.sent + ' armies' : 'an army'} to ${st.cities[r.city].name}`); else VM.Panels.toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); break; }
       case 'dGift': { const r = cmd({ type: 'giftFaction', to: f, gold: VM.CFG.DIPLO.giftSmall }); if (r.ok) VM.Panels.toast(`${name(f)} thanks you`); break; }
       case 'dMerge': { const r = cmd({ type: 'proposeMerge', to: f }); if (r.ok) VM.Panels.toast(r.accepted ? `${name(f)} joins you` : `${name(f)} will fight on`); break; }
       case 'dBreak': ui.confirmBreak = f; break;

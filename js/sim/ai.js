@@ -12,7 +12,7 @@ VM.AI = (function () {
   const dist = (state, a, b) => VM.Armies.distance(state, a, b);
   const originOf = a => a.at !== null ? a.at : a.edge.from;
   const mineOf = (state, f) => state.cities.filter(c => c.owner === f.id);
-  const armiesOf = (state, f) => state.armies.filter(a => a.owner === f.id);
+  const armiesOf = (state, f) => state.armies.filter(a => a.owner === f.id && !VM.Diplo.aiding(state, a));      // an army sent to help an ally is not ours to command for a while
   const idleOfficers = (state, f) => state.officers.filter(o => o.owner === f.id && o.role === 'idle' && o.army === null && !o.travel && !o.searching && o.loc !== null);
 
   function nearestOwn(state, f, node) { return VM.War.nearestOwnCity(state, node, f.id, -1); }

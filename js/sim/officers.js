@@ -264,6 +264,7 @@ VM.Officers = (function () {
     const s = a.supply, here = a.at !== null ? state.cities[a.at] : null;
     if (here && here.owner === a.owner) decideSortie(state, a, here);
     if (a.order === 'hold') return;
+    if (VM.Diplo.aiding(state, a) && a.at === a.aid.city) return;           // sent to help an ally: it stays
     const weary = !!VM.War.retreatReason(state, a);                    // the food would run out, or the men have lost heart (how far they are pushed depends on the officer)
     if (!weary && !a.rest && here && VM.Diplo.hostile(state, here.owner, a.owner) && VM.War.sieging(a)) return;     // a hostile city in the way is being fought: stay until it falls
     if (weary || a.rest) {                                            // fall back and recover
