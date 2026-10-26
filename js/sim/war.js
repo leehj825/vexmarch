@@ -160,6 +160,20 @@ VM.War = (function () {
     return null;
   }
 
+  // How an attack by army `a` on `city` would go, from what the attacker can see: its strength against the garrison, the defending armies in the city, the wall and the
+  // enemy armies near enough to join in. ratio >= 1.8 is what the AI wants before it attacks. With fog the armies out of sight are not counted.
+  function forecast(state, a, city) {
+    const pool = {}; for (const src of [city.garrison].concat(state.armies.filter(h => h.owner === city.owner && h.at === city.id).map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
+    const mine = power(a.troops, pool, roleOpts(state, a)) * armyMods(state, a);
+    const wall = city.wallHp > 0 ? city.wallHp * ((a.troops.siege || 0) > 0 ? 0.02 : 0.08) : 0;
+    const theirs = Math.max(1, power(pool, a.troops) * garrisonMods(state, city)) + wall;
+    const src = VM.Fog.on(state) ? VM.Fog.sources(state, a.owner) : null;
+    let help = 0;
+    for (const e of state.armies) if (e.owner === city.owner && e.at !== city.id && !e.routed && VM.Armies.distance(state, VM.Armies.zoneOf(e), city.id) <= 220 && VM.Fog.seesArmy(state, a.owner, e, src)) help += power(e.troops, a.troops);
+    const ratio = mine / (theirs + help);
+    return { ratio, verdict: ratio >= 3 ? 'overwhelming' : ratio >= 1.8 ? 'favourable' : ratio >= 1 ? 'even' : ratio >= 0.6 ? 'risky' : 'hopeless', help: help > 0 };
+  }
+
   // ---- Roles in the field: infantry hold the line, archers shoot from behind it, cavalry charge, fall back and swing round, engines stay out of it ----
   const cavPhase = (state, a) => ((state.time + a.id * 1.7) % 8) / 8;
   function flanker(state, a) { const o = state.officers[a.officer]; return !!o && (o.trait === 'Rash' || o.trait === 'Brave' || (o.command >= 55 && o.trait !== 'Cautious')); }
@@ -404,5 +418,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, pressing, total, updateZones, nearestOwnCity, checkOver };
+  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, pressing, forecast, total, updateZones, nearestOwnCity, checkOver };
 })();

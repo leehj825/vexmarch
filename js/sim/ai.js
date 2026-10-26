@@ -206,13 +206,14 @@ VM.AI = (function () {
     const probe = { troops: {}, owner: f.id, at: null, morale: 100, officer: ready[0].officer, edge: { prog: 0, len: 1, from: ready[0].at === null ? 0 : ready[0].at, to: 0 }, buff: null };
     for (const a of ready) for (const k in a.troops) probe.troops[k] = (probe.troops[k] || 0) + a.troops[k];
     let best = null, bs = -Infinity, goal = null, gs = -Infinity;
+    const fogSrc = VM.Fog.on(state) ? VM.Fog.sources(state, f.id) : null;
     const rivals = {}; for (const c of state.cities) if (c.owner > 0 && !VM.Diplo.friendly(state, c.owner, f.id)) rivals[c.owner] = (rivals[c.owner] || 0) + 1;
     for (const c of state.cities) {
-      if (VM.Diplo.friendly(state, c.owner, f.id)) continue;
+      if (VM.Diplo.friendly(state, c.owner, f.id) || !VM.Fog.known(state, f.id, c.id)) continue;           // with fog, only places the house has seen
       const near = nearestOwn(state, f, c.id), d = near >= 0 ? dist(state, near, c.id) : Infinity;
       if (d > D.reach) continue;
       const g = c.garrison, mine = VM.War.power(probe.troops, g), theirs = Math.max(1, VM.War.power(g, probe.troops) * VM.War.garrisonMods(state, c)) + (c.wallHp > 0 ? c.wallHp * ((probe.troops.siege || 0) > 0 ? 0.02 : 0.08) : 0);
-      let help = 0; for (const e of state.armies) if (e.owner === c.owner && !e.routed && dist(state, VM.Armies.zoneOf(e), c.id) <= 220) help += VM.War.power(e.troops, probe.troops);
+      let help = 0; for (const e of state.armies) if (e.owner === c.owner && !e.routed && dist(state, VM.Armies.zoneOf(e), c.id) <= 220 && VM.Fog.seesArmy(state, f.id, e, fogSrc)) help += VM.War.power(e.troops, probe.troops);
       const r = mine * (1 + VM.CFG.WAR.cmdBonus * 0.6) / (theirs + help);
       let value = 100 + c.pop / 10 + (c.spec === 'capital' ? 160 : 0) + (c.owner === 0 ? 0 : 25);
       if (c.owner > 0 && rivals[c.owner] <= 2) value += 90;                           // finish a weak rival

@@ -124,6 +124,9 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Fog of war (js/sim/fog.js): how far a city or an army sees, in map units (the map is 1000 x 700); cavalry see further
+  FOG: { city: 260, army: 190, cavalry: 1.4 },
+
   // Diplomacy (docs/DIPLOMACY.md): two states, enemy and ally; a strong faction may offer terms (merge) to a weak one
   DIPLO: {
     allyAt: 25, mergeAt: 50, mergeRatio: 3, mergeCool: 60, refuseCool: 30, mergeRefuseCool: 60, breakCool: 90, offerDays: 20,

@@ -10,6 +10,7 @@ VM.Sim = (function () {
     VM.War.step(state, dd);
     VM.Officers.step(state, dd);
     VM.Diplo.step(state, dd);
+    VM.Fog.update(state);
     VM.AI.step(state);
     VM.Eco.step(state, dd);
     state.time += dd;

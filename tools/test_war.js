@@ -401,5 +401,16 @@ test('breach: an army in a breached city does not retreat or rout on morale, unl
   a.troops.infantry = 3; assert(!VM.War.pressing(s, a), 'too small to press on'); assert(VM.War.retreatReason(s, a), 'a tiny army may still retreat');
 });
 
+test('forecast: a big army against a small garrison is overwhelming and wins; a tiny one is hopeless; relief armies and walls count', () => {
+  const { s, x, c } = siegeWorld(0, 10); c.owner = 2;
+  const big = army(s, 1, x, { infantry: 80 }), small = army(s, 1, x, { infantry: 2 });
+  const fb = VM.War.forecast(s, big, c), fs = VM.War.forecast(s, small, c);
+  assert(fb.verdict === 'overwhelming' && fs.verdict === 'hopeless', fb.verdict + ' ' + fs.verdict + ' ' + fb.ratio + ' ' + fs.ratio);
+  const c2 = siegeWorld(0, 10); c2.c.owner = 2; const a2 = army(c2.s, 1, c2.x, { infantry: 80 });
+  c2.c.buildings.wall = 3; c2.c.wallHp = VM.War.wallMax(c2.c);
+  assert(VM.War.forecast(c2.s, a2, c2.c).ratio < fb.ratio, 'a wall lowers the odds');
+  run(s, 30); assert(c.owner === 1, 'the overwhelming attack took the city');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -2,7 +2,7 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.Title = (function () {
-  let ui, box, count = 5, seed = 1, difficulty = 'normal';
+  let ui, box, count = 5, seed = 1, difficulty = 'normal', fog = false;
   const $ = id => document.getElementById(id);
   const hasSave = () => { try { return !!localStorage.getItem('vexmarch.save'); } catch (e) { return false; } };
 
@@ -10,6 +10,7 @@ VM.Title = (function () {
     if (!keepSeed) seed = (Math.random() * 65535 | 0) + 1;
     const player = ui.state ? ui.state.player : 1;
     ui.setState(VM.Sim.create({ seed, factions: count, player: Math.min(player, count), ai: true, difficulty }));
+    VM.Fog.setOn(ui.state, fog);
     VM.MapView.fit(); render();
   }
 
@@ -20,6 +21,7 @@ VM.Title = (function () {
       return `<button class="fac${f.id === st.player ? ' on' : ''}" data-f="${f.id}"><span class="dot" style="background:${f.color}"></span><b>${f.name}</b><small>capital ${cap} · ${n} nodes</small></button>`;
     }).join('');
     document.querySelectorAll('#countSel button').forEach(b => b.classList.toggle('on', +b.dataset.n === count));
+    $('fogBtn').classList.toggle('on', fog); $('fogBtn').textContent = fog ? 'Fog of war: on' : 'Fog of war: off';
     document.querySelectorAll('#diffSel button').forEach(b => b.classList.toggle('on', b.dataset.d === difficulty));
     $('contBtn').style.display = hasSave() ? '' : 'none';
   }
@@ -29,6 +31,7 @@ VM.Title = (function () {
     $('facList').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { ui.state.player = +b.dataset.f; render(); } });
     $('countSel').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (b) { count = +b.dataset.n; roll(false); } });
     $('diffSel').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { difficulty = b.dataset.d; ui.state.difficulty = difficulty; render(); } });
+    $('fogBtn').addEventListener('click', () => { fog = !fog; VM.Fog.setOn(ui.state, fog); render(); });
     $('rerollBtn').addEventListener('click', () => roll(false));
     $('setTitleBtn').addEventListener('click', () => { ui.sheet = ui.sheet === 'settings' ? null : 'settings'; VM.Sheets.update(); });
     $('campBtn').addEventListener('click', showCampaign);
@@ -66,7 +69,7 @@ VM.Title = (function () {
   }
   function beginCampaign() {
     VM.Audio.init(); VM.Audio.play('horn');
-    ui.setState(VM.Story.create({ player: house, difficulty })); VM.MapView.fit(); $('campaign').classList.remove('on'); ui.start();
+    ui.setState(VM.Story.create({ player: house, difficulty })); VM.Fog.setOn(ui.state, fog); VM.MapView.fit(); $('campaign').classList.remove('on'); ui.start();
   }
 
   function show() { if (ui.state && ui.state.story) roll(false); box.classList.add('on'); render(); $('tutBtn').classList.toggle('pulse', !VM.Tutorial.done()); }

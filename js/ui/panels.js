@@ -127,15 +127,31 @@ VM.Panels = (function () {
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c), here = st.armies.filter(a => a.at === c.id && a.owner === me);
     let h = `<div class="ph"><b>${N.name}</b>${I.t(M.spec[c.spec] || 'house', S.label, '', '', true)}<span class="sub"></span>`
       + detBtn() + hbtn(ui.panelMin ? 'down' : 'up', 'Show or hide the details', { 'data-act': 'panelToggle' }, 'tog');
-    h += ui.cityView === c.id ? `${mine ? hbtn('walk', 'Walk', { 'data-act': 'walk' }, '', true) : ''}${hbtn('back', 'Back to map', { 'data-act': 'backmap' }, '', true)}` : `${hbtn('eye', 'View city', { 'data-act': 'view3d', 'data-city': c.id }, '', true)}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}`;
+    h += ui.cityView === c.id ? `${mine ? hbtn('walk', 'Walk', { 'data-act': 'walk' }, '', true) : ''}${hbtn('back', 'Back to map', { 'data-act': 'backmap' }, '', true)}` : `${mine || VM.Fog.seesCity(st, me, c) ? hbtn('eye', 'View city', { 'data-act': 'view3d', 'data-city': c.id }, '', true) : ''}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}`;
     h += `</div><div class="ir"><span class="dot" style="background:${f.color}"></span><span>${f.name}</span>${mine ? I.t('star', 'You', 'Your city.', '', true) : (VM.Diplo.allied(st, c.owner, me) ? I.t('handshake', 'Ally', 'Allies do not fight each other.', '', true) : '')}`
       + `${c.besieged ? I.t('swords', 'Under siege', 'Enemy armies are at the gates.', 'bad', true) : (c.contested ? I.t('alert', 'Contested', 'Enemy armies stand in its land and none of its own.', 'bad', true) : '')}</div>`;
+    if (!mine && !VM.Fog.seesCity(st, me, c)) {                       // out of sight: only what was last seen
+      const m = VM.Fog.memory(st, me, c.id);
+      return h + `<div class="ir stats">${I.stat('pop', m ? num(m.pop) : '?', 'Population', TIPS.pop)}${I.stat('helmet', m ? num(m.troops) : '?', 'Garrison', TIPS.garrison)}</div><div class="ir">${I.t('eye', m ? 'Last seen day {0}'.replace('{0}', Math.floor(m.t)) : 'Never seen', 'Out of sight. Send an army or take a city nearby to see it.', '', true)}</div>`;
+    }
     h += `<div class="ir stats">${I.stat('pop', `${num(c.pop)}<small class="dim">/${num(s.cap)}</small>`, 'Population', TIPS.pop)}`;
     if (wmax > 0) h += `<span class="st">${I.t('wall', 'Wall', TIPS.wall)}${I.meter(c.wallHp / wmax, 'wall')}<small class="dim">${num(c.wallHp)}</small></span>`;
     h += `${I.stat('helmet', num(VM.Eco.troopsOf(c.garrison)), 'Garrison', TIPS.garrison)}`;
     for (const k of Object.keys(VM.CFG.TROOPS)) if (c.garrison[k] >= 0.5) h += I.stat(M.troop[k], num(c.garrison[k]), VM.CFG.TROOPS[k].label, '', 'dim');
     h += `</div>`;
-    if (!mine) return h + `<div class="ir">${here.length ? I.t('siege', 'Your army is here and will lay siege.', '', '', true) : I.t('info', 'Not yours', TIPS.siegeHere, '', true)}</div>`;
+    if (!mine) {
+      const hostile = VM.Diplo.hostile(st, me, c.owner), mineArmies = st.armies.filter(a => a.owner === me && !a.routed && VM.Armies.sizeOf(a) > 0 && !(a.at === c.id));
+      if (hostile && mineArmies.length) {                                // what an attack by each of your armies would come to
+        const VERD = { overwhelming: ['star', 'Overwhelming', 'good'], favourable: ['trend', 'Favourable', 'good'], even: ['swords', 'Even', ''], risky: ['alert', 'Risky', 'bad'], hopeless: ['skull', 'Hopeless', 'bad'] };
+        mineArmies.sort((x, y) => VM.Armies.distance(st, VM.Armies.zoneOf(x), c.id) - VM.Armies.distance(st, VM.Armies.zoneOf(y), c.id));
+        h += `<div class="sec">${I.t('swords', 'If attacked by', 'A forecast from the strengths on both sides: the attacker, the garrison and defending armies, the wall and enemy armies close by. The fight itself still has surprises.', '', true)}</div>`;
+        for (const a of mineArmies.slice(0, 3)) {
+          const f2 = VM.War.forecast(st, a, c), v = VERD[f2.verdict];
+          h += `<div class="ir">${I.stat('helmet', num(VM.Armies.sizeOf(a)), st.officers[a.officer].name, '')}${I.t(v[0], v[1], 'Strength ratio {0}'.replace('{0}', f2.ratio.toFixed(1)) + (f2.help ? ' (relief armies counted)' : ''), v[2], true)}</div>`;
+        }
+      }
+      return h + `<div class="ir">${here.length ? I.t('siege', 'Your army is here and will lay siege.', '', '', true) : I.t('info', 'Not yours', TIPS.siegeHere, '', true)}</div>`;
+    }
     h += `<div class="ir stats">${I.stat('trend', s.prosperity.toFixed(2), 'Prosperity', TIPS.prosperity)}${I.stat('shield', s.security.toFixed(2), 'Security', TIPS.security)}`
       + `${I.stat('gold', sgn(s.gold - s.upkeep) + '<small class="dim">/d</small>', 'Gold', TIPS.gold)}`
       + `<span class="st" data-tip="${tipOf('Food', TIPS.food + '\n' + '{0} made, {1} eaten'.replace('{0}', num(s.foodProd)).replace('{1}', num(s.foodCons)))}">${I.svg('food')}<small class="sl">Food</small><b>${sgn(s.foodProd - s.foodCons)}</b><small class="dim">/d</small></span></div>`;
