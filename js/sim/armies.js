@@ -223,6 +223,12 @@ VM.Armies = (function () {
     }
   }
 
+  // An army with nothing to do: standing in a city with no march ordered, no standing order, not in a fight, not besieging, not routed, not sent to help an ally
+  function idleOf(state, owner) {
+    return state.armies.filter(a => a.owner === owner && a.at !== null && !a.path.length && a.dest === null && a.order === 'hold' && !a.routed && !a.fighting.length && !a.reserve
+      && !a.aid && !a.rest && !VM.Diplo.hostile(state, owner, state.cities[a.at].owner));
+  }
+
   // Route the army's food would travel from its home city (drawn as the supply line).
   function supplyPath(state, army) {
     const o = army.at !== null ? army.at
@@ -230,5 +236,5 @@ VM.Armies = (function () {
     return path(state, o, army.home);
   }
 
-  return { form, spawn, merge, reinforce, transfer, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
+  return { form, spawn, merge, reinforce, transfer, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, idleOf, supplyPath, roadLen };
 })();

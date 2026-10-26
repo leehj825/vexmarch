@@ -428,5 +428,13 @@ test('front width at a siege: only the three biggest besiegers press the city; t
   assert(c.wallHp < hp0, 'the wall is hit'); assert(list.slice(0, 3).every((a, i) => size(a) < sizes[i]), 'the three in front are hurt by the garrison'); assert(list.slice(3).every((a, i) => size(a) === sizes[3 + i]), 'the two waiting are not');
 });
 
+test('idle armies: one standing in a city with no orders counts; marching, defending, fighting or besieging ones do not', () => {
+  const s = world(), mine = s.cities.find(c => c.owner === 1), a = army(s, 1, mine.id, { infantry: 20 }), b = army(s, 1, mine.id, { infantry: 20 });
+  assert.strictEqual(VM.Armies.idleOf(s, 1).length, 2);
+  b.order = 'defend'; assert.deepStrictEqual(VM.Armies.idleOf(s, 1).map(x => x.id), [a.id], 'a standing order is an order');
+  VM.Armies.move(s, a, s.cities.find(c => c.owner === 1 && c.id !== mine.id).id); assert.strictEqual(VM.Armies.idleOf(s, 1).length, 0, 'a march is an order');
+  const x = neutralNode(s); s.cities[x].garrison = T({ infantry: 500 }); const c = army(s, 1, x, { infantry: 30 }); run(s, 0.25); assert(!VM.Armies.idleOf(s, 1).includes(c), 'besieging is not idle');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

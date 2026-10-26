@@ -12,6 +12,11 @@ VM.Sheets = (function () {
     box.addEventListener('click', onClick);
     box.addEventListener('change', e => { if (e.target.dataset.pause) VM.Alerts.setPause(e.target.dataset.pause, e.target.checked); });
     $('offBtn').addEventListener('click', () => toggle('officers'));
+    $('idleBtn').addEventListener('click', () => {                          // jump to the next army with no orders
+      const st = ui.state, list = VM.Armies.idleOf(st, st.player).sort((a, b) => a.id - b.id); if (!list.length) { VM.Panels.toast('Every army has orders'); return; }
+      const next = list.find(a => a.id > (ui.idleLast || 0)) || list[0]; ui.idleLast = next.id;
+      ui.selectedCity = -1; ui.selectedArmy = next.id; ui.sheet = null; ui.centerOn(next.at);
+    });
     $('dipBtn').addEventListener('click', () => toggle('diplo'));
     $('alertBtn').addEventListener('click', () => toggle('alerts'));
     $('setBtn').addEventListener('click', () => toggle('settings'));
@@ -130,6 +135,7 @@ VM.Sheets = (function () {
     const db = $('dipBtn'), dn = VM.DiploUI.pending(), badge = c => c ? `<i class="badge">${c}</i>` : '';
     const dh = VM.Icons.svg('handshake') + VM.Icons.w('Diplomacy', 'tbw') + badge(dn); if (db.dataset.h !== dh) { db.dataset.h = dh; db.innerHTML = dh; } db.classList.toggle('hot', dn > 0); db.classList.toggle('on', ui.sheet === 'diplo');
     const ab = $('alertBtn'), ah = VM.Icons.svg('bell') + VM.Icons.w('Alerts', 'tbw') + badge(n); if (ab.dataset.h !== ah) { ab.dataset.h = ah; ab.innerHTML = ah; } ab.classList.toggle('hot', n > 0);
+    const ib = $('idleBtn'), idn = VM.Armies.idleOf(st, st.player).length, ih = VM.Icons.svg('flag') + VM.Icons.w('Idle', 'tbw') + badge(idn); if (ib.dataset.h !== ih) { ib.dataset.h = ih; ib.innerHTML = ih; } ib.classList.toggle('hot', idn > 0);
     const oh = VM.Icons.svg('pop') + VM.Icons.w('Officers', 'tbw'); if ($('offBtn').dataset.h !== oh) { $('offBtn').dataset.h = oh; $('offBtn').innerHTML = oh; }
     $('offBtn').classList.toggle('on', ui.sheet === 'officers'); ab.classList.toggle('on', ui.sheet === 'alerts'); $('setBtn').classList.toggle('on', ui.sheet === 'settings');
     box.classList.toggle('open', !!ui.sheet);
