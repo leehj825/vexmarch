@@ -199,5 +199,34 @@ var VM = globalThis.VM = globalThis.VM || {};
     6: { days: 60, need: { specs: ['horse'], names: ['Vexholm'] }, name: L('The Rider King', '기수의 왕'), text: L('Hold Vexholm and every horse-land for 60 days.', '벡스홀름과 모든 말 방목지를 60일 동안 지킨다.') }
   };
 
-  VM.StoryData = { TRAITS, VICTORIES, PRINCE, TIE_LABEL, OPENINGS, BEATS, NAMES_KO, HISTORY, FACTIONS, PLACES, CUT, DIAG, OFFICERS, TIES, ENDINGS, DEFEAT, L };
+  // ---------------------------------------------------------------- the ruler's decisions: a page with two choices. fx: gold, food, honor (the ruler's stat, 0 to 100), loyalty (all your officers), opinion (all rivals of you), rival (the house named in the page)
+  const C = (label, result, fx) => ({ label, result, fx });
+  const DECISIONS = {
+    festival: { title: L('The Harvest Feast', '추수 잔치'), text: L('The first harvest of the war is in, thinner than the old ones. Your steward asks whether the feast of the fields should be held as always, in the open, with the whole town at the long tables, or whether the grain should go into the stores.', '전쟁 중의 첫 수확이 들어왔다. 예전보다 빈약하다. 집사가 묻는다. 늘 하던 대로 온 마을이 긴 식탁에 앉는 들판의 잔치를 열 것인가, 아니면 곡식을 곳간에 넣을 것인가.'), choices: [
+      C(L('Hold the feast', '잔치를 연다'), L('The tables are full and the songs last until dawn. Your officers remember who set them.', '식탁은 가득 차고 노래는 새벽까지 이어진다. 장수들은 누가 그 자리를 마련했는지 기억한다.'), { gold: -200, loyalty: 4, honor: 4 }),
+      C(L('Fill the stores', '곳간을 채운다'), L('The granaries close with a good sound. Nobody sings, but nobody will go hungry in February.', '곳간 문이 든든한 소리를 내며 닫힌다. 노래는 없지만 2월에 굶을 사람도 없다.'), { food: 300 })] },
+    deserters: { title: L('Deserters', '탈영병'), text: L('Eleven men walked away from the line in the night and were caught at the river. They say they have fields to plough and that nobody told them the war would be this long. The captain waits for your word.', '열한 명이 밤중에 대열을 떠났다가 강가에서 붙잡혔다. 그들은 갈아야 할 밭이 있고 전쟁이 이렇게 길어질 줄은 아무도 말해 주지 않았다고 한다. 대장이 당신의 명령을 기다린다.'), choices: [
+      C(L('Pardon them', '용서한다'), L('They go back to the line with their heads down. The rest of the army notices that you can be spoken to.', '그들은 고개를 숙이고 대열로 돌아간다. 나머지 군대는 당신에게 말을 건넬 수 있다는 것을 알아챈다.'), { honor: 6, loyalty: 3 }),
+      C(L('Make an example', '본보기를 보인다'), L('The line stays straight after that. Nobody speaks of it at the fires.', '그 뒤로 대열은 곧게 유지된다. 모닥불가에서는 아무도 그 일을 입에 올리지 않는다.'), { honor: -8, loyalty: -3 })] },
+    refugees: { title: L('The Road of Refugees', '피난민의 길'), text: L('The people of the city you took are on the road with what they could carry. Some have kin on your side of the border, and some have only their children. They stop at your gate and wait.', '당신이 빼앗은 도시의 사람들이 챙길 수 있는 것만 들고 길 위에 나와 있다. 일부는 당신 쪽 국경에 친척이 있고, 일부는 아이들뿐이다. 그들이 성문 앞에 멈춰 서서 기다린다.'), choices: [
+      C(L('Open the gate', '성문을 연다'), L('They are fed and housed, and the story travels faster than the refugees did.', '그들은 먹고 쉴 곳을 얻고, 그 이야기는 피난민보다 빨리 퍼진다.'), { food: -150, honor: 7, opinion: 3 }),
+      C(L('Turn them away', '돌려보낸다'), L('The gate stays shut. The stores stay full. The road is long.', '성문은 닫힌 채다. 곳간은 그대로 가득하다. 길은 멀다.'), { honor: -6, opinion: -3 })] },
+    envoy: { title: L('An Envoy with Gifts', '선물을 든 사절'), text: L('An envoy of {rival} arrives with a chest and a smile. His master would like the border between your lands to be quiet for a while, and is willing to say so with gold.', '{rival}의 사절이 상자와 미소를 들고 도착한다. 그의 주군은 한동안 두 땅의 국경이 조용하기를 바라며, 그 뜻을 금으로 말할 준비가 되어 있다.'), choices: [
+      C(L('Take the gold', '금을 받는다'), L('The chest is heavy and the envoy is pleased. Both of you know how long this lasts.', '상자는 무겁고 사절은 만족한다. 이것이 얼마나 갈지는 두 사람 모두 안다.'), { gold: 300, honor: -4, rival: 10 }),
+      C(L('Send him home', '돌려보낸다'), L('He leaves with the chest. His master will remember the courtesy, and the refusal.', '그는 상자를 들고 떠난다. 그의 주군은 그 예의와 거절을 둘 다 기억할 것이다.'), { honor: 5, rival: -5 })] },
+    taxes: { title: L('The Weight of Taxes', '세금의 무게'), text: L('A delegation of elders from the villages asks for a year\'s relief from the levy. The treasurer says the army cannot be fed on speeches. The elders say neither can the villages.', '마을 원로들이 일 년 동안 징세를 면해 달라고 청한다. 재무관은 연설로는 군대를 먹일 수 없다고 한다. 원로들은 마을도 마찬가지라고 한다.'), choices: [
+      C(L('Ease the levy', '징세를 줄인다'), L('The elders bow lower than they need to. The treasurer does not speak to you for a week.', '원로들은 필요 이상으로 깊이 허리를 숙인다. 재무관은 일주일 동안 당신과 말을 섞지 않는다.'), { gold: -250, honor: 8, loyalty: 2 }),
+      C(L('Hold the levy', '징세를 유지한다'), L('The coffers hold. The villages remember.', '금고는 유지된다. 마을들은 기억한다.'), { gold: 100, honor: -6 })] },
+    winter: { title: L('A Hard Winter', '혹독한 겨울'), text: L('The snow came early and stayed. In the villages near your border the stores are low. Your own are not generous, but they are full enough for a hard decision.', '눈이 일찍 와서 머물렀다. 국경 가까운 마을들은 곳간이 비어 간다. 당신의 곳간도 넉넉하지는 않지만 어려운 결정을 내릴 만큼은 차 있다.'), choices: [
+      C(L('Share the stores', '곳간을 나눈다'), L('Carts go out in the snow. In spring, those villages will send their sons to your banner without being asked.', '눈길에 수레가 나간다. 봄이 오면 그 마을들은 청하지 않아도 아들들을 당신의 깃발 아래로 보낼 것이다.'), { food: -300, honor: 8, opinion: 3 }),
+      C(L('Keep them for the army', '군대를 위해 지킨다'), L('The army eats. The villages count their dead in the spring.', '군대는 먹는다. 마을들은 봄에 죽은 이를 센다.'), { honor: -8 })] },
+    funeral: { title: L('The Fallen', '쓰러진 이들'), text: L('One of your officers is dead, and the men are waiting to see what you will do about it. A proper funeral means a day lost, and gold spent on a man who cannot repay it.', '장수 한 명이 죽었고, 병사들은 당신이 어떻게 하는지 지켜보고 있다. 제대로 된 장례는 하루를 잃고, 갚을 수 없는 이에게 금을 쓰는 일이다.'), choices: [
+      C(L('A funeral with honours', '예를 갖춰 장례를 치른다'), L('The banners are lowered and the army stands in rows. Your officers do not forget it.', '깃발이 내려지고 군대가 줄지어 선다. 장수들은 그것을 잊지 않는다.'), { gold: -150, loyalty: 8, honor: 5 }),
+      C(L('Bury him quietly', '조용히 묻는다'), L('A hole, a stone, a name. The war does not wait.', '구덩이 하나, 돌 하나, 이름 하나. 전쟁은 기다려 주지 않는다.'), { honor: -3, loyalty: -2 })] },
+    half: { title: L('Half the Realm', '나라의 절반'), text: L('You hold fifteen places, and people have begun to call your court "the court". A herald asks what title he should use when he reads your name aloud.', '당신은 열다섯 곳을 지키고 있고, 사람들은 당신의 궁정을 그냥 "궁정"이라 부르기 시작했다. 전령이 당신의 이름을 낭독할 때 어떤 칭호를 쓸지 묻는다.'), choices: [
+      C(L('Regent of the Realm', '나라의 섭정'), L('The title is grand, and every rival hears it.', '칭호는 웅장하고, 모든 경쟁자가 그것을 듣는다.'), { honor: -5, opinion: -8 }),
+      C(L('Servant of the Throne', '왕좌의 종'), L('A modest title, and a modest answer from the other houses.', '겸손한 칭호에, 다른 가문들도 겸손한 답을 보낸다.'), { honor: 6, opinion: 5 })] }
+  };
+
+  VM.StoryData = { DECISIONS, TRAITS, VICTORIES, PRINCE, TIE_LABEL, OPENINGS, BEATS, NAMES_KO, HISTORY, FACTIONS, PLACES, CUT, DIAG, OFFICERS, TIES, ENDINGS, DEFEAT, L };
 })();

@@ -97,5 +97,20 @@ test('house gifts: each house has one, only in the campaign; a house wins by its
   assert(t.over && t.over.type === 'lose' && t.over.winner === 6, 'a rival can win that way too');
 });
 
+test('decisions: they come by day and by event, one at a time, with a price; honor moves officer loyalty', () => {
+  const s = VM.Story.create({ player: 1 }); s.story.queue.length = 0; s.story.fired.history = 1;
+  for (const k in D.DECISIONS) { const B = D.DECISIONS[k]; assert(B.choices.length === 2 && B.title.ko && B.text.ko, k); B.choices.forEach(c => assert(c.label.ko && c.result.ko && c.fx, k)); }
+  s.time = 121; s.story.lastDay = -1; VM.Story.step(s);
+  const it = s.story.queue.find(q => q.choices); assert(it && it.id === 'festival', 'the feast at day 120');
+  const gold = s.factions[1].gold, loy = s.officers.find(o => o.owner === 1).loyalty;
+  const r = VM.Commands.exec(s, { type: 'storyChoice', faction: 1, choice: 0 }); assert(r.ok && r.result.en);
+  assert(s.factions[1].gold === gold - 200 && s.officers.find(o => o.owner === 1).loyalty === loy + 4 && VM.Story.honorOf(s.story) === 54, 'the price is paid');
+  assert(!VM.Commands.exec(s, { type: 'storyChoice', faction: 1, choice: 1 }).ok, 'one choice only');
+  s.story.queue.length = 0; s.time = 161; s.story.lastDay = -1; VM.Story.step(s); assert(!s.story.queue.some(q => q.choices), 'not before 40 days have passed');
+  s.story.queue.length = 0; s.time = 201; s.story.lastDay = -1; VM.Story.step(s); assert(s.story.queue.some(q => q.id === 'deserters'));
+  s.story.honor = 100; const o = s.officers.find(o => o.owner === 1 && o.key); assert(VM.Story.loyaltyMod(s, o) >= 5, 'a high honor steadies the officers');
+  const t = VM.Sim.load(VM.Sim.save(s)); assert(t.story.queue.some(q => q.id === 'deserters'), 'saved with the game');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

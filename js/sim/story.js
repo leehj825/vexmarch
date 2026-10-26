@@ -124,6 +124,7 @@ VM.Story = (function () {
       if (e.type === 'merged' && e.from !== me) note(state, `${state.factions[e.from].name} bent the knee to ${state.factions[e.owner].name}.`, `${koOf(state.factions[e.from].name)}이(가) ${koOf(state.factions[e.owner].name)}에게 무릎을 꿇었다.`);
       if (e.type === 'eliminated') fire(state, 'eliminated', { house: house(state, e.owner) });
     }
+    decisions(state, day, fresh);
     // beats that wait for a time or for a pair of officers
     const sera = officer(state, 'sera'), tomas = officer(state, 'tomas'), varek = officer(state, 'varek'), isaure = officer(state, 'isaure'), cael = officer(state, 'cael'), ysolde = officer(state, 'ysolde');
     if (day >= 90 && alive(cael) && alive(ysolde) && cael.owner !== ysolde.owner) fire(state, 'letter');
@@ -171,12 +172,55 @@ VM.Story = (function () {
     }
   }
 
+  // ---- the ruler's decisions: a page with two choices, each with a price (docs/STORY.md). Your honor shifts how loyal your officers are. ----
+  const honorOf = S => S.honor === undefined ? 50 : S.honor;
+  function decide(state, id, vals) {
+    const S = state.story, B = D().DECISIONS[id]; if (S.fired[id]) return; S.fired[id] = state.time; S.lastDecision = state.time;
+    S.queue.push({ id, t: state.time, title: fill(B.title, vals || {}), text: fill(B.text, vals || {}), choices: B.choices.map(c => ({ label: fill(c.label, vals || {}), result: fill(c.result, vals || {}), fx: c.fx })) });
+  }
+  function choose(state, idx) {
+    const S = state.story, it = S && S.queue[0]; if (!it || !it.choices || it.chosen !== undefined) return { ok: false, reason: 'nothing to decide' };
+    const c = it.choices[idx]; if (!c) return { ok: false, reason: 'no such choice' };
+    const fx = c.fx, me = state.player, f = state.factions[me];
+    if (fx.gold) f.gold = Math.max(0, f.gold + fx.gold);
+    if (fx.food) f.food = Math.max(0, f.food + fx.food);
+    if (fx.honor) S.honor = clamp(honorOf(S) + fx.honor, 0, 100);
+    if (fx.loyalty) for (const o of state.officers) if (o.owner === me) VM.Officers.bump(state, o.id, fx.loyalty);
+    for (const x of state.factions) {
+      if (x.neutral || !x.alive || x.id === me) continue;
+      if (fx.opinion) VM.Diplo.addOp(state, x.id, me, fx.opinion);
+      if (fx.rival && it.vals && it.vals.rivalId === x.id) VM.Diplo.addOp(state, x.id, me, fx.rival);
+    }
+    it.chosen = idx; note(state, `${it.title.en}: ${c.label.en}.`, `${it.title.ko}: ${c.label.ko}.`);
+    return { ok: true, result: c.result };
+  }
+  function decisions(state, day, fresh) {
+    const S = state.story, me = state.player; S.flags = S.flags || {};
+    for (const e of fresh) {
+      if (e.type === 'captured' && e.owner === me) S.flags.took = true;
+      if (e.type === 'officerDied' && e.owner === me) S.flags.lost = true;
+    }
+    if (S.queue.length || (S.lastDecision !== undefined && state.time - S.lastDecision < 40)) return;
+    const mine = state.cities.filter(c => c.owner === me).length;
+    if (day >= 120 && !S.fired.festival) return decide(state, 'festival');
+    if (day >= 200 && !S.fired.deserters) return decide(state, 'deserters');
+    if (S.flags.took && !S.fired.refugees) return decide(state, 'refugees');
+    if (day >= 260 && !S.fired.envoy) {
+      let r = null; for (const x of state.factions) if (!x.neutral && x.alive && x.id !== me && !VM.Diplo.allied(state, me, x.id) && (!r || VM.Diplo.power(state, x.id) > VM.Diplo.power(state, r.id))) r = x;
+      if (r) { decide(state, 'envoy', { rival: nm(r.name) }); S.queue[S.queue.length - 1].vals = { rivalId: r.id }; return; }
+    }
+    if (day >= 330 && !S.fired.taxes) return decide(state, 'taxes');
+    if (S.flags.lost && !S.fired.funeral) return decide(state, 'funeral');
+    if (day >= 420 && !S.fired.winter) return decide(state, 'winter');
+    if (mine >= 15 && !S.fired.half) return decide(state, 'half');
+  }
+
   // ---- ties between officers: small effects on loyalty, on who joins whom when captured, and on a fight between rivals ----
   const tiesOf = key => D().TIES.filter(t => t[1] === key || t[2] === key);
   const isOfficer = key => D().OFFICERS.some(o => o.key === key);
   function loyaltyMod(state, o) {
     if (!state.story || !o.key) return 0;
-    let m = bonus(state, o.owner, 'loyalty');
+    let m = bonus(state, o.owner, 'loyalty') + (o.owner === state.player ? clamp((honorOf(state.story) - 50) / 10, -5, 5) : 0);
     for (const t of tiesOf(o.key)) {
       const other = t[1] === o.key ? t[2] : t[1];
       if (t[0] === 'debt' && t[1] === o.key) { const c = officer(state, other); if (alive(c) && c.owner !== o.owner) m -= 10; }       // an unpaid debt to a rival house
@@ -211,5 +255,5 @@ VM.Story = (function () {
     return tiesOf(o.key).map(t => { const first = t[1] === o.key; return { label: D().TIE_LABEL[t[0]][first ? 0 : 1], who: whoIs(state, first ? t[2] : t[1]), key: first ? t[2] : t[1] }; });
   }
 
-  return { create, buildMap, step, bonus, victoryView, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
+  return { create, buildMap, step, bonus, choose, honorOf, victoryView, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
 })();

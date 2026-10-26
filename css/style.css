@@ -200,3 +200,4 @@ html.det .ir.stats .st, html[data-ui="text"] .ir.stats .st { white-space: normal
 body.titlemode:has(#sheet.open) #hud { z-index: 45; }
 body.titlemode #sheet.open { visibility: visible; top: calc(16px + env(safe-area-inset-top)); }
 #speed button[data-s] .ic { width: 20px; height: 20px; }
+#storyB .btns { flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
