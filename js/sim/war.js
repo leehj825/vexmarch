@@ -33,13 +33,14 @@ VM.War = (function () {
     const o = state.officers[a.officer], city = state.cities[VM.Armies.zoneOf(a)];
     let m = (1 + W().cmdBonus * o.command / 100) * (0.5 + 0.5 * a.morale / 100);
     if (a.buff && a.buff.until > state.time) m *= a.buff.mult;
+    m *= 1 + VM.Story.bonus(state, a.owner, 'army');
     if (city.owner === a.owner) m *= W().home * (VM.CFG.SPEC[city.spec].defense || 1);
     return m;
   }
 
   function garrisonMods(state, city) {
     const gov = city.governor !== null ? state.officers[city.governor].command / 100 : 0;
-    let m = 1 + 0.2 * gov;
+    let m = (1 + 0.2 * gov) * (1 + VM.Story.bonus(state, city.owner, 'defense'));
     if (city.wallHp > 0) m *= W().wallBonus;
     return m * (VM.CFG.SPEC[city.spec].defense || 1);
   }

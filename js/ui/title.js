@@ -60,6 +60,7 @@ VM.Title = (function () {
     $('campList').innerHTML = D.FACTIONS.map(f => `<button class="fac${f.id === house ? ' on' : ''}" data-h="${f.id}"><span class="dot" style="background:${VM.CFG.FACTIONS[f.id].color}"></span><b>${nm(f.id)}</b><small>${tx(f.title)}</small></button>`).join('');
     const f = D.FACTIONS[house - 1], cast = D.OFFICERS.filter(o => o.house === house);
     $('campInfo').innerHTML = `<p><b>${tx(f.ruler)}</b> · ${tx(f.title)}</p><p>${tx(f.creed)}</p><p class="dim">${ko ? '상처' : 'The wound'}: ${tx(f.wound)}</p><p class="dim">${ko ? '위험' : 'The danger'}: ${tx(f.danger)}</p>` +
+      `<p><b>${ko ? '특성' : 'Gift'}: ${tx(D.TRAITS[house].name)}</b> · ${tx(D.TRAITS[house].text)}</p><p><b>${ko ? '고유 승리' : 'Own victory'}: ${tx(D.VICTORIES[house].name)}</b> · ${tx(D.VICTORIES[house].text)}</p>` +
       `<p class="dim">${ko ? '장수' : 'Officers'}: ${cast.map(o => (ko ? o.ko : o.name) + ' (' + tx(o.role) + ')').join(' · ')}</p>`;
     if (VM.I18N && VM.I18N.flush) VM.I18N.flush();
   }

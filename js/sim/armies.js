@@ -34,10 +34,10 @@ VM.Armies = (function () {
   }
   const distance = (state, a, b) => shortest(state, a).dist[b];
 
-  function speedOf(army) {
+  function speedOf(army, state) {
     let s = Infinity;
     for (const k in army.troops) if (army.troops[k] > 0) s = Math.min(s, VM.CFG.TROOPS[k].speed);
-    return s === Infinity ? 0 : s;
+    return s === Infinity ? 0 : s * (1 + VM.Story.bonus(state, army.owner, 'speed'));
   }
   const sizeOf = army => { let n = 0; for (const k in army.troops) n += army.troops[k]; return n; };
 
@@ -202,7 +202,7 @@ VM.Armies = (function () {
   function step(state, dd) {
     for (const army of state.armies) {
       if (army.fighting.length) continue;                 // locked in battle
-      let left = speedOf(army) * dd * (army.routed ? VM.CFG.WAR.routSpeed : 1), guard = 0;
+      let left = speedOf(army, state) * dd * (army.routed ? VM.CFG.WAR.routSpeed : 1), guard = 0;
       while (left > 1e-9 && guard++ < 20) {
         if (army.at !== null) {
           if (!army.path.length) { army.dest = null; break; }

@@ -84,7 +84,7 @@ The city and army panels, the Officers, Diplomacy and Alerts sheets and the top 
 ## Next (proposed order) — THE CURRENT TODO LIST
 Work through these from the top unless the owner says otherwise. Tick an item off here (mark it DONE) when it ships.
 1. **DONE — Fix: a city captured by a bystander.** An army inside a hostile city whose walls are down no longer retreats or routs on morale while it is at least half as strong as what is left to fight (`War.pressing`, `WAR.pressRatio`); food and a too-small army still pull it out. Credit-to-besieger (tracking who did the siege damage) was not done.
-2. **House traits and special victories.** Each of the six houses gets a gameplay trait and its own victory condition, so the campaign houses play differently.
+2. **DONE — House traits and special victories.** (`Story.bonus`, `StoryData.TRAITS/VICTORIES`: Kaldrath +10% army strength, Orsolyn +15% gold, Tessarune +15% food, Marrowgate +20% garrison defence, Wickfront +8 officer loyalty, Thornreach +20% march speed; each house also wins by holding its own set of places for 60 to 120 days; shown on the house pick screen and at the top of the Chronicle. Campaign only; the AI houses benefit and can win this way too, but do not aim for it.) Each of the six houses gets a gameplay trait and its own victory condition, so the campaign houses play differently.
 3. **Allies help each other.** Ask an ally for troops or help; allies join your wars, so a pact is worth more than not being attacked.
 4. **More campaign beats.** Extend the story past the first 12 beats, with a ruler who has stats and makes choices.
 5. **Fog of war and scouting.** You see only what your cities and armies see, scouts matter, and the AI follows the same rules.

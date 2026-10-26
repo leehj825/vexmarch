@@ -39,6 +39,7 @@
       VM.Audio.play(st.over.type === 'win' ? 'win' : 'lose');
       if (st.over.type === 'merged') { document.getElementById('overT').textContent = 'Absorbed'; document.getElementById('overP').textContent = `You bent the knee to ${nm(st.over.winner)}. Your people and officers live on under their banner, and the war is over for you.`; return; }
       document.getElementById('overT').textContent = st.over.type === 'win' ? 'Victory' : 'Defeat';
+      if (st.over.special) { const V = VM.StoryData.VICTORIES[st.over.winner]; document.getElementById('overP').textContent = (st.over.type === 'win' ? 'You achieved your house\'s aim: ' : `${nm(st.over.winner)} achieved their aim: `) + VM.Story.tx(V.name) + `. It took ${Math.round(st.over.t)} days.`; return; }
       document.getElementById('overP').textContent = st.over.type === 'win' ? `All of the realm marches under your banner. It took ${Math.round(st.over.t)} days.` : (st.over.winner ? `${nm(st.over.winner)} now holds every node` : `${nm(st.player)} holds no nodes`) + '. Start again and do better.';
     }
   }

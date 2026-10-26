@@ -95,6 +95,7 @@ VM.Story = (function () {
     const S = state.story; if (!S || !S.campaign) return;
     opening(state);
     const day = dayOf(state); if (S.lastDay === day) return; S.lastDay = day;
+    checkVictories(state);
     const fresh = state.events.filter(e => e.n > S.seen); for (const e of fresh) S.seen = Math.max(S.seen, e.n);
     const me = state.player;
     for (const e of fresh) {
@@ -140,9 +141,33 @@ VM.Story = (function () {
         note(state, 'The house bent the knee.', '가문이 무릎을 꿇었다.'); return;
       }
       const win = state.over.type === 'win' && state.over.winner === me;
-      const text = win ? D().ENDINGS[S.house] : (state.over.type === 'win' ? { en: `${state.factions[state.over.winner].name} holds the whole realm. ` + D().DEFEAT.en, ko: `${koOf(state.factions[state.over.winner].name)}이(가) 온 나라를 차지했다. ` + D().DEFEAT.ko } : D().DEFEAT);
+      const text = win ? D().ENDINGS[S.house] : (state.over.winner && state.over.winner !== me ? { en: `${state.factions[state.over.winner].name} ${state.over.special ? 'has done what it set out to do: ' + D().VICTORIES[state.over.winner].name.en + '.' : 'holds the whole realm.'} ` + D().DEFEAT.en, ko: `${koOf(state.factions[state.over.winner].name)}이(가) ${state.over.special ? '뜻한 바를 이루었다: ' + D().VICTORIES[state.over.winner].name.ko + '.' : '온 나라를 차지했다.'} ` + D().DEFEAT.ko } : D().DEFEAT);
       S.queue.push({ id: win ? 'victory' : 'defeat', t: state.time, title: win ? D().FACTIONS[S.house - 1].title : { en: 'The End of the House', ko: '가문의 끝' }, text, ending: win ? 'win' : 'lose' });
       note(state, win ? 'The realm was won.' : 'The house fell.', win ? '나라를 얻었다.' : '가문이 무너졌다.');
+    }
+  }
+
+  // ---- a house's gift (campaign only): 0 for everyone else ----
+  function bonus(state, owner, kind) {
+    if (!state || !state.story || !state.story.campaign) return 0;
+    const t = D().TRAITS[owner]; return t && t.kind === kind ? t.v : 0;
+  }
+  // ---- a house's own way to win: which parts it holds now, and for how many days in a row ----
+  function victoryView(state, h) {
+    const V = D().VICTORIES[h], n = V.need, places = D().PLACES, parts = [];
+    const own = i => state.cities[i].owner === h;
+    for (const nmv of n.names || []) parts.push({ label: nm(nmv), done: own(places.findIndex(p => p.name === nmv)) });
+    for (const sp of n.specs || []) { const ids = places.map((p, i) => p.spec === sp ? i : -1).filter(i => i >= 0); parts.push({ spec: sp, have: ids.filter(own).length, of: ids.length, done: ids.every(own) }); }
+    if (n.min) { const have = state.cities.filter(c => c.owner === h).length; parts.push({ have, of: n.min, done: have >= n.min }); }
+    if (n.allies) { const have = state.factions.filter(f => f.id !== h && f.alive && !f.neutral && VM.Diplo.allied(state, h, f.id)).length; parts.push({ allies: true, have, of: n.allies, done: have >= n.allies }); }
+    return { met: parts.every(p => p.done), parts, days: V.days, held: (state.story.hold && state.story.hold[h]) || 0 };
+  }
+  function checkVictories(state) {
+    const S = state.story; if (state.over) return; S.hold = S.hold || {};
+    for (const f of state.factions) {
+      if (f.neutral || !f.alive || !D().VICTORIES[f.id]) continue;
+      const v = victoryView(state, f.id); S.hold[f.id] = v.met ? (S.hold[f.id] || 0) + 1 : 0;
+      if (S.hold[f.id] >= v.days) { state.over = { type: f.id === state.player ? 'win' : 'lose', winner: f.id, special: true, t: state.time }; return; }
     }
   }
 
@@ -151,7 +176,7 @@ VM.Story = (function () {
   const isOfficer = key => D().OFFICERS.some(o => o.key === key);
   function loyaltyMod(state, o) {
     if (!state.story || !o.key) return 0;
-    let m = 0;
+    let m = bonus(state, o.owner, 'loyalty');
     for (const t of tiesOf(o.key)) {
       const other = t[1] === o.key ? t[2] : t[1];
       if (t[0] === 'debt' && t[1] === o.key) { const c = officer(state, other); if (alive(c) && c.owner !== o.owner) m -= 10; }       // an unpaid debt to a rival house
@@ -186,5 +211,5 @@ VM.Story = (function () {
     return tiesOf(o.key).map(t => { const first = t[1] === o.key; return { label: D().TIE_LABEL[t[0]][first ? 0 : 1], who: whoIs(state, first ? t[2] : t[1]), key: first ? t[2] : t[1] }; });
   }
 
-  return { create, buildMap, step, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
+  return { create, buildMap, step, bonus, victoryView, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
 })();

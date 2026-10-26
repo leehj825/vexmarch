@@ -51,7 +51,10 @@ VM.StoryUI = (function () {
     const ko = VM.Story.lang() === 'ko', rows = st.story.chronicle.slice().reverse().map(c => {
       const d = VM.Sim.date({ time: c.t }); return `<div class="chr"><span class="dim">${ko ? d.year + '년 ' + d.month + '월 ' + d.day + '일' : 'Y' + d.year + ' M' + d.month + ' D' + d.day}</span> ${esc(tx(c))}</div>`;
     });
-    open(ko ? '연대기' : 'Chronicle', rows.length ? rows.join('') : para(ko ? '아직 기록할 일이 없다.' : 'Nothing has happened yet.'), 'Close');
+    const D = VM.StoryData, me = st.player, V = D.VICTORIES[me], v = VM.Story.victoryView(st, me), T = D.TRAITS[me];
+    const part = p => p.label ? `${tx(p.label)} ${p.done ? '✔' : '✘'}` : p.allies ? `${ko ? '동맹' : 'Allies'} ${p.have}/${p.of}` : p.spec ? `${p.spec} ${p.have}/${p.of}` : `${ko ? '지배 지역' : 'Places'} ${p.have}/${p.of}`;
+    const goal = `<div class="chr"><b>${esc(tx(T.name))}</b>: ${esc(tx(T.text))}</div><div class="chr"><b>${esc(tx(V.name))}</b>: ${esc(tx(V.text))}<br>${esc(v.parts.map(part).join(' · '))} · ${ko ? '유지' : 'Held'} ${v.held}/${v.days}</div>`;
+    open(ko ? '연대기' : 'Chronicle', goal + (rows.length ? rows.join('') : para(ko ? '아직 기록할 일이 없다.' : 'Nothing has happened yet.')), 'Close');
   }
 
   return { init, update, chronicle, isOpen: () => !!mode };

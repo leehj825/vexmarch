@@ -179,5 +179,25 @@ var VM = globalThis.VM = globalThis.VM || {};
     friend: [L('Friend of', '친구'), L('Friend of', '친구')], rival: [L('Rival of', '라이벌'), L('Rival of', '라이벌')], love: [L('Loves', '마음에 둔 사람'), L('Loves', '마음에 둔 사람')],
     debt: [L('Owes money to', '빚을 진 상대'), L('Is owed money by', '빚을 받을 사람')]
   };
-  VM.StoryData = { PRINCE, TIE_LABEL, OPENINGS, BEATS, NAMES_KO, HISTORY, FACTIONS, PLACES, CUT, DIAG, OFFICERS, TIES, ENDINGS, DEFEAT, L };
+  // ---------------------------------------------------------------- what each house is good at, and how it can win without taking every place
+  // trait: kind (read by VM.Story.bonus) and v, the size of the gift. victory: hold every place named by spec (or by name) for `days` in a row.
+  // need: { names: [...], specs: [...], min: how many places in all, allies: how many living allies }
+  const TRAITS = {
+    1: { kind: 'army', v: 0.10, name: L('Veteran Ranks', '노련한 대열'), text: L('Armies fight 10% harder.', '군대가 10% 더 강하게 싸운다.') },
+    2: { kind: 'gold', v: 0.15, name: L('Free Trade', '자유 무역'), text: L('Cities pay 15% more gold.', '도시가 금을 15% 더 낸다.') },
+    3: { kind: 'food', v: 0.15, name: L('Full Granaries', '가득 찬 곡창'), text: L('Fields give 15% more food.', '밭에서 식량이 15% 더 난다.') },
+    4: { kind: 'defense', v: 0.20, name: L('Mountain Defence', '산악 방어'), text: L('Garrisons defend 20% better.', '수비대가 20% 더 잘 막는다.') },
+    5: { kind: 'loyalty', v: 8, name: L('The Faithful', '신실한 자들'), text: L('Officers are more loyal (+8).', '장수들의 충성이 더 높다(+8).') },
+    6: { kind: 'speed', v: 0.20, name: L('Swift Riders', '날랜 기수'), text: L('Armies march 20% faster.', '군대가 20% 더 빨리 행군한다.') }
+  };
+  const VICTORIES = {
+    1: { days: 90, need: { names: ['Vexholm'], min: 16 }, name: L('Order Restored', '질서의 회복'), text: L('Hold Vexholm and at least 16 places for 90 days.', '벡스홀름과 16곳 이상을 90일 동안 지킨다.') },
+    2: { days: 90, need: { specs: ['port', 'market'] }, name: L('The Charter Signed', '헌장의 서명'), text: L('Hold every port and market for 90 days.', '모든 항구와 시장을 90일 동안 지킨다.') },
+    3: { days: 90, need: { names: ['Vexholm', 'Tessar Keep'], allies: 2 }, name: L('The Boy Crowned', '소년의 즉위'), text: L('Hold Vexholm and Tessar Keep, with two allies, for 90 days.', '벡스홀름과 테사르 성채를 지키고 동맹 둘과 함께 90일을 버틴다.') },
+    4: { days: 120, need: { specs: ['pass'], names: ['Marrow Hold'] }, name: L('The Gates Closed', '닫힌 관문'), text: L('Hold every pass and Marrow Hold for 120 days.', '모든 고개와 마로 요새를 120일 동안 지킨다.') },
+    5: { days: 90, need: { specs: ['holy'], names: ['Vexholm'] }, name: L('The Light Chosen', '선택된 빛'), text: L('Hold every holy place and Vexholm for 90 days.', '모든 성지와 벡스홀름을 90일 동안 지킨다.') },
+    6: { days: 60, need: { specs: ['horse'], names: ['Vexholm'] }, name: L('The Rider King', '기수의 왕'), text: L('Hold Vexholm and every horse-land for 60 days.', '벡스홀름과 모든 말 방목지를 60일 동안 지킨다.') }
+  };
+
+  VM.StoryData = { TRAITS, VICTORIES, PRINCE, TIE_LABEL, OPENINGS, BEATS, NAMES_KO, HISTORY, FACTIONS, PLACES, CUT, DIAG, OFFICERS, TIES, ENDINGS, DEFEAT, L };
 })();
