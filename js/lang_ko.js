@@ -15,6 +15,8 @@ var LANG_KO = {
 "Last seen day {0}": "{0}일에 마지막으로 봄", "Never seen": "본 적 없음",
 "Out of sight. Send an army or take a city nearby to see it.": "시야 밖입니다. 군대를 보내거나 가까운 도시를 차지하면 볼 수 있습니다.",
 "Ask for help": "도움 요청",
+"In reserve": "예비대",
+"The front is full: only the three biggest armies of a house fight at once. This army waits and steps in as the front thins.": "전선이 가득 찼습니다. 한 세력에서는 가장 큰 군대 셋만 동시에 싸웁니다. 이 군대는 대기하다가 전선이 얇아지면 투입됩니다.",
 "Random events: on": "무작위 사건: 켬", "Random events: off": "무작위 사건: 끔",
 "The harvest at {a} has failed: half the food for a while": "{a}의 수확이 흉작입니다. 한동안 식량이 절반입니다.",
 "A bountiful harvest at {a}: more food for a while": "{a}에 풍년이 들었습니다. 한동안 식량이 늘어납니다.",

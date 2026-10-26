@@ -207,6 +207,7 @@ VM.Panels = (function () {
     h += `<div class="ir stats">` + Object.keys(VM.CFG.TROOPS).filter(k => a.troops[k] >= 0.5).map(k => I.stat(M.troop[k], num(a.troops[k]), VM.CFG.TROOPS[k].label)).join('') + `${I.stat('banner', Math.round(a.morale), 'Morale', TIPS.morale)}${I.meter(a.morale / 100)}</div>`;
     h += `<div class="ir">${I.t('pin', 'Location')}<span>${a.at !== null ? N[a.at].name : N[a.edge.to].name}</span>${a.at === null ? I.t('go', 'On the road', '', '', true) : ''}${a.dest !== null && !a.routed ? I.t('go', 'Heading to', '', '', true) + `<b>${N[a.dest].name}</b>` : ''}</div>`;
     if (a.routed) h += `<div class="ir bad">${I.t('back', 'Routed', 'Fleeing to safety.', '', true)}</div>`;
+    else if (a.reserve) h += `<div class="ir">${I.t('shield', 'In reserve', 'The front is full: only the three biggest armies of a house fight at once. This army waits and steps in as the front thins.', '', true)}</div>`;
     else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
     else if (VM.War.sieging(a) && VM.Diplo.hostile(st, a.owner, st.cities[a.at].owner)) h += `<div class="ir bad">${I.t('siege', 'Besieging', '', '', true)}<b>${N[a.at].name}</b></div>`;
     const s = a.supply;

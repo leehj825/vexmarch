@@ -92,6 +92,7 @@ VM.CFG = {
   // Troop types beat each other in a cycle: spear > cavalry > archer > infantry > spear.
   WAR: {
     contact: 16,            // map units: armies this close are in battle
+    front: 3, siegeFront: 3, // how many armies of one house fight at once in a field battle, or press a city (the biggest ones; the rest wait in reserve and step in as the front thins)
     k: 0.035,               // casualties per day = k x effective strength of the enemy
     strong: 1.4, weak: 0.7, // matchup multipliers
     siegeField: 0,          // siege engines fight at this strength against troops: none, they only break gates and walls and stay behind the line

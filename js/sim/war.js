@@ -261,6 +261,21 @@ VM.War = (function () {
       if (b.retreat > 0) a.fighting.push(b.id);
     }
     const byId = new Map(armies.map(a => [a.id, a]));
+    // Front width: of the armies of one house in the same fight only the biggest few engage; the others wait in reserve (they do not strike, are not struck, and do not move)
+    for (const a of armies) a.reserve = false;
+    {
+      const group = new Map(), find = x => { while (group.get(x) !== x) { group.set(x, group.get(group.get(x))); x = group.get(x); } return x; };
+      for (const a of armies) if (a.fighting.length) group.set(a.id, a.id);
+      for (const a of armies) for (const e of a.fighting) if (group.has(e)) group.set(find(a.id), find(e));
+      const comps = new Map(); for (const a of armies) if (group.has(a.id)) { const k = find(a.id); if (!comps.has(k)) comps.set(k, new Map()); const m = comps.get(k); if (!m.has(a.owner)) m.set(a.owner, []); m.get(a.owner).push(a); }
+      const held = new Set();
+      for (const m of comps.values()) for (const list of m.values()) {
+        if (list.length <= W().front) continue;
+        list.sort((x, y) => VM.Armies.sizeOf(y) - VM.Armies.sizeOf(x) || x.id - y.id);
+        for (const a of list.slice(W().front)) { a.reserve = true; held.add(a.id); }
+      }
+      if (held.size) for (const a of armies) a.fighting = held.has(a.id) ? [] : a.fighting.filter(id => !held.has(id));
+    }
     // Army against army: the front line trades blows, archers shoot over it, cavalry come and go (see the roles above); siege engines do not fight here
     for (const a of armies) {
       if (a.retreat > 0 || !a.fighting.length) continue;
@@ -275,7 +290,8 @@ VM.War = (function () {
     const sieges = {};
     for (const a of armies) if (sieging(a) && VM.Diplo.hostile(state, a.owner, state.cities[a.at].owner)) (sieges[a.at] = sieges[a.at] || []).push(a);
     for (const cid in sieges) {
-      const city = state.cities[cid], list = sieges[cid], walled = city.wallHp > 0;
+      const city = state.cities[cid], all = sieges[cid], walled = city.wallHp > 0;
+      const list = all.length > W().siegeFront ? all.slice().sort((x, y) => VM.Armies.sizeOf(y) - VM.Armies.sizeOf(x) || x.id - y.id).slice(0, W().siegeFront) : all;      // the rest wait their turn
       const holders = walled ? armies.filter(h => h.owner === city.owner && h.at === city.id && inWalls(state, h)) : [];
       const pool = {}; for (const src of [city.garrison].concat(holders.map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
       const gt = total(pool), poolPow = walled ? Object.assign({}, pool, { archer: (pool.archer || 0) * W().wallArcher }) : pool;

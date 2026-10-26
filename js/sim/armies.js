@@ -201,7 +201,7 @@ VM.Armies = (function () {
 
   function step(state, dd) {
     for (const army of state.armies) {
-      if (army.fighting.length) continue;                 // locked in battle
+      if (army.fighting.length || army.reserve) continue;                 // locked in battle, or held back in the reserve
       let left = speedOf(army, state) * dd * (army.routed ? VM.CFG.WAR.routSpeed : 1), guard = 0;
       while (left > 1e-9 && guard++ < 20) {
         if (army.at !== null) {
