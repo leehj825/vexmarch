@@ -168,7 +168,7 @@ var LANG_KO = {
 // ---- tutorial ----
 "Tutorial · step {0} of {1}": "튜토리얼 · {1}단계 중 {0}단계",
 "Skip step": "단계 건너뛰기", "Leave tutorial": "튜토리얼 나가기",
-"The game runs in real time. Pause it with the II button (or Space), then press {0}x to carry on.": "게임은 실시간으로 흘러갑니다. II 버튼(또는 스페이스)으로 멈춘 뒤 {0}x를 눌러 계속하세요.",
+"The game runs in real time. Pause it with the pause button (or Space), then press play to carry on.": "게임은 실시간으로 흘러갑니다. 일시정지 버튼(또는 스페이스)으로 멈춘 뒤 재생 버튼을 눌러 계속하세요.", "Settings": "설정", "Pause\nStop the clock (space).": "일시정지", "Stop the clock (space).": "시계를 멈춥니다 (스페이스).", "Play": "재생", "Let time run.": "시간을 흐르게 합니다.", "Pause": "일시정지",
 "This is your realm. Tap your capital (the star inside the gold ring) to open it.": "여기가 당신의 영토입니다. 수도(금빛 고리 안의 별)를 눌러 열어 보세요.",
 "Food keeps people alive and lets cities grow. Build a Farm in your capital: press the Farm button in the Buildings list.": "식량은 백성을 살리고 도시를 키웁니다. 수도에 농장을 지으세요. 건물 목록의 농장 버튼을 누르면 됩니다.",
 "Troops cost gold and come from the population. Press {0} next to Infantry.": "병사는 골드가 들고 인구에서 나옵니다. 보병 옆의 {0} 버튼을 누르세요.",
@@ -207,5 +207,128 @@ var LANG_KO = {
 "The army must be in a city": "군대가 도시 안에 있어야 합니다", "They were rewarded recently": "얼마 전에 이미 포상했습니다",
 "You have no officer to make the offer": "제안을 전할 장수가 없습니다", "Ability is recharging": "능력을 아직 쓸 수 없습니다",
 "Wanderers": "재야의 장수", "Old or finished save": "오래되었거나 끝난 저장 파일입니다",
-"Armies must belong to you.": "아군끼리만 합칠 수 있습니다."
+"Armies must belong to you.": "아군끼리만 합칠 수 있습니다.",
+"Campaign": "캠페인", "Skirmish": "스커미시", "Begin": "시작", "Back": "뒤로", "Choose your house": "가문을 고르세요", "The Sundering": "분열의 시대", "Chronicle": "연대기", "Close": "닫기", "Continue": "계속", "Main menu": "메인 메뉴", "Timeline": "연표"
 };
+// the names of the campaign's places, officers and houses
+// ---- walk mode ----
+Object.assign(LANG_KO, {
+"Walk": "걷기", "■ Stop walking": "■ 걷기 멈춤", "You can only walk in your own cities": "자신의 도시에서만 걸을 수 있습니다",
+"WASD or the stick to walk · Shift runs · drag to look · F to talk · Esc to stop": "WASD 또는 스틱으로 이동 · Shift 달리기 · 드래그로 시점 · F 대화 · Esc 종료",
+"Talk to": "대화:", "Look at": "살펴보기:", "The barracks. {0} soldiers are quartered in the city.": "병영입니다. 도시에 병사 {0}명이 머물고 있습니다.", "The market stalls. Trade here is at level {0}.": "시장 가판대입니다. 교역 수준 {0}.", "The temple. Its level is {0}; the faithful are calm.": "신전입니다. 수준 {0}, 신자들은 평온합니다.", "The keep. {0} people live under its walls.": "성채입니다. 성벽 아래 {0}명이 삽니다.", "Townsperson": "마을 사람", "Close": "닫기", "A gift is given": "선물을 건넸습니다",
+"Say the word and I will ride out at dawn. Waiting is for old men.": "명만 내리십시오. 새벽에 출진하겠습니다. 기다림은 늙은이들의 몫입니다.",
+"Let us count the grain and the spears before we count the glory.": "영광을 세기 전에 곡식과 창부터 세어 봅시다.",
+"My house is yours. Ask, and it is done.": "제 가문은 당신의 것입니다. 명하시면 이루겠습니다.",
+"A full treasury keeps an army faithful. Not that I am thinking of my own purse.": "곳간이 차야 군이 충성합니다. 제 주머니를 생각하는 건 아닙니다만.",
+"I have never turned my back on a wall, and I do not mean to begin now.": "성벽 앞에서 등을 보인 적이 없고, 지금도 그럴 생각이 없습니다.",
+"Some doors open better when no one hears the hinge.": "어떤 문은 경첩 소리가 안 날 때 더 잘 열리는 법입니다.",
+"The city is quiet. I hope it stays so.": "도시가 조용합니다. 계속 그랬으면 좋겠군요.",
+"The harvest looks good this year.": "올해는 수확이 좋을 것 같습니다.", "They say the enemy is gathering beyond the hills.": "적이 언덕 너머에 모이고 있다더군요.",
+"Taxes are heavy, but the walls are strong.": "세금은 무겁지만 성벽은 튼튼합니다.", "My son joined the guard last spring.": "아들이 지난봄에 수비대에 들어갔습니다.",
+"Is it true the ruler walks among us?": "통치자께서 우리 사이를 걷고 계시다는 게 사실입니까?", "Peace is a fine thing. May it last.": "평화는 좋은 것이지요. 오래가길.", "The market was busy today.": "오늘 시장이 붐볐습니다.",
+"The supply depot, where grain is stored for the army.": "군량을 쌓아 두는 보급소입니다.", "The smithy rings with hammers.": "대장간에 망치 소리가 울립니다.",
+"The town well. The water is cold and sweet.": "마을 우물입니다. 물이 차고 답니다.", "A monument to the city's past glory.": "도시의 지난 영광을 기리는 기념비입니다."
+});
+// ---- diplomacy ----
+Object.assign(LANG_KO, {
+"Diplomacy": "외교", "Diplomacy {0}": "외교 {0}", "allies and terms": "동맹과 조건", "Ally": "동맹", "Enemy": "적",
+"Every house is your enemy until you ally. A pact can be broken at any time, at the price of your name. A house that is much weaker may be offered terms.": "모든 가문은 동맹을 맺기 전까지 적입니다. 동맹은 언제든 깰 수 있지만 명예를 잃습니다. 훨씬 약한 가문에는 조건을 제시할 수 있습니다.",
+"Nobody is left.": "남은 세력이 없습니다.", "{a} offers you an alliance.": "{a}이(가) 동맹을 제안합니다.",
+"asks you to bend the knee and join them. If you accept, your game ends here; refuse, and you fight on.": "당신에게 무릎을 꿇고 합류하라고 요구합니다. 받아들이면 게임이 끝나고, 거절하면 계속 싸웁니다.",
+"Open for {0} days": "{0}일 동안 유효", "Accept": "수락", "Decline": "거절", "Bend the knee": "무릎 꿇기", "Fight on": "계속 싸우기",
+"{0} cities · Strength {1}": "도시 {0}개 · 전력 {1}", "Opinion of you:": "당신에 대한 평가:", "Leader:": "지도자:",
+"Hostile": "적대적", "Cold": "냉담", "Neutral": "중립", "Warm": "호의적", "Friendly": "우호적", "oath-breaker": "맹약 파기자",
+"Break the pact": "동맹 파기", "Break the pact?": "동맹을 깨시겠습니까?", "Yes, break it": "예, 깹니다", "No": "아니오", "Propose alliance": "동맹 제안", "Offer terms": "조건 제시",
+"Gift {0}g": "선물 {0}g", "Recent": "최근",
+"{a} accepts the alliance": "{a}이(가) 동맹을 받아들였습니다", "{a} thanks you": "{a}이(가) 감사해 합니다", "{a} joins you": "{a}이(가) 당신에게 합류했습니다", "{a} will fight on": "{a}은(는) 계속 싸울 것입니다",
+"The pact is broken": "동맹이 깨졌습니다",
+"{a} declines: they do not know you well enough": "{a}이(가) 거절했습니다: 당신을 충분히 알지 못합니다", "{a} declines: they do not trust a breaker of oaths": "{a}이(가) 거절했습니다: 맹약을 깬 자를 믿지 않습니다",
+"{a} declines: they keep their hands free": "{a}이(가) 거절했습니다: 스스로 자유롭기를 원합니다", "{a} declines: they see no need for it": "{a}이(가) 거절했습니다: 필요성을 느끼지 않습니다",
+"they will not hear you yet": "아직 당신의 말을 들으려 하지 않습니다", "already has an ally": "이미 동맹이 있습니다", "they cannot take in another house yet": "아직 다른 가문을 받아들일 수 없습니다",
+"they are not weak enough": "충분히 약하지 않습니다", "no alliance to break": "깰 동맹이 없습니다", "that offer is no longer open": "그 제안은 더 이상 유효하지 않습니다", "that faction is gone": "그 세력은 사라졌습니다",
+"they were given a gift not long ago": "얼마 전에 선물을 받았습니다", "no such faction": "그런 세력이 없습니다",
+"Diplomatic offers and betrayals": "외교 제안과 배신",
+"{a} offers you an alliance": "{a}이(가) 동맹을 제안합니다", "{a} asks you to bend the knee and join them": "{a}이(가) 무릎을 꿇고 합류하라고 요구합니다",
+"You are now allied with {a}": "이제 {a}와(과) 동맹입니다", "{a} and {b} have allied": "{a}와(과) {b}이(가) 동맹을 맺었습니다",
+"{a} has broken the pact with you!": "{a}이(가) 당신과의 동맹을 깼습니다!", "You broke the pact with {a}": "{a}와(과)의 동맹을 깼습니다", "{a} broke the pact with {b}": "{a}이(가) {b}와(과)의 동맹을 깼습니다",
+"{a} has joined {b}": "{a}이(가) {b}에 합류했습니다", "Absorbed": "흡수됨", "(ally)": "(동맹)",
+"You bent the knee to {a}. Your people and officers live on under their banner, and the war is over for you.": "당신은 {a}에게 무릎을 꿇었습니다. 백성과 장수들은 그 깃발 아래 살아가며, 당신의 전쟁은 끝났습니다."
+});
+// ---- tips ----
+Object.assign(LANG_KO, {
+"Not yours.": "당신의 것이 아닙니다.", "Not built": "미건설", "Resting": "휴식 중", "Allies and enemies": "동맹과 적", "Strength": "전력", "Population": "인구", "Wall": "성벽", "Garrison": "수비대", "Prosperity": "번영", "Security": "치안", "Tax": "세금", "Governor": "태수", "loyalty": "충성도", "Rations": "군량", "Morale": "사기", "Loyalty": "충성도", "Forward depot": "전진 보급소", "Recruit": "모병", "Form an army": "군대 편성", "Cmd": "지휘", "Might": "무력", "Pol": "정치", "Int": "지력",
+"People living here. Taxes and recruits come from them. The number after the slash is how many the city can hold; farms, markets and a temple raise it.": "이곳에 사는 사람들입니다. 세금과 병사가 여기서 나옵니다. 슬래시 뒤의 숫자는 도시가 수용할 수 있는 인구이며, 농장·시장·신전이 이를 늘립니다.",
+"The wall slows an attacker and lets your archers shoot down from it. Siege engines break it fastest. When it falls, the enemy storms the gate.": "성벽은 공격자를 늦추고 궁수가 위에서 쏠 수 있게 합니다. 공성 병기가 가장 빨리 부수며, 무너지면 적이 성문으로 몰려듭니다.",
+"Soldiers stationed in the city. They defend it and are the pool you draw armies from.": "도시에 주둔한 병사입니다. 도시를 지키며, 군대를 편성할 때 여기서 데려갑니다.",
+"How well the city does: markets, a calm population and a temple raise it. It multiplies the gold the city earns.": "도시가 얼마나 잘 돌아가는지를 나타냅니다. 시장, 안정된 민심, 신전이 높여 주며 도시의 금 수입에 곱해집니다.",
+"How safe the people feel. It falls while an enemy stands nearby and when the city is devastated, and it lowers tax income and growth.": "백성이 느끼는 안전입니다. 적이 가까이 있거나 도시가 황폐해지면 떨어지고, 세수와 성장이 줄어듭니다.",
+"Gold the city earns each day, minus the upkeep of its soldiers and buildings.": "도시가 하루에 버는 금에서 병사와 건물 유지비를 뺀 값입니다.",
+"Food grown each day minus the food eaten by the people and soldiers. If it stays negative, the faction starves.": "하루 생산 식량에서 백성과 병사가 먹는 양을 뺀 값입니다. 계속 음수면 굶주리게 됩니다.",
+"Higher tax brings more gold but slows growth and lowers contentment. Low tax does the opposite.": "세금이 높으면 금이 늘지만 성장이 느려지고 민심이 나빠집니다. 낮으면 그 반대입니다.",
+"A governor runs the city by the policy you choose, so you do not have to micromanage it. A governor cannot lead an army.": "태수는 당신이 정한 방침대로 도시를 운영하므로 일일이 관리하지 않아도 됩니다. 태수는 군대를 이끌 수 없습니다.",
+"Stores food so armies near here eat at the normal rate while in enemy land. Fill it before a campaign.": "이 근처의 군대가 적진에서도 평소처럼 먹을 수 있게 식량을 쌓아 둡니다. 출정 전에 채워 두세요.",
+"Training costs gold and takes people from the population. Recruits join the garrison.": "훈련에는 금이 들고 인구가 줄어듭니다. 신병은 수비대에 들어갑니다.",
+"Choose how many of the garrison go with the army, pick a free officer to lead it, then form it. The army marches out and eats its own rations.": "수비대에서 몇 명이 따라갈지 정하고, 이끌 장수를 골라 편성하세요. 군대는 출정하여 자신의 군량을 먹습니다.",
+"Select one of your armies, then tap this node to march on it.": "군대 하나를 선택한 뒤 이 거점을 눌러 진군하세요.",
+"An army that loses morale breaks and runs. Battles, hunger and a cut supply line wear it down; rest in a friendly city restores it.": "사기가 떨어진 군대는 무너져 달아납니다. 전투, 굶주림, 끊긴 보급선이 사기를 깎으며, 아군 도시에서 쉬면 회복됩니다.",
+"How loyal the officer is to you. Low loyalty can make them desert; a gift raises it.": "장수가 당신에게 얼마나 충성하는지입니다. 낮으면 떠날 수 있고, 선물을 주면 올라갑니다.",
+"Food reaches an army along a road line from its home city. If an enemy army stands on that line, the supply is cut and the army starves.": "식량은 본거지에서 도로를 따라 군대에 닿습니다. 적군이 그 길을 막으면 보급이 끊겨 군대가 굶주립니다.",
+"How many days the army can eat from the food it carries.": "군대가 지닌 식량으로 며칠을 먹을 수 있는지입니다.",
+"Move recruits between the army and the city's garrison. Only possible while the army stands in your own city.": "군대와 도시 수비대 사이에서 병사를 옮깁니다. 군대가 아군 도시에 있을 때만 가능합니다.",
+"Tap a node to march there (right-click works too). Moving out of a battle costs morale. Tap empty ground to deselect.": "거점을 눌러 진군합니다(우클릭도 가능). 전투 중에 빠져나오면 사기가 떨어집니다. 빈 땅을 누르면 선택이 해제됩니다.",
+"The officer's special move, used in battle or a siege. It needs time to recharge.": "장수의 특수 기술로, 전투나 공성 중에 쓰며 다시 쓰려면 시간이 필요합니다.",
+"You decide everything here.": "여기서는 모든 것을 직접 정합니다.", "The governor builds, sets taxes and keeps a small garrison, saving a gold reserve.": "태수가 건설하고 세금을 정하며, 작은 수비대를 유지하고 금을 비축합니다.",
+"Walls first, then archers and a larger garrison.": "성벽을 먼저, 그다음 궁수와 더 큰 수비대를 갖춥니다.", "Barracks first, then a large standing garrison to draw armies from.": "병영을 먼저 짓고, 군대를 뽑을 큰 상비 수비대를 둡니다.",
+"Stays where it is.": "제자리에 머뭅니다.", "Guards its station and meets intruders when the odds suit the officer.": "맡은 자리를 지키며, 장수에게 유리하다고 보이면 침입자를 맞아 싸웁니다.",
+"Marches to your cities that are under attack.": "공격받는 아군 도시로 달려갑니다.", "Seeks weak hostile towns nearby, falls back to rest when worn down or cut off.": "가까운 약한 적 도시를 찾아 공격하고, 지치거나 보급이 끊기면 물러나 쉽니다.",
+"Eager to fight. Attacks on worse odds and holds out less in a siege.": "싸우기를 좋아합니다. 불리한 승산에도 공격하고, 농성은 덜 버팁니다.",
+"Careful. Wants clear odds before attacking and pulls back early when worn down.": "신중합니다. 확실한 승산이 있어야 공격하며, 지치면 일찍 물러납니다.",
+"Steadfast. Loyalty drops less and rises faster.": "굳건합니다. 충성도가 덜 떨어지고 더 빨리 오릅니다.", "Loves gold. Loyalty falls if the treasury is empty and a gift pleases them.": "금을 좋아합니다. 국고가 비면 충성이 떨어지고, 선물을 받으면 기뻐합니다.",
+"Fights on when others would retreat and takes risks.": "남들이 물러날 때도 싸우며 위험을 감수합니다.", "Clever and ambitious. A little less loyal, and hard to trust.": "영리하고 야심이 큽니다. 충성이 약간 낮고 믿기 어렵습니다.",
+"Command: how well they lead an army. It adds to the army's strength.": "지휘: 군대를 얼마나 잘 이끄는지입니다. 군대의 전투력에 더해집니다.", "Might: personal strength. Decides who wins a duel and how hard a charge hits.": "무력: 개인의 힘입니다. 일기토의 승패와 돌격의 위력을 좌우합니다.",
+"Politics: how well they govern a city. A good governor earns more and keeps order.": "정치: 도시를 얼마나 잘 다스리는지입니다. 좋은 태수는 더 벌고 질서를 지킵니다.", "Intellect: cunning. Helps with fire attacks and with finding wanderers.": "지력: 지략입니다. 화공과 떠도는 인재 탐색에 도움이 됩니다.",
+"Soldiers in the field and in garrisons, plus a tenth of the population. A house three times stronger than another may offer it terms.": "야전군과 수비대의 병사 수에 인구의 10분의 1을 더한 값입니다. 3배 이상 강한 가문은 상대에게 조건을 제시할 수 있습니다.",
+"How the house feels about you. Gifts and shared enemies raise it; taking their cities and breaking pacts lowers it. It fades toward neutral over time.": "그 가문이 당신을 어떻게 보는지입니다. 선물과 공동의 적이 높이고, 도시를 빼앗거나 동맹을 깨면 떨어집니다. 시간이 지나면 중립으로 돌아갑니다.",
+"This house has broken a pact before. Others are slow to trust it.": "이 가문은 전에 동맹을 깬 적이 있어 다른 이들이 믿기를 꺼립니다.",
+"Ask for an alliance. Allies do not fight each other and may pass through each other's land. A house accepts when it likes you, or when a bigger threat looms.": "동맹을 청합니다. 동맹은 서로 싸우지 않고 서로의 땅을 지나갈 수 있습니다. 가문이 당신을 좋아하거나 더 큰 위협이 있을 때 받아들입니다.",
+"Give 100 gold to raise their opinion of you. One gift every ten days.": "금 100을 주어 당신에 대한 평가를 높입니다. 열흘에 한 번만 가능합니다.",
+"Offer terms: a much weaker house may join you, with all its cities, armies and officers, rather than be destroyed. It may refuse.": "조건 제시: 훨씬 약한 가문은 멸망하는 대신 모든 도시, 군대, 장수와 함께 당신에게 합류할 수 있습니다. 거절할 수도 있습니다.",
+"End the alliance at once. You lose their trust and everybody else's, and your officers grumble. You cannot ally with them again for 90 days.": "동맹을 즉시 끝냅니다. 그들과 모든 이의 신뢰를 잃고 장수들이 불평합니다. 90일간 다시 동맹할 수 없습니다.",
+"Show or hide the details": "세부 정보 보기/숨기기",
+"Your treasury, and how much you earn or lose each day.": "보유 금과 하루 수입(손실)입니다.", "Your food stock, and the daily balance. If it runs out, your people and armies starve.": "식량 재고와 하루 수지입니다. 바닥나면 백성과 군대가 굶주립니다.",
+"One year has 360 days. Use the speed buttons to run time faster.": "1년은 360일입니다. 속도 버튼으로 시간을 빠르게 할 수 있습니다.",
+"Your officers: governors and army leaders, with their skills and loyalty.": "당신의 장수들: 태수와 군대 지휘관, 그들의 능력과 충성도입니다.", "Alliances, gifts and terms with the other houses.": "다른 가문과의 동맹, 선물, 조건입니다.", "News of battles, losses and requests, and what pauses the game.": "전투, 손실, 요청 소식과 게임을 멈추는 조건입니다.",
+"Settings": "설정", "Pause (space)": "일시정지 (스페이스)", "Menu": "메뉴", "North up": "북쪽을 위로", "Turn left": "왼쪽으로 회전", "Turn right": "오른쪽으로 회전", "Tilt up": "위로 기울이기", "Tilt down": "아래로 기울이기",
+"Not enough gold": "골드가 부족합니다", "They will not hear you yet": "아직 당신의 말을 들으려 하지 않습니다", "Already has an ally": "이미 동맹이 있습니다"
+});
+// ---- icon tips ----
+Object.assign(LANG_KO, {
+"Date": "날짜", "Yours": "당신의 도시", "{0} made, {1} eaten": "{0} 생산, {1} 소비", "Low tax": "낮은 세율", "Normal tax": "보통 세율", "High tax": "높은 세율",
+"Level {0}: {1} gold, {2} days": "{0}단계: 금 {1}, {2}일", "Build a depot": "보급소 건설", "{0} gold each": "개당 금 {0}", "Price": "가격", "Gold for each soldier.": "병사 한 명당 드는 금입니다.",
+"Recruit {0}": "{0}명 모병", "Taking": "데려갈 인원", "Soldiers that go with the army.": "군대와 함께 가는 병사입니다.", "Speed": "속도", "The army moves at the speed of its slowest troops.": "군대는 가장 느린 병종의 속도로 움직입니다.",
+"Take none": "모두 빼기", "Take all": "모두 데려가기", "All": "전체", "Troops": "병력", "Soldiers in the army.": "군대의 병사 수입니다.", "Command": "지휘", "How well they lead an army. It adds to the army's strength.": "군대를 얼마나 잘 이끄는지입니다. 군대의 전투력에 더해집니다.",
+"Personal strength. Decides who wins a duel and how hard a charge hits.": "개인의 힘입니다. 일기토의 승패와 돌격의 위력을 좌우합니다.", "Politics": "정치", "How well they govern a city. A good governor earns more and keeps order.": "도시를 얼마나 잘 다스리는지입니다. 좋은 태수는 더 벌고 질서를 지킵니다.",
+"Intellect": "지력", "Cunning. Helps with fire attacks and with finding wanderers.": "지략입니다. 화공과 떠도는 인재 탐색에 도움이 됩니다.", "Location": "위치", "On the road": "이동 중", "Heading to": "목적지", "In the army": "군대 안", "In the city": "도시 안",
+"Gift": "선물", "A gift raises their loyalty.": "선물을 주면 충성도가 오릅니다.", "Search": "탐색", "Look for wandering officers near this city.": "이 도시 근처에서 떠도는 장수를 찾습니다.", "Send to": "보내기", "Go": "가기",
+"Wandering officers you know of": "알고 있는 떠돌이 장수", "Wanderers drift between nodes; send an idle officer to search a city to find more.": "떠돌이는 거점 사이를 떠돕니다. 한가한 장수를 도시로 보내 탐색하면 더 찾을 수 있습니다.",
+"Recruit": "모병", "Offer them a place.": "자리를 제안합니다.", "Near": "근처", "Story": "이야기", "Show on the map": "지도에서 보기", "Approve": "승인", "Refuse": "거절",
+"At war with you.": "당신과 전쟁 중입니다.", "Cities": "도시", "Opinion of you": "당신에 대한 평가", "Pause the game automatically for": "자동으로 게임을 멈출 경우", "Pause the game when this happens.": "이런 일이 생기면 게임을 멈춥니다.",
+"Newest first. Hold an item to read it.": "최신순입니다. 항목을 길게 눌러 읽으세요.", "Offers an alliance": "동맹을 제안", "Asks you to bend the knee": "무릎 꿇기를 요구", "Allies do not fight each other.": "동맹은 서로 싸우지 않습니다.",
+"If you accept, your game ends here; refuse, and you fight on.": "받아들이면 게임이 끝나고, 거절하면 계속 싸웁니다.", "Open for days": "남은 기간(일)", "Days left to answer.": "답할 수 있는 남은 일수입니다.", "Expires in days": "남은 기간(일)",
+"Enemy": "적", "Ally": "동맹", "Oath-breaker": "맹약 파기자", "Break the pact?": "동맹을 깨시겠습니까?", "You will lose trust.": "신뢰를 잃게 됩니다.", "Garrison": "수비대", "Cost": "비용", "Orders": "명령",
+"Under siege": "포위됨", "Enemy armies are at the gates.": "적군이 성문 앞에 있습니다.", "Contested": "분쟁 중", "Enemy armies stand in its land and none of its own.": "적군이 영토에 있고 아군은 없습니다.", "Not yours": "당신의 것이 아님",
+"Your army is here and will lay siege.": "당신의 군대가 여기 있으며 포위할 것입니다.", "Routed": "패주", "Fleeing to safety.": "안전한 곳으로 도망치는 중입니다.", "In battle": "전투 중", "Besieging": "포위 중", "Supply line open": "보급선 열림", "Supply cut": "보급선 끊김", "No supply source": "보급처 없음",
+"Fed by a depot": "보급소에서 보급", "Enemy land": "적지", "The army eats more in enemy land.": "군대는 적지에서 더 많이 먹습니다.", "Supplied from": "보급 출처", "Resting": "휴식 중", "Recharging": "재충전 중", "Days until it can be used again.": "다시 쓸 수 있을 때까지 남은 일수입니다.",
+"Join with": "합치기", "Merge": "합치기", "Halt": "정지", "Disband into city": "도시로 해산", "Leader": "지휘관", "Form army": "군대 편성", "No soldiers": "병사 없음", "No free officer": "한가한 장수 없음", "Stock": "재고", "Target": "목표",
+"Food stored here.": "여기에 쌓인 식량입니다.", "The depot is filled up to this much food.": "보급소는 이만큼 식량이 찰 때까지 채워집니다.", "Lower the target by 500": "목표를 500 낮추기", "Raise the target by 500": "목표를 500 높이기", "Building…": "건설 중…", "Highest level": "최고 단계",
+"Buildings": "건물", "Not built": "미건설", "Show or hide the details": "세부 정보 보기/숨기기", "View city": "도시 보기", "Back to map": "지도로", "Walk": "걷기", "Close": "닫기", "Tax": "세금", "Governor": "태수", "Officers": "장수", "Alerts": "알림", "Diplomacy": "외교",
+"Recent": "최근", "Waiting for your answer": "답을 기다리는 중", "Accept": "수락", "Decline": "거절", "Bend the knee": "무릎 꿇기", "Fight on": "계속 싸우기", "Yes, break it": "예, 깹니다", "No": "아니오", "Break the pact": "동맹 파기", "Propose alliance": "동맹 제안", "Offer terms": "조건 제시", "Strength": "전력"
+});
+// ---- words and labels ----
+Object.assign(LANG_KO, {
+"Details": "자세히", "You": "나", "Your city.": "당신의 도시입니다.", "Interface": "화면 표시", "Icons only": "아이콘만", "Icons and words": "아이콘+글자", "Words and labels": "글자와 라벨 모두",
+"asks to attack": "공격 허가를 요청", "asks to build a wall in": "성벽 건설 허가를 요청", "Low": "낮음", "Normal": "보통", "High": "높음", "Manual": "수동", "Develop": "개발", "Fortify": "요새화", "Hold": "대기", "Defend": "방어", "Reinforce": "증원", "Raid": "습격",
+"Charge": "돌격", "Fire attack": "화공", "Rally": "독려", "Food": "식량", "Gold": "골드", "Pause the game automatically for": "자동으로 게임을 멈출 경우", "Walk": "걷기", "View city": "도시 보기", "Back to map": "지도로", "Taking": "데려갈 인원",
+"Infantry": "보병", "Spearmen": "창병", "Cavalry": "기병", "Archers": "궁병", "Siege engines": "공성 병기", "Farm": "농장", "Market": "시장", "Barracks": "병영", "Temple": "신전", "Capital": "수도"
+});
+(function () { const N = typeof VM !== 'undefined' && VM.StoryData && VM.StoryData.NAMES_KO; if (N) for (const k in N) LANG_KO[k] = N[k]; })();

@@ -103,6 +103,11 @@ VM.Commands = (function () {
     searchOfficers(state, cmd) { return VM.Officers.search(state, cmd.faction, cmd.officer); },
     recruitOfficer(state, cmd) { return VM.Officers.recruit(state, cmd.faction, cmd.officer); },
     giftOfficer(state, cmd) { return VM.Officers.gift(state, cmd.faction, cmd.officer); },
+    proposeAlliance(state, cmd) { return VM.Diplo.proposeAlliance(state, cmd.faction, cmd.to); },
+    breakAlliance(state, cmd) { return VM.Diplo.breakAlliance(state, cmd.faction); },
+    giftFaction(state, cmd) { return VM.Diplo.gift(state, cmd.faction, cmd.to, cmd.gold); },
+    proposeMerge(state, cmd) { return VM.Diplo.proposeMerge(state, cmd.faction, cmd.to); },
+    answerOffer(state, cmd) { return VM.Diplo.answerOffer(state, cmd.faction, cmd.offer, !!cmd.accept); },
     answerProposal(state, cmd) { return VM.Officers.answer(state, cmd.faction, cmd.proposal, !!cmd.accept); },
     setDepot(state, cmd) {
       const [city, err] = ownCity(state, cmd); if (err) return err;

@@ -216,6 +216,7 @@ VM.MapView = (function () {
     for (const { c, q } of order) {
       const n = N[c.id], f = st.factions[c.owner], x = q.x, y = q.y, zoom = use3d ? Math.max(0.55, Math.min(1.6, q.k)) : q.k, fs = Math.max(use3d ? 9 : 10, Math.min(14, 11 * zoom));
       const r = (c.spec === 'capital' ? 13 : 9 + 3 * Math.min(1, c.pop / Math.max(1, c.stats ? c.stats.cap : 1))) * (use3d ? zoom : Math.min(1.5, Math.max(0.85, zoom)));
+      if (c.owner !== me && VM.Diplo.allied(st, c.owner, me)) { ctx.strokeStyle = '#8fd08a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 7); ctx.stroke(); }
       if (c.owner === me) { ctx.strokeStyle = '#f2d27a'; ctx.lineWidth = 2; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 7); ctx.stroke(); dashed(false); }
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = f.color; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
@@ -230,7 +231,8 @@ VM.MapView = (function () {
       if (c.besieged || c.contested) { ctx.strokeStyle = '#e0483a'; ctx.lineWidth = 2.5; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 11 + (Math.sin(Date.now() / 250) + 1) * 1.5, 0, 7); ctx.stroke(); dashed(false); }
       drawMark(c.spec, x, y, r);
       ctx.font = fs + 'px system-ui'; ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(7,6,10,0.8)'; ctx.fillText(n.name, x + 1, y + r + fs + 5); ctx.fillStyle = c.owner === me ? '#f2d27a' : 'rgba(238,230,214,0.9)'; ctx.fillText(n.name, x, y + r + fs + 4);
+      const label = VM.I18N ? VM.I18N.tr(n.name) : n.name;                    // names on the canvas follow the language too
+      ctx.fillStyle = 'rgba(7,6,10,0.8)'; ctx.fillText(label, x + 1, y + r + fs + 5); ctx.fillStyle = c.owner === me ? '#f2d27a' : 'rgba(238,230,214,0.9)'; ctx.fillText(label, x, y + r + fs + 4);
     }
 
     const fo = VM.Tutorial.focus();                                           // the node the tutorial wants you to look at

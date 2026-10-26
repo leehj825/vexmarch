@@ -9,9 +9,11 @@ VM.Sim = (function () {
     VM.Armies.step(state, dd);
     VM.War.step(state, dd);
     VM.Officers.step(state, dd);
+    VM.Diplo.step(state, dd);
     VM.AI.step(state);
     VM.Eco.step(state, dd);
     state.time += dd;
+    if (state.story && VM.Story) VM.Story.step(state);
   }
 
   // Advance by a number of in-game days (headless runs and tests).

@@ -26,7 +26,7 @@ VM.AI = (function () {
 
   function threatScore(state, c) {
     let t = 0;
-    for (const a of state.armies) if (a.owner !== c.owner && !a.routed && dist(state, VM.Armies.zoneOf(a), c.id) <= VM.CFG.OFFICERS.sense) t += VM.Armies.sizeOf(a);
+    for (const a of state.armies) if (VM.Diplo.hostile(state, a.owner, c.owner) && !a.routed && dist(state, VM.Armies.zoneOf(a), c.id) <= VM.CFG.OFFICERS.sense) t += VM.Armies.sizeOf(a);
     return t + (c.contested || c.besieged ? 500 : 0);
   }
 
@@ -61,8 +61,8 @@ VM.AI = (function () {
   // ---------------- Recruiting ----------------
   function wantedType(state, f, c) {
     const w = { infantry: 0, spear: 0, cavalry: 0, archer: 0 };
-    for (const a of state.armies) if (a.owner !== f.id && dist(state, VM.Armies.zoneOf(a), c.id) <= 700) for (const k in w) w[k] += (COUNTER[k] ? 0 : 0) + (a.troops[k] || 0);
-    for (const x of state.cities) if (x.owner !== f.id && x.owner !== 0 && dist(state, x.id, c.id) <= 500) for (const k in w) w[k] += (x.garrison[k] || 0) * 0.5;
+    for (const a of state.armies) if (VM.Diplo.hostile(state, a.owner, f.id) && dist(state, VM.Armies.zoneOf(a), c.id) <= 700) for (const k in w) w[k] += (COUNTER[k] ? 0 : 0) + (a.troops[k] || 0);
+    for (const x of state.cities) if (VM.Diplo.hostile(state, x.owner, f.id) && x.owner !== 0 && dist(state, x.id, c.id) <= 500) for (const k in w) w[k] += (x.garrison[k] || 0) * 0.5;
     const need = { infantry: 0.2, spear: 0.2, cavalry: 0.2, archer: 0.2 }, sum = w.infantry + w.spear + w.cavalry + w.archer;
     if (sum > 0) for (const k in w) need[COUNTER[k]] += w[k] / sum;
     const have = {}; let hs = 1; for (const k in w) { have[k] = c.garrison[k] || 0; hs += have[k]; }
@@ -148,7 +148,7 @@ VM.AI = (function () {
     // Abilities and rest
     for (const a of strikes) {
       const o = state.officers[a.officer];
-      if (D.abilities && (a.fighting.length || (a.at !== null && VM.War.sieging(a) && state.cities[a.at].owner !== f.id)) && state.time >= a.abilityReady) exec(state, f, { type: 'ability', army: a.id });
+      if (D.abilities && (a.fighting.length || (a.at !== null && VM.War.sieging(a) && VM.Diplo.hostile(state, state.cities[a.at].owner, f.id))) && state.time >= a.abilityReady) exec(state, f, { type: 'ability', army: a.id });
       if (!a.fighting.length) {
         if (weary(state, a) && !a.rest) { a.rest = true; m.plan = m.plan && m.plan.armies.includes(a.id) ? null : m.plan; }
         if (a.rest) {
@@ -184,7 +184,7 @@ VM.AI = (function () {
     }
     if (plan.phase === 'march') {
       const a = state.armies.find(x => x.id === plan.armies[0]); if (!a) { m.plan = null; return; }
-      if (a.fighting.length || (a.at !== null && state.cities[a.at].owner !== f.id && VM.War.sieging(a))) return;     // fighting, or besieging the target or a city in the way
+      if (a.fighting.length || (a.at !== null && VM.Diplo.hostile(state, state.cities[a.at].owner, f.id) && VM.War.sieging(a))) return;     // fighting, or besieging the target or a city in the way
       if (a.dest !== plan.target && !a.rest) {
         // Re-check the odds on the day it leaves.
         if (ratio(state, a, target) < odds * 0.85) { m.plan = null; m.cool = state.time + 20; return; }
@@ -206,9 +206,9 @@ VM.AI = (function () {
     const probe = { troops: {}, owner: f.id, at: null, morale: 100, officer: ready[0].officer, edge: { prog: 0, len: 1, from: ready[0].at === null ? 0 : ready[0].at, to: 0 }, buff: null };
     for (const a of ready) for (const k in a.troops) probe.troops[k] = (probe.troops[k] || 0) + a.troops[k];
     let best = null, bs = -Infinity, goal = null, gs = -Infinity;
-    const rivals = {}; for (const c of state.cities) if (c.owner > 0 && c.owner !== f.id) rivals[c.owner] = (rivals[c.owner] || 0) + 1;
+    const rivals = {}; for (const c of state.cities) if (c.owner > 0 && !VM.Diplo.friendly(state, c.owner, f.id)) rivals[c.owner] = (rivals[c.owner] || 0) + 1;
     for (const c of state.cities) {
-      if (c.owner === f.id) continue;
+      if (VM.Diplo.friendly(state, c.owner, f.id)) continue;
       const near = nearestOwn(state, f, c.id), d = near >= 0 ? dist(state, near, c.id) : Infinity;
       if (d > D.reach) continue;
       const g = c.garrison, mine = VM.War.power(probe.troops, g), theirs = Math.max(1, VM.War.power(g, probe.troops) * VM.War.garrisonMods(state, c)) + (c.wallHp > 0 ? c.wallHp * ((probe.troops.siege || 0) > 0 ? 0.02 : 0.08) : 0);

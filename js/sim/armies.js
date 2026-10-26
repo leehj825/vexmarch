@@ -102,7 +102,7 @@ VM.Armies = (function () {
 
   // An army marching out from one of its own cities to attack takes extra food along, up to a campaign's worth, out of the faction's stock
   function provision(state, a, to) {
-    if (a.at === null || state.cities[a.at].owner !== a.owner || state.cities[to].owner === a.owner) return;
+    if (a.at === null || state.cities[a.at].owner !== a.owner || VM.Diplo.friendly(state, a.owner, state.cities[to].owner)) return;
     const W = VM.CFG.WAR, E = VM.CFG.ECON, f = state.factions[a.owner], per = sizeOf(a) * E.foodPerHead, want = per * W.campaignDays - a.rations;
     const take = Math.min(want, Math.max(0, f.food * 0.5)); if (take <= 0) return;
     f.food -= take; a.rations += take; a.rationDays = Math.max(a.rationDays || W.rationDays, a.rations / per);
@@ -197,7 +197,7 @@ VM.Armies = (function () {
   }
 
   // An army on its way through a city of another faction (or a free one) stops and lays siege to it. Routed or retreating armies are only running home.
-  const blockedBy = (state, army) => !army.routed && army.retreat <= 0 && state.cities[army.at].owner !== army.owner;
+  const blockedBy = (state, army) => !army.routed && army.retreat <= 0 && VM.Diplo.hostile(state, army.owner, state.cities[army.at].owner);
 
   function step(state, dd) {
     for (const army of state.armies) {

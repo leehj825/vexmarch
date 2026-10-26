@@ -616,8 +616,10 @@ VM.City3D = (function () {
     cam.tx = Math.max(-lim, Math.min(lim, cam.tx - Math.cos(cam.yaw) * dx * k - Math.sin(cam.yaw) * dy * k));
     cam.tz = Math.max(-lim, Math.min(lim, cam.tz + Math.sin(cam.yaw) * dx * k - Math.cos(cam.yaw) * dy * k));
   };
-  function down(e) { canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); cam.auto = false; panning = e.button === 2 || e.shiftKey; if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; } }
+  let walk = null;                                                                       // walk mode (js/view3d/walk.js) takes over the camera and the pointer
+  function down(e) { if (walk) return walk.down(e); canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); cam.auto = false; panning = e.button === 2 || e.shiftKey; if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; } }
   function move(e) {
+    if (walk) return walk.move(e);
     const p = pointers.get(e.pointerId); if (!p) return;
     const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
     if (pointers.size >= 2) {
@@ -626,7 +628,7 @@ VM.City3D = (function () {
     } else if (panning) pan(dx, dy);
     else { cam.yaw -= dx * 0.008; cam.pitch = Math.max(0.12, Math.min(1.35, cam.pitch + dy * 0.005)); }
   }
-  function up(e) { pointers.delete(e.pointerId); if (pointers.size < 2) { pinch = 0; mid = null; } if (!pointers.size) panning = false; }
+  function up(e) { if (walk) return walk.up(e); pointers.delete(e.pointerId); if (pointers.size < 2) { pinch = 0; mid = null; } if (!pointers.size) panning = false; }
 
   function open(id) {
     if (!ensureRenderer()) return false;
@@ -655,6 +657,7 @@ VM.City3D = (function () {
   function frame(dt) {
     if (!shown || !renderer) return;
     t += dt; acc += dt; if (acc > 0.3) { acc = 0; refresh(false); }
+    if (walk) { walk.frame(dt); animate(dt); renderer.render(scene, camera); return; }
     if (cam.auto) cam.yaw += dt * 0.05;
     const cp = Math.cos(cam.pitch);
     camera.position.set(cam.tx + Math.sin(cam.yaw) * cp * cam.dist, Math.sin(cam.pitch) * cam.dist, cam.tz + Math.cos(cam.yaw) * cp * cam.dist);
@@ -665,7 +668,8 @@ VM.City3D = (function () {
 
   return {
     init, open, close, frame, refresh, supported: () => ensureRenderer(), isOpen: () => shown, id: () => cityId, layout: () => layout,
-    cam,
+    cam, setWalk: m => { walk = m; if (!m) resize(); },
+    internals: () => ({ THREE, scene, camera, canvas, crowd: crowd(), layout, cityId, resize }),
     info: () => renderer ? { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, staticTriangles: stats.tris, soldiers: dyn ? dyn.entries.length : 0, frames: dyn ? Object.values(dyn.groups).map(g => Array.from(g.body.geometry.attributes.aAnim.array.slice(0, 12)).filter((v, i) => i % 4 === 2)) : [], conquest: !!conq, assaultRadii: dyn ? dyn.entries.filter(e => e.mode === 'besieging' && e._x !== undefined).map(e => Math.hypot(e._x, e._z)) : [] } : null,
     camera: cam
   };

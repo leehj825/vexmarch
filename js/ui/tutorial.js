@@ -11,7 +11,7 @@ VM.Tutorial = (function () {
   const mine = () => ui.state.armies.filter(a => a.owner === me());
 
   const STEPS = [
-    { id: 'pause', text: 'The game runs in real time. Pause it with the II button (or Space), then press 1x to carry on.',
+    { id: 'pause', text: 'The game runs in real time. Pause it with the pause button (or Space), then press play to carry on.',
       done: () => { if (ui.speed === 0) mem.paused = true; return mem.paused && ui.speed > 0; } },
     { id: 'capital', text: 'This is your realm. Tap your capital (the star inside the gold ring) to open it.', focus: () => cap(),
       done: () => ui.selectedCity === cap() },

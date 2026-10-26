@@ -62,14 +62,33 @@ Principle: prove the strategy layer is fun in 2D before spending on 3D. Each pha
 
 - Delivered: four soldier types with their own silhouettes (shield and sword, long spear, bow and quiver, riders on horses) in the proportions of the army's troops, siege engines, armies marching on the roads into and out of the city (seen from 140 map units away, easing along the road as the sim moves them), armies in battle meeting in one line with defenders facing attackers, arrow volleys, clash sparks, stone shots from engines, and fallen soldiers that follow the army's casualties. Still cosmetic: the sim decides every outcome. Follow-up: armies stop and fight a hostile city on their path instead of passing it; the 3D scene shows a wave-by-wave assault with ladders, defenders fighting back, a breach scene, and a conquest scene when a city falls. 13 layout tests and 62 browser checks (worst case 23 draw calls, about 25k triangles). Later: the soldiers were replaced by simple animated figures that play the clips of Nightfall Settlement and Deepward (see DESIGN, Animated crowd).
 
-## Phase 9 — Walk mode (optional extra)
+## Phase 9 — Walk mode (done)
 - Third-person hero walking the city, clock paused while active. No combat and no war participation.
+- Delivered: `js/view3d/walk.js`, Walk button in the city panel (own cities), keyboard and thumb-stick controls, officers and townsfolk to talk to, gifts, building descriptions, Korean text, `tools/ui_walk.js` (22 checks).
 
 ## Phase 10 — Optional flavour
 - Optional on-device language-model text for officer messages, with template fallback. May be dropped.
 
+## Since Phase 9 (done)
+Animated crowd, Nightfall-style city look, city growth stages, ÷10 population/soldier rescale (exact soldier counts), smarter army tactics (roles, wall defence, sorties, campaign food, retreats), 3D strategy map with terrain, pause menu, collapsible phone panel, ad-banner freeze fix, Campaign story slice (six houses, 24 officers, 12 beats, endings, chronicle, English and Korean).
+
+## Tips (done)
+`js/ui/tips.js`: a hold (touch) or hover (mouse) on anything with `data-tip` shows a short popup; a held press is not also a click. The city and army panels, the Officers and Diplomacy sheets and the top bar now show short labels with dotted underlines and small (i) marks, and the explanations moved into tips (about 50 texts, all in Korean too). `tools/ui_tips.js`: 19 checks. To add one: `VM.Panels.T('Label', 'Explanation')` or `data-tip="..."`.
+
+## Icons and words (done)
+After the first icons-only pass the rule became: **icons for numbers you scan** (stats, bars, counts, costs) and **words for what you read or decide** (offers, buttons that do something, headings, statuses, alert sentences). Settings > Interface switches between *Icons only*, *Icons and words* (default) and *Words and labels*; a **Details** button (list icon) in the city, army and officer panels shows a label beside every stat, remembered between sessions. Words are `<span class="w">` and labels `<small class="sl">` and CSS decides what is shown (`html[data-ui]`, `html.det`), so switching needs no redraw.
+
+### Icons
+The city and army panels, the Officers, Diplomacy and Alerts sheets and the top bar are made of icons, meters, pips and generated officer portraits instead of words, the same on phone and desktop. Names, numbers and costs stay as text; everything else (labels, descriptions, the reason a button is disabled) is a tip: hold or hover an icon and its name and explanation appear (first line the name, then the text). `js/ui/icons.js` holds the set and helpers (`VM.Icons.t / stat / btn / meter / pips / portrait`, `VM.Icons.MAP` for troops, buildings, policies, orders, traits, roles and event types); `tools/ui_icons.js` checks that every icon exists and every icon button has a tip. Still text: Settings, the title and campaign screens, story pages, the walk-mode buttons and the toasts.
+
+## Next (proposed order)
+1. More beats, a gameplay trait and special victory per house. 2. A ruler with stats and choices. 3. Native review of the Korean text. 4. Diplomacy extras (marriages, hostages, asking an ally for help). (Android APK verification and phone performance checks are parked.)
+
+## Phase 11 — Diplomacy (DONE; spec in `docs/DIPLOMACY.md`)
+Two states (enemy, ally), no truce; breaking a pact is always possible and costly (betray at the end); a strong faction can offer terms to a weak one to merge (the player can refuse; the AI accepts for survival). Delivered in this order: (1) state, alliance rules in war and army code, break, tests; (2) alliance proposals and AI answers; (3) merge offers, survival score, game-over by merge; (4) AI initiative and betrayal; (5) UI sheet, alerts, map marks; (6) campaign hooks and Korean; (7) balance and docs.
+
 ## Later / unscheduled
-Diplomacy, joining wars as a hero, extra scenarios and maps, unique faction bonuses.
+Joining wars as a hero, extra scenarios and maps, unique faction bonuses.
 
 ## Risks
 - **3D on Android:** keep draw calls low, instance everything, one city at a time.

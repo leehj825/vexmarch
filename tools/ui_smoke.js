@@ -19,6 +19,13 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await p.click('#facList button:nth-child(2)'); ok(await ev(() => __vm.state.player) === 2, 'picked faction 2');
     await p.click('[data-d="hard"]'); ok(await ev(() => __vm.state.difficulty) === 'hard', 'difficulty hard');
 
+    // Settings from the title screen, and only pause and play for the speed
+    await p.click('#setTitleBtn'); await p.waitForTimeout(250);
+    ok(await ev(() => { const s = document.getElementById('sheet'); return s.classList.contains('open') && getComputedStyle(s).visibility === 'visible' && /Interface/.test(s.textContent); }), 'the title screen has a Settings button that opens the settings');
+    await p.click('#sheet [data-act="sheetClose"]'); await p.waitForTimeout(150);
+    ok(await ev(() => !document.getElementById('sheet').classList.contains('open')), 'and the sheet closes again');
+    ok(await ev(() => document.querySelectorAll('#speed button[data-s]').length) === 2, 'only a pause and a play button');
+
     // Tutorial: complete every step through real UI actions where possible
     await p.click('#tutBtn'); await p.waitForTimeout(400);
     ok(await ev(() => VM.Tutorial.active()), 'tutorial started'); ok(await ev(() => __vm.state.aiOn === false), 'AI asleep during the tutorial');
@@ -48,9 +55,9 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     await p.click('#setBtn'); await p.waitForTimeout(250);
     await p.click('[data-act="lang"][data-l="ko"]'); await p.waitForTimeout(300);
     ok((await p.textContent('#sheet')).includes('설정'), 'settings sheet in Korean');
-    ok((await p.textContent('#gold')).includes('골드'), 'top bar in Korean');
+    ok(await ev(() => VM.I18N.tr('Gold') === '골드' && document.getElementById('gold').getAttribute('data-tip').includes('Gold')), 'tips are translated in Korean');
     await p.click('[data-act="lang"][data-l="en"]'); await p.waitForTimeout(300);
-    ok((await p.textContent('#gold')).includes('Gold'), 'back to English');
+    ok(await ev(() => VM.I18N.lang === 'en'), 'back to English');
     await ev(() => VM.Audio.set('music', 0.3)); ok(await ev(() => VM.Audio.get('music')) === 0.3, 'volume setting');
     await ev(() => { __vm.speed = 2; }); await p.click('#menuBtn'); await p.waitForTimeout(200); ok(await p.locator('#pauseMenu.on').count() === 1 && await ev(() => __vm.speed) === 0, 'the menu button pauses and offers a menu');
     await p.click('[data-pm="resume"]'); await p.waitForTimeout(150); ok(await p.locator('#pauseMenu.on').count() === 0 && await ev(() => __vm.speed) === 2, 'resume carries on at the speed it was');

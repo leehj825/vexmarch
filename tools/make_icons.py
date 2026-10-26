@@ -29,26 +29,47 @@ def gradient(w, h, top, bot):
 
 
 def emblem(n):
-    """Three nodes joined by roads, and a banner on a pole in the middle one (drawn 4x larger, then shrunk)."""
+    """A stone keep with two towers and red roofs on a green hill, a banner on top and the road to the gate, inside a gold ring
+    (drawn 4x larger, then shrunk)."""
     S = n * 4
     im = Image.new('RGBA', (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    c = (S * 0.5, S * 0.70)
-    a, b = (S * 0.17, S * 0.84), (S * 0.85, S * 0.86)
-    d.line((a, c, b), fill=(238, 230, 214, 110), width=int(S * 0.03), joint='curve')
-    top = (S * 0.5, S * 0.46)
-    for p, col, r in ((a, BLUE, 0.075), (b, GREEN, 0.075)):
-        d.ellipse((p[0] - S * r, p[1] - S * r, p[0] + S * r, p[1] + S * r), fill=col + (255,), outline=(10, 8, 12, 255), width=int(S * 0.012))
-    d.ellipse((c[0] - S * 0.12, c[1] - S * 0.12, c[0] + S * 0.12, c[1] + S * 0.12), fill=RED + (255,), outline=(10, 8, 12, 255), width=int(S * 0.016))
-    d.ellipse((c[0] - S * 0.16, c[1] - S * 0.16, c[0] + S * 0.16, c[1] + S * 0.16), outline=GOLD + (255,), width=int(S * 0.014))
-    # the banner
-    px = S * 0.5
-    d.line((px, c[1], px, S * 0.12), fill=(60, 44, 30, 255), width=int(S * 0.024))
-    d.ellipse((px - S * 0.025, S * 0.095, px + S * 0.025, S * 0.145), fill=GOLD + (255,))
-    flag = [(px, S * 0.17), (px + S * 0.34, S * 0.19), (px + S * 0.27, S * 0.285), (px + S * 0.34, S * 0.38), (px, S * 0.36)]
-    d.polygon(flag, fill=RED + (255,), outline=GOLD + (255,))
-    d.line(flag + [flag[0]], fill=GOLD + (255,), width=int(S * 0.014))
-    d.line((px + S * 0.04, S * 0.21, px + S * 0.2, S * 0.215), fill=GOLD + (255,), width=int(S * 0.012))
-    d.line((px + S * 0.04, S * 0.33, px + S * 0.2, S * 0.325), fill=GOLD + (255,), width=int(S * 0.012))
+    INK = (14, 10, 18, 255)
+    ow = max(2, int(S * 0.012))
+    def box(x0, y0, x1, y1, fill, outline=INK, w=ow):
+        d.rectangle((x0 * S, y0 * S, x1 * S, y1 * S), fill=fill, outline=outline, width=w)
+    def poly(pts, fill, outline=INK, w=ow):
+        d.polygon([(x * S, y * S) for x, y in pts], fill=fill); d.line([(x * S, y * S) for x, y in pts + [pts[0]]], fill=outline, width=w, joint='curve')
+    # gold ring and the hill
+    d.ellipse((S * 0.05, S * 0.05, S * 0.95, S * 0.95), outline=GOLD + (255,), width=int(S * 0.022))
+    d.ellipse((S * 0.13, S * 0.62, S * 0.87, S * 0.92), fill=(86, 142, 58, 255), outline=INK, width=ow)
+    d.ellipse((S * 0.22, S * 0.66, S * 0.78, S * 0.86), fill=(108, 164, 70, 255))
+    STONE, STONE_D, STONE_L = (176, 170, 188, 255), (128, 122, 146, 255), (206, 200, 216, 255)
+    ROOF, ROOF_D = RED + (255,), (170, 46, 38, 255)
+    # side towers
+    for x0, x1 in ((0.17, 0.33), (0.67, 0.83)):
+        box(x0, 0.46, x1, 0.77, STONE); box((x0 + x1) / 2, 0.46, x1, 0.77, STONE_D, outline=None)
+        d.rectangle((x0 * S, 0.46 * S, x1 * S, 0.77 * S), outline=INK, width=ow)
+        poly([(x0 - 0.02, 0.46), (x1 + 0.02, 0.46), ((x0 + x1) / 2, 0.29)], ROOF)
+        poly([((x0 + x1) / 2, 0.46), (x1 + 0.02, 0.46), ((x0 + x1) / 2, 0.29)], ROOF_D)
+        box((x0 + x1) / 2 - 0.012, 0.54, (x0 + x1) / 2 + 0.012, 0.62, INK, outline=None)
+    # the keep: wall, battlements, roof, banner
+    box(0.30, 0.40, 0.70, 0.78, STONE); box(0.5, 0.40, 0.70, 0.78, STONE_D, outline=None)
+    d.rectangle((0.30 * S, 0.40 * S, 0.70 * S, 0.78 * S), outline=INK, width=ow)
+    for i in range(5):
+        x = 0.30 + i * 0.08
+        box(x, 0.365, x + 0.045, 0.40, STONE_L if i < 3 else STONE_D)
+    poly([(0.27, 0.365), (0.73, 0.365), (0.5, 0.15)], ROOF)
+    poly([(0.5, 0.365), (0.73, 0.365), (0.5, 0.15)], ROOF_D)
+    d.line((0.5 * S, 0.15 * S, 0.5 * S, 0.075 * S), fill=(60, 44, 30, 255), width=int(S * 0.016))
+    poly([(0.5, 0.078), (0.64, 0.092), (0.60, 0.115), (0.64, 0.138), (0.5, 0.15)], RED + (255,), outline=GOLD + (255,), w=max(2, int(S * 0.01)))
+    d.ellipse((0.5 * S - S * 0.018, 0.15 * S - S * 0.018, 0.5 * S + S * 0.018, 0.15 * S + S * 0.018), fill=GOLD + (255,))
+    # gate and windows
+    d.rectangle((0.44 * S, 0.60 * S, 0.56 * S, 0.78 * S), fill=INK); d.pieslice((0.44 * S, 0.54 * S, 0.56 * S, 0.66 * S), 180, 360, fill=INK)
+    for x in (0.36, 0.60):
+        box(x, 0.47, x + 0.04, 0.55, INK, outline=None)
+    # the road to the gate
+    d.polygon([(0.47 * S, 0.78 * S), (0.53 * S, 0.78 * S), (0.66 * S, 0.93 * S), (0.34 * S, 0.93 * S)], fill=(214, 196, 150, 255))
+    d.line([(0.47 * S, 0.78 * S), (0.34 * S, 0.93 * S)], fill=INK, width=ow); d.line([(0.53 * S, 0.78 * S), (0.66 * S, 0.93 * S)], fill=INK, width=ow)
     return im.resize((n, n), Image.LANCZOS)
 
 
