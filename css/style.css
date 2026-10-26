@@ -28,7 +28,7 @@ body.adLive #top { padding-top: 58px; }          /* leave room for the 320x50 ba
 #panel.open { display: block; }
 .ph .tog { display: inline-block; padding: 2px 9px; border: 1px solid rgba(242, 210, 122, 0.5); border-radius: 4px; background: transparent; color: #f2d27a; font-size: 14px; cursor: pointer; }
 #panel.min > :not(.ph) { display: none; }
-.ph { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.ph { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; position: sticky; top: -8px; z-index: 2; margin-top: -8px; padding-top: 8px; background: rgba(12, 10, 14, 0.97); }
 .ph b { font-size: 16px; color: #f2d27a; } .ph .sub { opacity: 0.7; font-size: 12px; flex: 1; }
 .x { border: none; background: none; color: #eee6d6; font-size: 16px; cursor: pointer; padding: 2px 6px; }
 .row { margin: 3px 0; } .row.between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

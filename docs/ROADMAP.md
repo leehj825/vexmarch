@@ -81,18 +81,22 @@ After the first icons-only pass the rule became: **icons for numbers you scan** 
 ### Icons
 The city and army panels, the Officers, Diplomacy and Alerts sheets and the top bar are made of icons, meters, pips and generated officer portraits instead of words, the same on phone and desktop. Names, numbers and costs stay as text; everything else (labels, descriptions, the reason a button is disabled) is a tip: hold or hover an icon and its name and explanation appear (first line the name, then the text). `js/ui/icons.js` holds the set and helpers (`VM.Icons.t / stat / btn / meter / pips / portrait`, `VM.Icons.MAP` for troops, buildings, policies, orders, traits, roles and event types); `tools/ui_icons.js` checks that every icon exists and every icon button has a tip. Still text: Settings, the title and campaign screens, story pages, the walk-mode buttons and the toasts.
 
-## Next (proposed order)
-1. **House traits and special victories.** Each of the six houses gets a gameplay trait and its own victory condition, so the campaign houses play differently.
-2. **Allies help each other.** Ask an ally for troops or help; allies join your wars, so a pact is worth more than not being attacked.
-3. **More campaign beats.** Extend the story past the first 12 beats, with a ruler who has stats and makes choices.
-4. **Fog of war and scouting.** You see only what your cities and armies see, scouts matter, and the AI follows the same rules.
-5. **Random events.** Famine, plague, bandits, rebellions in low-loyalty cities and good harvests, through the alerts system.
-6. **Battle forecast.** A tooltip before you attack that shows the likely outcome.
-7. **Front-width cap.** A limit on how many armies can stack at a front, so chokepoints and sieges matter.
-8. **Idle-army button.** A button to jump to the next army with no orders.
-9. **More diplomacy.** Marriages and hostages.
+## Next (proposed order) — THE CURRENT TODO LIST
+Work through these from the top unless the owner says otherwise. Tick an item off here (mark it DONE) when it ships.
+1. **Fix: a city captured by a bystander.** When an army retreats just before a siege is won, another faction's army that arrived later takes the city. Needs a rule for who gets credit (see Known issues below).
+2. **House traits and special victories.** Each of the six houses gets a gameplay trait and its own victory condition, so the campaign houses play differently.
+3. **Allies help each other.** Ask an ally for troops or help; allies join your wars, so a pact is worth more than not being attacked.
+4. **More campaign beats.** Extend the story past the first 12 beats, with a ruler who has stats and makes choices.
+5. **Fog of war and scouting.** You see only what your cities and armies see, scouts matter, and the AI follows the same rules.
+6. **Random events.** Famine, plague, bandits, rebellions in low-loyalty cities and good harvests, through the alerts system.
+7. **Battle forecast.** A tooltip before you attack that shows the likely outcome.
+8. **Front-width cap.** A limit on how many armies can stack at a front, so chokepoints and sieges matter.
+9. **Idle-army button.** A button to jump to the next army with no orders.
+10. **More diplomacy.** Marriages and hostages.
 
-Parked: Android APK verification, phone performance checks, native review of the Korean text.
+Known issues: (a) A siege nearly won can be lost to a latecomer: war.js `step` captures a city for any hostile sieging army once the garrison is at or below `captureMin`, regardless of who did the work. (b) Morale retreat (`retreatReason`) can pull an army out one day before the walls fall.
+
+Parked (owner decision, not to be started): Android APK verification, phone performance checks, native review of the Korean text.
 
 ## Phase 11 — Diplomacy (DONE; spec in `docs/DIPLOMACY.md`)
 Two states (enemy, ally), no truce; breaking a pact is always possible and costly (betray at the end); a strong faction can offer terms to a weak one to merge (the player can refuse; the AI accepts for survival). Delivered in this order: (1) state, alliance rules in war and army code, break, tests; (2) alliance proposals and AI answers; (3) merge offers, survival score, game-over by merge; (4) AI initiative and betrayal; (5) UI sheet, alerts, map marks; (6) campaign hooks and Korean; (7) balance and docs.
