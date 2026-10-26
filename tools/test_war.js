@@ -392,5 +392,14 @@ test('retreat: only food or morale pulls an army back; how low the morale may fa
   c.size; c.troops.infantry = 5; c.morale = 60; c.supply = { line: 'ok', starving: false, mult: 1 }; assert(!VM.War.retreatReason(s, c), 'losses alone are no reason');
 });
 
+test('breach: an army in a breached city does not retreat or rout on morale, unless it is far too small', () => {
+  const { s, x, c } = siegeWorld(0, 30); c.owner = 2;
+  const a = army(s, 1, x, { infantry: 40 }); run(s, 1);
+  a.morale = 5; a.supply = { line: 'ok', starving: false, mult: 1 };
+  assert(VM.War.pressing(s, a), 'pressing the assault'); assert(!VM.War.retreatReason(s, a), 'no morale retreat in the breach');
+  a.morale = 0; run(s, 0.25); assert(!a.routed, 'no rout in the breach');
+  a.troops.infantry = 3; assert(!VM.War.pressing(s, a), 'too small to press on'); assert(VM.War.retreatReason(s, a), 'a tiny army may still retreat');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

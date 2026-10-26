@@ -141,10 +141,19 @@ VM.War = (function () {
   const carryOf = o => o.carry || (o.carry = {});
 
   // Why an officer would pull his army back from a campaign, if at all: the food would run out, or the men have lost heart (the limit depends on his nature)
+  // An army inside a hostile city whose walls are down is in the final assault: pulling out then only hands the city to whoever comes next. It stays unless it is too small for what is left to fight.
+  function pressing(state, a) {
+    if (a.at === null || a.routed || !sieging(a)) return false;
+    const c = state.cities[a.at];
+    if (!c.besieged || !VM.Diplo.hostile(state, a.owner, c.owner) || (wallMax(c) > 0 && c.wallHp > 0)) return false;
+    const pool = {}; for (const src of [c.garrison].concat(state.armies.filter(h => h.owner === c.owner && h.at === c.id).map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
+    return power(a.troops, pool) * W().pressRatio >= power(pool, a.troops);
+  }
   function retreatReason(state, a) {
     const o = state.officers[a.officer], s = a.supply, n = VM.Armies.sizeOf(a);
     if (s && s.starving) return 'food';
     if (s && s.line !== 'ok' && !s.depot) { const eat = n * VM.CFG.ECON.foodPerHead * (s.mult || 1); if (eat > 0 && a.rations / eat < W().retreatFoodDays) return 'food'; }
+    if (pressing(state, a)) return null;
     const lim = W().retreatMorale;
     if (a.morale < (o && lim[o.trait] !== undefined ? lim[o.trait] : lim.other)) return 'morale';
     return null;
@@ -298,6 +307,7 @@ VM.War = (function () {
         destroy(state, a, killer ? killer.owner : z.owner);
         continue;
       }
+      if (a.morale <= 0 && !a.routed && pressing(state, a)) a.morale = 1;       // no rout in the breach while the assault is still winnable
       if (a.morale <= 0 && !a.routed) {
         const from = VM.Armies.zoneOf(a), home = nearestOwnCity(state, from, a.owner, state.cities[from].owner === a.owner ? from : -1);
         a.fighting = []; a.buff = null;
@@ -393,5 +403,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity, checkOver };
+  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, pressing, total, updateZones, nearestOwnCity, checkOver };
 })();

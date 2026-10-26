@@ -106,6 +106,7 @@ VM.CFG = {
     siegeWall: 4,           // wall hit points per siege engine per day
     chip: 1.5,              // wall hit points per other soldier per day
     wallRepair: 0.01,       // fraction of max per day when nobody threatens the city
+    pressRatio: 2,          // an army in a breached city stays while it is at least half as strong as what is left to fight
     captureMin: 0,          // garrison at or below this falls
     captureLoss: 0.15,      // population lost when a city is taken
     foreignFood: 3,         // food eaten per soldier in enemy or neutral land

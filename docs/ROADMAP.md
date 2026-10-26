@@ -83,7 +83,7 @@ The city and army panels, the Officers, Diplomacy and Alerts sheets and the top 
 
 ## Next (proposed order) — THE CURRENT TODO LIST
 Work through these from the top unless the owner says otherwise. Tick an item off here (mark it DONE) when it ships.
-1. **Fix: a city captured by a bystander.** When an army retreats just before a siege is won, another faction's army that arrived later takes the city. Needs a rule for who gets credit (see Known issues below).
+1. **DONE — Fix: a city captured by a bystander.** An army inside a hostile city whose walls are down no longer retreats or routs on morale while it is at least half as strong as what is left to fight (`War.pressing`, `WAR.pressRatio`); food and a too-small army still pull it out. Credit-to-besieger (tracking who did the siege damage) was not done.
 2. **House traits and special victories.** Each of the six houses gets a gameplay trait and its own victory condition, so the campaign houses play differently.
 3. **Allies help each other.** Ask an ally for troops or help; allies join your wars, so a pact is worth more than not being attacked.
 4. **More campaign beats.** Extend the story past the first 12 beats, with a ruler who has stats and makes choices.
@@ -93,8 +93,6 @@ Work through these from the top unless the owner says otherwise. Tick an item of
 8. **Front-width cap.** A limit on how many armies can stack at a front, so chokepoints and sieges matter.
 9. **Idle-army button.** A button to jump to the next army with no orders.
 10. **More diplomacy.** Marriages and hostages.
-
-Known issues: (a) A siege nearly won can be lost to a latecomer: war.js `step` captures a city for any hostile sieging army once the garrison is at or below `captureMin`, regardless of who did the work. (b) Morale retreat (`retreatReason`) can pull an army out one day before the walls fall.
 
 Parked (owner decision, not to be started): Android APK verification, phone performance checks, native review of the Korean text.
 
