@@ -62,6 +62,7 @@ VM.Sheets = (function () {
     const st = ui.state, N = st.map.nodes;
     if (o.travel) return `travelling to ${N[o.travel.to].name} (${Math.ceil(o.travel.arrive - st.time)}d)`;
     if (o.searching) return `searching near ${N[o.searching.city].name} (${Math.ceil(o.searching.until - st.time)}d)`;
+    if (o.role === 'hostage') return `held as a hostage by ${st.factions[o.hostage].name}`;
     if (o.role === 'governor') { const c = st.cities.find(x => x.governor === o.id); return c ? `governs ${N[c.id].name}` : 'governor'; }
     if (o.role === 'commander') { const a = st.armies.find(x => x.id === o.army); return a ? `leads an army (${num(VM.Armies.sizeOf(a))})` : 'commander'; }
     return `idle in ${N[o.loc].name}`;

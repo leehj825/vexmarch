@@ -62,6 +62,9 @@ VM.Alerts = (function () {
         if (ev.kind === 'unrest') return spec(`Unrest in ${nme}: the garrison lost ${ev.lost} men to rioters. Keep the people fed and the governor loyal.`, 'attack', true, ev.city);
         return null;
       }
+      case 'married': return (ev.a === me || ev.b === me) ? spec(`You are now wed to ${nm(ev.a === me ? ev.b : ev.a)}`, 'info', false, null) : null;
+      case 'hostages': return (ev.a === me || ev.b === me) ? spec(`Hostages exchanged with ${nm(ev.a === me ? ev.b : ev.a)}`, 'info', false, null) : null;
+      case 'hostageKept': return ev.owner === me ? spec(`${on(ev.officer)} was held as a hostage and has joined ${nm(ev.to)}`, 'officer', true, null) : (ev.to === me ? spec(`${on(ev.officer)}, held as a hostage, joins you`, 'info', false, null) : null);
       case 'allyBroken': return ev.other === me ? spec(`${nm(ev.by)} has broken the pact with you!`, 'diplo', true, null) : (ev.by === me ? spec(`You broke the pact with ${nm(ev.other)}`, 'info', false, null) : spec(`${nm(ev.by)} broke the pact with ${nm(ev.other)}`, 'info', false, null, false));
       case 'merged': return ev.from === me ? null : spec(`${nm(ev.from)} has joined ${nm(ev.owner)}`, 'info', false, null, ev.owner === me);
       case 'proposal': {

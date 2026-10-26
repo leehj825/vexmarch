@@ -2,7 +2,7 @@
 
 A real-time grand strategy game: 30 nodes, 4 to 6 factions, officers who run your cities, and supply lines that decide wars. Plain JavaScript (no build step, no modules) so it opens from `file://`; Capacitor wraps it for Android (`com.vexmarch.game`).
 
-See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 9 and 11 (diplomacy) done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). The 3D city view (View city in the city panel, or double-tap a node) shows buildings, walls, soldiers of every kind and armies marching and fighting outside the gates; Walk mode (the Walk button in your own city) lets you stroll the streets, talk to officers and townsfolk and give gifts while the clock is paused. The strategy map is 3D with terrain, and there is a Campaign mode with a story (`docs/STORY.md`) beside the random Skirmish. See `ANDROID.md` for the phone build.
+See `docs/DESIGN.md` and `docs/ROADMAP.md`. **Status: Phases 0 to 9 and 11 (diplomacy) done** (the 2D game is complete: economy, war, officers, AI rivals, tutorial, English and Korean, sound, Android wrapper). The 3D city view (View city in the city panel, or double-tap a node) shows buildings, walls, soldiers of every kind and armies marching and fighting outside the gates; Walk mode (the Walk button in your own city) lets you stroll the streets, talk to officers and townsfolk and give gifts while the clock is paused. The strategy map is 3D with terrain, and there is a Campaign mode with a story (`docs/STORY.md`) beside the random Skirmish. Options on the title screen: **fog of war** and **random events**. Campaign houses have their own gift and victory; allies can be asked for help, married, or exchange hostages; an enemy city's panel forecasts an attack; an idle-army button sits in the top bar. See `ANDROID.md` for the phone build.
 
 ## Run
 
@@ -12,7 +12,7 @@ Open `index.html` in a browser. Press Tutorial on the title screen for a guided 
 
 ```
 npm test              # tools/test_diplo.js (alliances, betrayal, merge offers), tools/test.js (map, determinism, saves, economy, commands, armies) tools/test_war.js (battles, sieges, supply) and tools/test_officers.js (loyalty, governors, orders, proposals)
-npm run tournament   # AI-vs-AI games: node tools/ai_tournament.js [seeds] [years] [levels]
+npm run tournament   # AI-vs-AI games: node tools/ai_tournament.js [seeds] [years] [levels]; add FOG=1 and/or HAZARDS=1 to turn those options on
 npm run ui:test       # browser smoke test (needs Playwright: PLAYWRIGHT=/path/to/playwright)
 npm run ui:test3d     # browser test of the 3D city view (needs Playwright)
 # more browser tests: tools/ui_map3d.js, ui_story.js, ui_walk.js, ui_diplo.js, ui_tips.js, ui_icons.js, ui_ads.js (run with node, PLAYWRIGHT=...)

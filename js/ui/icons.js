@@ -119,7 +119,7 @@ VM.Icons = (function () {
     order: { hold: 'hold', defend: 'shield', reinforce: 'reinforce', raid: 'raid' },
     ability: { charge: 'bolt', fire: 'flame', rally: 'horn' },
     trait: { Rash: 'flame', Cautious: 'eye', Loyal: 'handshake', Greedy: 'bag', Brave: 'chevrons', Schemer: 'mask' },
-    role: { governor: 'crown', commander: 'flag', idle: 'zzz', traveling: 'go', searching: 'search' },
+    role: { governor: 'crown', commander: 'flag', idle: 'zzz', hostage: 'unlink', traveling: 'go', searching: 'search' },
     alert: { attack: 'alert', army: 'flag', officer: 'mask', proposal: 'ask', battle: 'swords', famine: 'bread', diplo: 'handshake', info: 'info' },
     event: { attacked: 'alert', battle: 'swords', rout: 'back', destroyed: 'skull', captured: 'flag', breach: 'wall', blocked: 'stop', cut: 'unlink', officerCaptured: 'mask', officerDied: 'skull', eliminated: 'skull',
       defected: 'mask', loyaltyLow: 'heart', wanderer: 'pop', found: 'search', searchFailed: 'search', recruited: 'pop', arrived: 'go', built: 'house', starving: 'bread', proposal: 'ask',

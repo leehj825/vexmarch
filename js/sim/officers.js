@@ -33,7 +33,7 @@ VM.Officers = (function () {
   function defect(state, o) {
     const from = o.owner, c = state.cities.find(x => x.governor === o.id);
     if (c) { c.governor = null; }
-    o.role = 'idle'; o.idleDays = 0;
+    o.role = 'idle'; o.idleDays = 0; o.hostage = null;
     let best = -1, bd = Infinity;
     for (const x of state.cities) { if (x.owner === 0 || x.owner === from) continue; const d = hops(state, o.loc, x.id); if (d < bd) { bd = d; best = x.id; } }
     if (best >= 0) { o.owner = state.cities[best].owner; o.loc = best; o.loyalty = 50; } else { o.owner = 0; o.loyalty = 50; }

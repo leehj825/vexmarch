@@ -77,6 +77,7 @@ VM.Armies = (function () {
     if (!city || city.owner !== faction) return { ok: false, reason: 'not your city' };
     if (!o || o.owner !== faction) return { ok: false, reason: 'not your officer' };
     if (o.army !== null) return { ok: false, reason: 'officer already leads an army' };
+    if (o.role === 'hostage') return { ok: false, reason: 'officer is a hostage' };
     if (city.governor === o.id) return { ok: false, reason: 'officer is governing; relieve them first' };
     if (o.loc !== cityId) return { ok: false, reason: 'officer is not in this city' };
     if (VM.Eco.troopsOf(city.garrison) <= 0) return { ok: false, reason: 'no troops in the garrison' };
