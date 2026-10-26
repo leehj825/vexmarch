@@ -33,6 +33,7 @@ npm run balance       # node tools/balance.js [seed] [years]: yearly economy tab
 | `js/sim/armies.js` | Armies: form, march along roads, disband, supply route |
 | `js/sim/war.js` | Battles, sieges, supply and cut-off, morale, abilities, capture, elimination, depots |
 | `js/sim/officers.js` | Loyalty, wanderers, governors' policies, armies' standing orders, proposals |
+| `js/sim/hazards.js` | Optional random events: harvests, plague, bandits, unrest |
 | `js/sim/fog.js` | Optional fog of war: what a house sees, what it remembers |
 | `js/sim/ai.js` | AI factions: staffing, recruiting, armies, strike force |
 | `js/sim/tick.js` | Fixed-timestep clock, save/load, hash |

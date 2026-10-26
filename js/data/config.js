@@ -124,6 +124,13 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Random events (js/sim/hazards.js): chances per city per day, and what they do
+  HAZARDS: {
+    blight: 0.0004, bounty: 0.0005, plague: 0.0003, bandits: 0.0005, unrest: 0.01,
+    blightFood: 0.5, blightDays: 60, bountyFood: 1.4, bountyDays: 60, plagueLoss: 0.12, plagueGold: 0.8, plagueDays: 30, plagueMinPop: 100, banditGold: 0.6, banditDays: 40,
+    unrestLoyalty: 30, unrestSecurity: 0.5, unrestLoss: 0.3, unrestDevastation: 0.15
+  },
+
   // Fog of war (js/sim/fog.js): how far a city or an army sees, in map units (the map is 1000 x 700); cavalry see further
   FOG: { city: 260, army: 190, cavalry: 1.4 },
 
