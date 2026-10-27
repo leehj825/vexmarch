@@ -92,7 +92,7 @@
   ui.exitToMenu = exitToMenu;
   const $pm = document.getElementById('pauseMenu');
   const closePause = () => { if (!$pm.classList.contains('on')) return; $pm.classList.remove('on'); ui.speed = ui.prevSpeed === undefined ? 1 : ui.prevSpeed; };
-  $menu.addEventListener('click', () => { if (!ui.running || $pm.classList.contains('on')) return; ui.prevSpeed = ui.speed; ui.speed = 0; $pm.classList.add('on'); document.getElementById('pmChron').style.display = ui.state.story ? '' : 'none'; });
+  $menu.addEventListener('click', () => { if (!ui.running || $pm.classList.contains('on')) return; ui.prevSpeed = ui.speed; ui.speed = 0; $pm.classList.add('on'); document.getElementById('pmChron').style.display = ''; });
   $pm.addEventListener('click', e => {
     const b = e.target.closest('[data-pm]'); if (!b) { if (e.target === $pm) closePause(); return; }
     if (b.dataset.pm === 'resume') closePause();

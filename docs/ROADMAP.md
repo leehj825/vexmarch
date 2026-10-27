@@ -97,6 +97,14 @@ All ten items below are DONE (items 1 to 10); the list is kept as a record of wh
 ## Field battle view (done)
 Watch a fight that happens on the road, away from any city. `FieldLayout.start` (only while the army is fighting and seen; a finished battle gives nothing) fixes the place; `FieldLayout.build` describes the two sides facing each other, the reserve behind, armies that march in or leave at their real place on the map, and the fallen. `Field3D` draws it with the crowd, volleys and sparks. The view is entered with **Watch battle** in the army panel or by tapping the red cross on the map. Once in, it is never closed by the game: after the fight the loser leaves, a destroyed army lies on the field and the status line says who holds it; only Back to map or Esc leaves. `tools/test_field.js` (3 tests) and `tools/ui_field.js` (32 browser checks). Not done: following an army that leaves the field, siege engines in the field.
 
+## Round two (done, one commit each)
+- **Trade routes** (`js/sim/trade.js`): a road between two of your cities, or one of yours and an ally's, through land friendly to both; pays both houses daily; cut when an enemy holds a city on the road; markets allow more routes. Panel: *Trade* section in your city.
+- **Doctrines** (`js/sim/doctrine.js`): a yearly choice of one of three lasting bonuses (drill, fortifications, granaries, levies, caravans, mobility). The player's offer pauses the game; AI houses take the first.
+- **Vassals and tribute** (`js/sim/diplo.js`): a weaker house can accept vassalage: it keeps its cities and name, pays tribute daily, cannot ally elsewhere, and rebels when it grows much stronger than its lord.
+- **Generals' duels** (`js/sim/duel.js`): while your army fights an enemy army, challenge the enemy general; decided at once by stats and trait, with a rival bonus; loser's army loses morale and its general loyalty; a cool-down after each.
+- **Battle reports** (`js/sim/report.js`): each fight is recorded with start and end sizes, who held the field and where; the last 40 are kept.
+- **Chronicle as a history book** (`js/ui/story.js`): year headings, a summary of the current year, and battles written as sentences; available in every game from the pause menu.
+
 ## Ideas for next (not started, none agreed)
 - AI that aims for its house's own victory (Story.victoryView), and AI that proposes marriages, hostages and asks for help against the player.
 - House-specific story beats and decisions beyond the first twelve; the ruler choosing a policy at the start (not only reacting).
