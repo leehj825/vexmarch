@@ -27,8 +27,7 @@
   <div id="sheet"></div>
   <div id="lesson"></div>
   <div id="toast"></div>
-  <div id="pauseMenu"><div><h2>Paused</h2><button data-pm="resume" class="btn">Resume</button><button data-pm="chronicle" class="btn" id="pmChron">Chronicle</button><button data-pm="settings" class="btn">Settings</button><button data-pm="exit" class="btn">Save and go to the main menu</button></div></div>
-  <div id="story"><div class="card"><h2 id="storyT"></h2><div id="storyB"></div><div class="btns"><button id="storyBtn" class="go">Continue</button></div></div></div>
+  <div id="pauseMenu"><div><h2>Paused</h2><button data-pm="resume" class="btn">Resume</button><button data-pm="chronicle" class="btn" id="pmChron">Chronicle</button><button data-pm="settings" class="btn">Settings</button><button data-pm="slots" class="btn">Save to a slot</button><button data-pm="exit" class="btn">Save and go to the main menu</button></div></div>
   <div id="over"><div><h2 id="overT"></h2><p id="overP"></p><button id="overBtn">Main menu</button></div></div>
 </div>
 <div id="campaign" class="screen"><div class="card"><h1>The Sundering</h1><p class="tag" id="campTag"></p><div class="lbl">Choose your house</div><div id="campList"></div><div id="campInfo"></div><div class="btns"><button id="campGo" class="go">Begin</button><button id="campBack">Back</button></div></div></div>
@@ -45,9 +44,10 @@
     <div id="diffSel"><button data-d="easy">Easy</button><button data-d="normal">Normal</button><button data-d="hard">Hard</button></div>
     <div class="lbl">Sight</div>
     <div><button id="fogBtn">Fog of war: off</button><button id="hazBtn">Random events: on</button></div>
-    <div class="btns"><button id="campBtn" class="go">Campaign</button><button id="startBtn">Skirmish</button><button id="tutBtn">Tutorial</button><button id="rerollBtn">New map</button><button id="setTitleBtn">Settings</button><button id="contBtn">Continue</button></div>
+    <div class="btns"><button id="campBtn" class="go">Campaign</button><button id="startBtn">Skirmish</button><button id="tutBtn">Tutorial</button><button id="rerollBtn">New map</button><button id="setTitleBtn">Settings</button><button id="contBtn">Continue</button><button id="loadSlotBtn">Saved games</button></div>
   </div>
 </div>
+  <div id="story"><div class="card"><h2 id="storyT"></h2><div id="storyB"></div><div class="btns"><button id="storyBtn" class="go">Continue</button></div></div></div>
 <script src="js/data/config.js"></script>
 <script src="js/data/story.js"></script>
 <script src="js/sim/rng.js"></script>
@@ -92,6 +92,7 @@
 <script src="js/ui/diplo.js"></script>
 <script src="js/ui/story.js"></script>
 <script src="js/ui/doctrine.js"></script>
+<script src="js/ui/slots.js"></script>
 <script src="js/ui/title.js"></script>
 <script src="js/main.js"></script>
 <script src="js/ads_env.js"></script>

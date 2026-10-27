@@ -55,7 +55,7 @@ select { background: #1c1620; color: #eee6d6; border: 1px solid rgba(255, 230, 1
 #facList, #campList { display: grid; gap: 6px; }
 #campInfo p { margin: 8px 0; line-height: 1.45; font-size: 14px; } #campInfo .dim { opacity: 0.75; font-size: 13px; } #campaign .card { width: min(520px, 100%); } #campaign .tag { font-size: 13px; opacity: 0.8; line-height: 1.45; }
 #story { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(4, 3, 6, 0.82); pointer-events: auto; padding: 16px; z-index: 40; }
-#story.on { display: flex; }
+#story.on { display: flex; visibility: visible; }      /* inside the HUD, which the title screen hides: a page opened from the title must still show */
 #story .card { width: min(620px, 100%); max-height: 92vh; padding: 18px 22px; background: rgba(14, 11, 16, 0.96); border: 1px solid rgba(242, 210, 122, 0.45); border-radius: 8px; display: flex; flex-direction: column; }
 #story h2 { margin: 0 0 10px; font-size: 26px; letter-spacing: 0.06em; color: #f2d27a; }
 #storyB { overflow-y: auto; line-height: 1.55; font-size: 15px; } #storyB p { margin: 0 0 10px; } #storyB .tl { margin: 0; padding-left: 18px; font-size: 13px; opacity: 0.85; } #storyB .tl li { margin: 3px 0; } #storyB .chr { margin: 0 0 8px; font-size: 14px; }

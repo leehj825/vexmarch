@@ -39,6 +39,18 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     ok(await p.locator('#storyB .lbl').count() >= 1, 'the chronicle has year headings');
     ok((await p.locator('#storyB').innerText()).includes('Summary'), 'and a summary');
     await p.click('#storyBtn'); await p.waitForTimeout(200);
+    // save to slot 1 from the pause menu, then the saved games list shows it
+    await ev(() => { localStorage.removeItem('vexmarch.slot1'); localStorage.removeItem('vexmarch.slot1.meta'); });
+    await p.click('#menuBtn'); await p.waitForTimeout(200); await p.click('[data-pm="slots"]'); await p.waitForTimeout(300);
+    ok(await p.locator('#story.on [data-act="save"]').count() === 3, 'three slots to save to');
+    await p.click('#story [data-slot="1"][data-act="save"]'); await p.waitForTimeout(300);
+    ok(await ev(() => !!localStorage.getItem('vexmarch.slot1')), 'slot 1 is written');
+    const turn = await ev(() => __vm.state.time);
+    await p.click('#menuBtn'); await p.waitForTimeout(200); await p.click('[data-pm="exit"]'); await p.waitForTimeout(500);
+    ok(await p.locator('#loadSlotBtn').isVisible(), 'the title offers saved games');
+    await p.click('#loadSlotBtn'); await p.waitForTimeout(300);
+    await p.click('#story [data-slot="1"][data-act="load"]'); await p.waitForTimeout(500);
+    ok(await ev(t => __vm.running && Math.abs(__vm.state.time - t) < 1, turn), 'slot 1 loads the game back at the same day');
     ok(errs.length === 0, 'no errors: ' + errs.join(' | '));
     await ctx.close();
   }

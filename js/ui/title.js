@@ -26,6 +26,7 @@ VM.Title = (function () {
     $('fogBtn').classList.toggle('on', fog); $('fogBtn').textContent = fog ? 'Fog of war: on' : 'Fog of war: off';
     document.querySelectorAll('#diffSel button').forEach(b => b.classList.toggle('on', b.dataset.d === difficulty));
     $('contBtn').style.display = hasSave() ? '' : 'none';
+    $('loadSlotBtn').style.display = VM.Slots.list().some(x => x.has) ? '' : 'none';
   }
 
   function init(uiRef) {
@@ -44,6 +45,7 @@ VM.Title = (function () {
     $('campGo').addEventListener('click', beginCampaign);
     $('startBtn').addEventListener('click', () => { if (ui.state.story) roll(true); VM.Audio.init(); VM.Audio.play('horn'); box.classList.remove('on'); ui.state.aiOn = true; ui.start(); });
     $('tutBtn').addEventListener('click', () => { VM.Audio.init(); startTutorial(); });
+    $('loadSlotBtn').addEventListener('click', () => VM.SlotsUI.open('load'));
     $('contBtn').addEventListener('click', () => {
       try { const saved = VM.Sim.load(localStorage.getItem('vexmarch.save')); if (saved.version !== VM.CFG.VERSION || saved.over) throw new Error('old or finished save'); if (saved.tutorial) saved.aiOn = true; ui.setState(saved); VM.MapView.fit(); box.classList.remove('on'); VM.Audio.init(); ui.start(); }
       catch (e) { VM.Panels.toast('Saved game could not be loaded'); }
