@@ -50,7 +50,9 @@ VM.Alerts = (function () {
       case 'searchFailed': return mine ? spec(`${on(ev.officer)} found no one worth recruiting`, 'info', false, ev.city) : null;
       case 'recruited': return mine ? spec(`${on(ev.officer)} has joined you in ${N[ev.city].name}`, 'info', false, ev.city) : null;
       case 'arrived': return mine ? spec(`${on(ev.officer)} arrived in ${N[ev.city].name}`, 'info', false, ev.city, false) : null;
-      case 'diploOffer': return ev.owner === me ? spec(ev.kind === 'alliance' ? `${nm(ev.from)} offers you an alliance` : `${nm(ev.from)} asks you to bend the knee and join them`, 'diplo', true, null) : null;
+      case 'diploOffer': return ev.owner === me ? spec(ev.kind === 'alliance' ? `${nm(ev.from)} offers you an alliance` : ev.kind === 'vassal' ? `${nm(ev.from)} asks to become your vassal` : `${nm(ev.from)} asks you to bend the knee and join them`, 'diplo', true, null) : null;
+      case 'vassal': return (ev.a === me || ev.b === me) ? spec(ev.a === me ? `${nm(ev.b)} is now your vassal and pays tribute` : `You are now a vassal of ${nm(ev.a)}`, 'diplo', false, null) : null;
+      case 'rebel': return (ev.a === me || ev.b === me) ? spec(ev.a === me ? `${nm(ev.b)} rebelled against you!` : `You rebelled against ${nm(ev.a)}`, 'diplo', true, null) : null;
       case 'allied': return (ev.a === me || ev.b === me) ? spec(`You are now allied with ${nm(ev.a === me ? ev.b : ev.a)}`, 'info', false, null) : spec(`${nm(ev.a)} and ${nm(ev.b)} have allied`, 'info', false, null, false);
       case 'aid': return ev.owner === me ? spec(`${nm(ev.from)} sends ${ev.armies > 1 ? 'armies' : 'an army'} to help ${N[ev.city].name}`, 'diplo', false, ev.city) : (ev.from === me ? spec(`Your ${ev.armies > 1 ? 'armies go' : 'army goes'} to help ${nm(ev.owner)} at ${N[ev.city].name}`, 'info', false, ev.city) : null);
       case 'hazard': {

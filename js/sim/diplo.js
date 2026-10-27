@@ -259,8 +259,49 @@ VM.Diplo = (function () {
     if (!accept) { d.cool[(o.kind === 'merge' ? 'm' : '') + key(o.from, o.to)] = state.time + (o.kind === 'merge' ? D().mergeRefuseCool : D().refuseCool); return { ok: true }; }
     if (!live(state, o.from)) return fail('that faction is gone');
     if (o.kind === 'alliance') { if (allyOf(state, o.from) || allyOf(state, o.to)) return fail('already has an ally'); makeAlliance(state, o.from, o.to); }
+    else if (o.kind === 'vassal') { const r = makeVassal(state, o.from, o.to); if (!r.ok) return r; }
     else { const bad = canMerge(state, o.from, o.to); if (bad) return fail(bad); doMerge(state, o.from, o.to); }
     return { ok: true, accepted: true };
+  }
+
+  // ---- vassalage: a weaker house keeps its cities, officers and name, pays tribute each day and is bound to its lord by a pact that cannot be ----
+  // broken by an AI lord. It rebels when it has grown much stronger than its lord. Only the lord's pact (one per house) is used.
+  const vassalOf = (state, f) => { const p = pactOf(state, f); return p && p.vassal && p.b === f ? p.a : 0; };
+  const vassalsOf = (state, lord) => state.diplo ? state.diplo.allies.filter(p => p.vassal && p.a === lord).map(p => p.b) : [];
+  function proposeVassal(state, from, to) {
+    const bad = canMerge(state, from, to); if (bad) return fail(bad);
+    if (vassalOf(state, to)) return fail('they already serve a lord');
+    if (allyOf(state, from)) return fail('already has an ally');                  // one pact a house, its vassals included
+    if (isHuman(state, to)) { offer(state, from, to, 'vassal'); return { ok: true, pending: true }; }
+    const r = survival(state, to, from);
+    if (r.score >= D().vassalAt) { makeVassal(state, from, to); return { ok: true, accepted: true }; }
+    ensure(state).cool['v' + key(from, to)] = state.time + D().mergeRefuseCool;
+    return { ok: true, accepted: false, why: 'they will not bend that far' };
+  }
+  function makeVassal(state, lord, vassal) {
+    const d = ensure(state);
+    const old = pactOf(state, vassal); if (old) { releaseHostages(state, old, null); d.allies.splice(d.allies.indexOf(old), 1); }
+    if (allyOf(state, lord)) return fail('the lord already has an ally');
+    d.allies.push({ a: lord, b: vassal, since: state.time, vassal: true });
+    addOp(state, lord, vassal, D().vassalOpinion); addOp(state, vassal, lord, D().vassalOpinion);
+    VM.Eco.pushEvent(state, { type: 'vassal', a: lord, b: vassal }); log(state, `${state.factions[vassal].name} became a vassal of ${state.factions[lord].name}`, 'allied', lord, vassal);
+    return { ok: true };
+  }
+  // each day: tribute goes from the vassal to its lord; a vassal that has grown too strong rebels
+  function vassalDay(state, dd) {
+    const d = ensure(state), C = D();
+    for (const p of d.allies.slice()) {
+      if (!p.vassal) continue;
+      const lord = state.factions[p.a], v = state.factions[p.b];
+      if (!lord || !v || !lord.alive || !v.alive) continue;
+      const due = C.tribute * citiesOf(state, p.b).length * dd, paid = Math.min(due, Math.max(0, v.gold));
+      v.gold -= paid; lord.gold += paid;
+      if (state.time - p.since >= C.rebelAge && power(state, p.b) >= C.rebelRatio * power(state, p.a)) {
+        d.allies.splice(d.allies.indexOf(p), 1);
+        addOp(state, p.a, p.b, -40); addOp(state, p.b, p.a, -20);
+        VM.Eco.pushEvent(state, { type: 'rebel', a: p.a, b: p.b }); log(state, `${v.name} rebelled against ${lord.name}`, 'broken', p.b, p.a);
+      }
+    }
   }
 
   // ---- called by the war code ----
@@ -278,6 +319,7 @@ VM.Diplo = (function () {
     const d = ensure(state), C = D();
     for (const a in d.opinion) for (const b in d.opinion[a]) { const v = d.opinion[a][b], k = Math.min(Math.abs(v), C.decay * dd); d.opinion[a][b] = v - Math.sign(v) * k; }
     for (const f in d.trust) d.trust[f] = Math.min(0, d.trust[f] + C.trustHeal * dd);
+    vassalDay(state, dd);
     for (const p of d.allies) { const up = (x, y) => { if (op(state, x, y) < C.driftMax) addOp(state, x, y, C.drift * dd + C.decay * dd); }; up(p.a, p.b); up(p.b, p.a); }
     if (d.offers.length) d.offers = d.offers.filter(o => o.until > state.time);
     endAid(state);
@@ -299,6 +341,7 @@ VM.Diplo = (function () {
     const C = D(), id = f.id, ally = allyOf(state, id);
     if (ally) {                                                          // betray at the end
       const p = pactOf(state, id), mine = power(state, id), theirs = power(state, ally);
+      if (p.vassal) return;                                             // a vassal pact is kept by the AI lord and vassal alike
       if (p.married || (p.hostages && p.hostages.length)) return;                       // a marriage or hostages hold an AI to its pact
       const held = citiesOf(state, id).length + citiesOf(state, ally).length, left = state.cities.length - held;
       const strong = mine >= C.betrayRatio * theirs && nodeShare(state, id) >= C.betrayShare;
@@ -324,5 +367,5 @@ VM.Diplo = (function () {
   const d0 = state => ensure(state);
 
   return { ensure, allyOf, allied, friendly, hostile, pactOf, op, addOp, trust, power, leaderOf, traitOf, allianceScore, survival, canMerge, whyNot,
-    proposeAlliance, marry, exchangeHostages, pickHostages, sendAid, askAid, endAid, aiding, breakAlliance, gift, proposeMerge, doMerge, answerOffer, onCapture, drop, step, think, storyOpinion };
+    proposeAlliance, proposeVassal, vassalOf, vassalsOf, marry, exchangeHostages, pickHostages, sendAid, askAid, endAid, aiding, breakAlliance, gift, proposeMerge, doMerge, answerOffer, onCapture, drop, step, think, storyOpinion };
 })();

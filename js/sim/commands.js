@@ -111,6 +111,7 @@ VM.Commands = (function () {
     openRoute(state, cmd) { return VM.Trade.open(state, cmd.faction, cmd.a, cmd.b); },
     closeRoute(state, cmd) { return VM.Trade.close(state, cmd.faction, cmd.route); },
     chooseDoctrine(state, cmd) { return VM.Doctrine.pick(state, cmd.faction, cmd.id); },
+    proposeVassal(state, cmd) { return VM.Diplo.proposeVassal(state, cmd.faction, cmd.to); },
     askAid(state, cmd) { return VM.Diplo.askAid(state, cmd.faction); },
     giftFaction(state, cmd) { return VM.Diplo.gift(state, cmd.faction, cmd.to, cmd.gold); },
     proposeMerge(state, cmd) { return VM.Diplo.proposeMerge(state, cmd.faction, cmd.to); },

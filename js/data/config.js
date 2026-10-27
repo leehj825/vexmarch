@@ -149,6 +149,7 @@ VM.CFG = {
     marryCost: 300, marryOpinion: 30, marryAge: 60, marryBond: 25, hostageOpinion: 10, hostageAge: 30, hostageBond: 5, marriedAid: 1,   // a marriage binds a pact; hostages are officers held in the partner's capital
     aidDays: 40, aidCool: 30, aidArmies: 2, aidMorale: 50, aidOpinion: 0,      // an ally sends up to aidArmies armies to a threatened city and keeps them there aidDays
     betrayAge: 90, betrayRatio: 3, betrayShare: 0.45, betrayLeft: 2, popWeight: 0.1,
+    vassalAt: 30, tribute: 3, rebelRatio: 1.6, rebelAge: 120, vassalOpinion: 20,      // vassalage: the score a weak house needs; tribute gold per city a day; a vassal rebels at this strength over its lord
     mergeTrait: { Cautious: 20, Greedy: 10, Schemer: 10, Loyal: 0, Rash: -30, Brave: -35, none: 0 }
   },
   AI: {
