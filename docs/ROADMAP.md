@@ -110,6 +110,16 @@ Watch a fight that happens on the road, away from any city. `FieldLayout.start` 
 - **Scenario maps** (`js/sim/scenarios.js`): Open ground (the random map), The fixed realm (the campaign's 30 places, no story), and Siege of Vexholm (the realm with Vexholm walled and held by another house, your army at its gates). Chosen on the title screen.
 - **Chronicle as a history book** (`js/ui/story.js`): year headings, a summary of the current year, and battles written as sentences; available in every game from the pause menu.
 
+## City plan (done, six steps)
+- **Streets**: a road from every gate, plus a cross street between gates that sit far apart (not in a hamlet). A ring road was not done: at these wall sizes it leaves no room for blocks.
+- **Houses in rows**: along every street, both sides, a set distance back and facing the road, with a second and third row behind. No random tilt.
+- **Fill from the centre out**: houses are ordered by distance from the keep, so growth fills the nearest blocks first and the houses already built never move. The plaza has a fixed size for this reason.
+- **Districts**: the houses facing one street share a roof and facade colour; stone is near the centre of a bigger place, tents at the edge of a village.
+- **Outside the walls**: the suburb in two rows along each gate road, and square field plots in rows between the roads.
+- **No random tilt**: a test checks every house faces a street and every field lies square to its radius.
+- Some small villages are squeezed between close gates and stay sparse; the test allows that.
+- The market, temple, barracks and smithy keep their fixed sites.
+
 ## Ideas for next (older list, not started) (not started, none agreed)
 - AI that aims for its house's own victory (Story.victoryView), and AI that proposes marriages, hostages and asks for help against the player.
 - House-specific story beats and decisions beyond the first twelve; the ruler choosing a policy at the start (not only reacting).

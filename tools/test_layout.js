@@ -63,6 +63,25 @@ test('districts: the houses facing one street form a district that shares its ro
   assert(L.houses.every(h => h.district !== undefined && Number.isInteger(h.district)), 'every house names its district');
 });
 
+test('no random tilt: every house faces a street exactly, every field lies square to its radius', () => {
+  for (const seed of [1, 2, 3]) {
+    const s = world(seed);
+    for (const c of s.cities) {
+      const L = CL.build(s, c.id);
+      for (const h of L.houses) {
+        const fx = Math.sin(h.rot), fz = Math.cos(h.rot);                  // the house's front (local +z)
+        const ok = L.streets.some(st => Math.abs(fx * Math.cos(st.angle) + fz * Math.sin(st.angle)) < 1e-9);   // its front is across a street
+        assert(ok, `house ${seed}/${c.id} at ${h.x.toFixed(2)},${h.z.toFixed(2)} does not face a street exactly`);
+      }
+      for (const f of L.fields) {
+        const a = Math.atan2(f.z, f.x), want = Math.atan2(-Math.cos(a), -Math.sin(a));
+        const diff = Math.abs(Math.atan2(Math.sin(f.rot - want), Math.cos(f.rot - want)));
+        assert(diff < 1e-9, `field ${seed}/${c.id} is not square to its radius (${diff})`);
+      }
+    }
+  }
+});
+
 test('size: capitals are bigger than towns; the tier follows capacity', () => {
   const s = world(); const cap = s.cities[s.factions[1].capital];
   assert.strictEqual(CL.build(s, cap.id).tier, 'capital'); assert(CL.build(s, cap.id).radius > CL.RADIUS.hamlet);
