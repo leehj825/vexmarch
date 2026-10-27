@@ -51,15 +51,28 @@ VM.City3D = (function () {
     for (let i = 0; i < g.idx.length; i++) B.idx.push(g.idx[i] + base);
     this.tris += g.idx.length / 3;
   };
+  // a plain geometry (a box, a tower) with its base at yb and turned about Y by rot, into the stone bucket; the UVs are planar, so the stone texture runs on every face
+  TexMerger.prototype.addGeo = function (g, x, yb, z, rot, U) {
+    const P = g.attributes.position.array, N = g.attributes.normal.array, I = g.index ? g.index.array : null, unit = U || 2.2;
+    const B = this.by.wall || (this.by.wall = { pos: [], nor: [], uv: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
+    for (let i = 0; i < P.length; i += 3) {
+      const px = P[i], py = P[i + 1], pz = P[i + 2], nx = N[i], ny = N[i + 1], nz = N[i + 2];
+      B.pos.push(px * c + pz * sn + x, py + yb, -px * sn + pz * c + z); B.nor.push(nx * c + nz * sn, ny, -nx * sn + nz * c);
+      B.uv.push((Math.abs(nx) > Math.abs(nz) ? pz : px) / unit, py / unit);
+    }
+    if (I) for (let i = 0; i < I.length; i++) B.idx.push(I[i] + base);
+    else for (let i = 0; i < P.length / 3; i++) B.idx.push(base + i);
+    this.tris += (I ? I.length : P.length / 3) / 3;
+  };
   TexMerger.prototype.meshes = function () {
     return Object.keys(this.by).map(t => {
       const B = this.by[t], geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(B.nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
       geo.setIndex(B.idx);
       if (t === 'wall' && !structMats.wall) {                                      // the brick wall, turned into grey castle stone: the texture's light and dark, none of its red
-        const tex = new THREE.TextureLoader().load(VM.StructModels.tex.t3); tex.flipY = true;
+        const tex = new THREE.TextureLoader().load(VM.StructModels.tex.t3); tex.flipY = true; tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
         const m = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x2c2c30), side: THREE.DoubleSide });
-        m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = vec3(l * 0.95, l * 0.95, l) * 0.8; }'); };
+        m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); l = clamp((l - 0.5) * 2.4 + 0.5, 0.0, 1.0); diffuseColor.rgb = vec3(l) * 0.9; }'); };
         m.customProgramCacheKey = () => 'vmwall'; m.userData.shared = true; structMats.wall = m;
       }
       if (t !== 'wall' && !structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
@@ -70,6 +83,10 @@ VM.City3D = (function () {
   const facing = (x, z) => Math.atan2(-x, -z);                                     // turn about Y that points a model's front (+z) at the city centre
   const yawFor = (dx, dz) => -Math.atan2(dz, dx);                 // rotation about Y that turns local +x toward (dx, dz) in the x/z plane
   const place = (g, x, y, z, rot) => { if (rot) g.rotateY(rot); g.translate(x, y, z); return g; };
+  // a stone piece of the wall, tower or gate: the stone texture of the Nightfall wall when the models are loaded, the plain colour otherwise
+  const stonePiece = (M, g, x, yb, z, rot, shade) => { if (VM.StructModels && tx) tx.addGeo(g, x, yb, z, rot); else M.add(place(g, x, yb, z, rot), COL.stone, shade); };
+  const stoneBox = (M, x, yb, z, w, h, d, rot, shade) => stonePiece(M, new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0), x, yb, z, rot, shade);
+  const stoneCyl = (M, x, yb, z, rt, rb, h, seg, shade) => stonePiece(M, new THREE.CylinderGeometry(rt, rb, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0, shade);
   const box = (M, x, yb, z, w, h, d, color, rot, shade) => M.add(place(new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0), x, yb, z, rot), color, shade);
   const cyl = (M, x, yb, z, rt, rb, h, color, seg, shade) => M.add(place(new THREE.CylinderGeometry(rt, rb, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0), color, shade);
   const cone = (M, x, yb, z, r, h, color, seg, shade) => M.add(place(new THREE.ConeGeometry(r, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0), color, shade);
@@ -154,18 +171,18 @@ VM.City3D = (function () {
       const [x, z] = polar(R, s.angle), rot = yawFor(-Math.sin(s.angle), Math.cos(s.angle));
       if (s.damage === 2) { for (let k = 0; k < 4; k++) box(M, x + (k - 1.5) * 0.5, 0, z + (k % 2) * 0.4, 0.8, 0.5 + (k % 3) * 0.3, 0.8, COL.rockDark, k); return; }
       const h = s.damage === 1 ? wh * 0.62 : wh;
-      box(M, x, 0, z, chord, h, th, COL.stone, rot, s.damage ? 0.8 : 1);                       // a plain stone wall, like the towers and the gate
+      stoneBox(M, x, 0, z, chord, h, th, rot, s.damage ? 0.8 : 1);
       if (s.damage === 1) box(M, x + 0.3, 0, z, 0.9, 0.5, 0.9, COL.rockDark, 0.6);
       else if (lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
     });
     for (const a of W.towers) {
       const [x, z] = polar(R, a), th2 = lvl >= 2 ? 1.5 : 1.1, hh = wh + (lvl >= 2 ? 1.4 : 0.8);
-      cyl(M, x, 0, z, th2, th2 * 1.1, hh, COL.stoneLight, 8);
+      stoneCyl(M, x, 0, z, th2, th2 * 1.1, hh, 8);
       if (lvl >= 2) cone(M, x, hh, z, th2 * 1.3, 1.7, accent, 8); else cyl(M, x, hh, z, th2 * 1.15, th2 * 1.15, 0.35, COL.stoneDark, 8);
     }
     for (const g of L.gates) {                                              // the gate: an arch between two heavier towers
       const [x, z] = polar(R, g.angle), rot = yawFor(-Math.sin(g.angle), Math.cos(g.angle)), broken = L.wall.hpFrac <= 0 && L.besieged;
-      box(M, x, wh * 0.72, z, 3.8, wh * 0.28, th + 0.3, COL.stone, rot);
+      stoneBox(M, x, wh * 0.72, z, 3.8, wh * 0.28, th + 0.3, rot);
       if (!broken) box(M, x - Math.cos(g.angle) * 0.0, 0, z, 0.35, wh * 0.72, 3.0, COL.door, rot + Math.PI / 2, 0.9);
       else box(M, x + 0.5, 0, z + 0.3, 1.1, 0.7, 1.1, COL.rockDark, 0.4);
       box(M, x, wh + 0.3, z, 0.12, 1.6, 0.12, COL.woodDark, 0);
