@@ -20,12 +20,14 @@ npm run android:debug        # copies the game into the app and runs Gradle
 `npm run android:sync` only copies the web files into the Android project (use it before opening `android/` in Android Studio). `npm run icons` redraws the icons and splash screens (needs Pillow).
 
 ## Ads
-`js/ads_env.js` holds the ad settings. By default the app shows Google's sample banner (safe for development). For a release build, create the app and a banner unit in AdMob, then:
+The game shows a standard 320x50 AdMob banner at the top centre of the screen, through the `@capacitor-community/admob` plugin (it wraps the Google Mobile Ads SDK: the app id goes in the manifest, the banner is requested in `js/ads.js` with ad type *banner*, size *BANNER*, position *top centre*). While a banner is on screen the game moves its top bar, sheets and lessons down by the banner's height (`body.adLive` in `css/style.css`), so nothing is covered. It is hidden on the title screen, and the Google consent form (UMP) is shown first where the law asks for it.
+
+Vexmarch's own ids are in `tools/ads_ids.js` (app `ca-app-pub-4400173019354346~6657386533`, banner unit `ca-app-pub-4400173019354346/4031223197`). They are used only by *real* builds:
 ```
-VX_ADS=real VX_BANNER_ID=ca-app-pub-XXXXXXXXXXXXXXXX/NNNNNNNNNN VX_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~NNNNNNNNNN npm run www
-VX_APP_ID=ca-app-pub-XXXXXXXXXXXXXXXX~NNNNNNNNNN node tools/android_patch.js
+VX_ADS=real npm run www
+VX_ADS=real node tools/android_patch.js     # puts the app id into AndroidManifest.xml
 ```
-Never click your own real ads. The ids in your other games belong to those apps; do not reuse them here.
+or, on GitHub, **Actions -> Android debug APK -> Run workflow -> ads: real**. Everything else (every push, and the default of the manual run) builds with Google's **test** banner. Never click your own real ads: that is invalid traffic and can get the AdMob account banned. Before a Play Store release also check Google's AdMob policies (no ads over buttons, no accidental clicks: the layout above keeps the banner clear of the controls) and add an app-ads.txt on your developer website if you have one.
 
 ## What was customised
 - Full-screen immersive window, screen kept on while playing (`MainActivity.java`).
