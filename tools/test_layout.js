@@ -45,6 +45,24 @@ test('streets: a road from every gate, cross streets only between gates far apar
   }
 });
 
+test('the town fills from the centre out: each house is no nearer the keep than the one before it', () => {
+  for (const seed of [1, 2, 3]) {
+    const s = world(seed);
+    for (const c of s.cities) {
+      const L = CL.build(s, c.id), r = L.houses.map(h => Math.hypot(h.x, h.z));
+      for (let i = 1; i < r.length; i++) assert(r[i] >= r[i - 1] - 1e-9, `house ${i} is nearer the keep than house ${i - 1} (${seed}/${c.id})`);
+    }
+  }
+});
+
+test('districts: the houses facing one street form a district that shares its roof and facade', () => {
+  const s = world(2), c = own(s), L = CL.build(s, c.id);
+  const by = {}; for (const h of L.houses) (by[h.district] = by[h.district] || []).push(h);
+  const ds = Object.keys(by); assert(ds.length >= 2, 'more than one district');
+  for (const d of ds) assert(by[d].every(h => h.roof === by[d][0].roof), 'one roof per district');
+  assert(L.houses.every(h => h.district !== undefined && Number.isInteger(h.district)), 'every house names its district');
+});
+
 test('size: capitals are bigger than towns; the tier follows capacity', () => {
   const s = world(); const cap = s.cities[s.factions[1].capital];
   assert.strictEqual(CL.build(s, cap.id).tier, 'capital'); assert(CL.build(s, cap.id).radius > CL.RADIUS.hamlet);

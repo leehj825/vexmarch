@@ -162,11 +162,14 @@ VM.CityLayout = (function () {
     if (city.buildings.farm >= 3) L.works.push(wk.windmill);
     if (stage >= 2) L.works.push(wk.lumber);
     if (city.spec === 'iron' || city.spec === 'pass') L.works.push(wk.quarry);
-    const sub = [];                                                                // the suburb: houses either side of each road, just outside the gate
-    for (let k = 0; k < 7; k++) gates.forEach((g, gi) => {
-      const side = (k + gi) % 2 ? 1 : -1, t = R + 4.5 + Math.floor(k / 2) * 4.2, lat = side * (4.4 + (k % 3) * 0.7), d = dirs[gi], p = { x: d.x * t - d.z * lat, z: d.z * t + d.x * lat };
+    // The suburb: outside the walls, houses in rows along each gate road, both sides, facing the road. Built out from the gate, so it grows along the road.
+    const sub = [];
+    for (let k = 0; k < 8; k++) for (let row = 0; row < 2; row++) gates.forEach((g, gi) => {
+      const d = dirs[gi], t = R + 5.5 + k * 4.2, side = gi % 2 ? 1 : -1, lat = side * (4.4 + row * 4.2), along = { x: d.x * t, z: d.z * t }, across = { x: -d.z * lat, z: d.x * lat };
+      const p = { x: along.x + across.x, z: along.z + across.z };
       if (!dry(Math.atan2(p.z, p.x))) return;
-      sub.push({ x: p.x, z: p.z, rot: Math.atan2(d.z, d.x) + (side > 0 ? -Math.PI / 2 : Math.PI / 2) + (k % 2 ? 0.12 : -0.1), w: 1.8 + (k % 3) * 0.25, d: 1.8 + ((k + 1) % 3) * 0.25, h: 1.2 + (k % 2) * 0.4, roof: (k + gi) % 3, chimney: k % 3 === 0 });
+      if (streets.some((o, oi) => { const ou = dirs[oi] || { x: Math.cos(o.angle), z: Math.sin(o.angle) }, al = p.x * ou.x + p.z * ou.z; return al > -2 && Math.abs(p.x * ou.z - p.z * ou.x) < (oi === gi ? 0 : 4.0); })) return;
+      sub.push({ x: p.x, z: p.z, rot: Math.atan2(-across.x / Math.abs(lat), -across.z / Math.abs(lat)), w: 1.8 + (k % 3) * 0.25, d: 1.8 + ((k + 1) % 3) * 0.25, h: 1.2 + (k % 2) * 0.4, roof: gi % 3, chimney: k % 3 === 0, district: 100 + gi, ratio: 1, gate: gi, k });
     });
     for (const q of sub) take(q.x, q.z, 2.4);
     L.suburb = sub.slice(0, stage >= 4 ? 16 : stage >= 3 ? 7 : 0);
@@ -200,16 +203,28 @@ VM.CityLayout = (function () {
     L.housesWanted = wanted;
 
 
-    // Fields and farmhouses outside the walls: a fixed list of spots, the first few used as the farms grow
-    const flvl = city.buildings.farm, nf = Math.min(14, flvl * 3 + (city.spec === 'farmland' ? 3 : 0) + 1), fspots = [];
-    for (let tries = 0; tries < 600 && fspots.length < 14; tries++) {
-      const a = rF() * TAU, rr = R + 7 + rF() * 16, p = pol(rr, a), crop = rF() < 0.5 ? 0 : 1;
-      if (gates.some(g => angDiff(g.angle, a) < 0.3) || !dry(a)) continue;
-      if (fspots.some(f => Math.hypot(f.x - p.x, f.z - p.z) < 8) || obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 5)) continue;
-      fspots.push({ x: p.x, z: p.z, rot: a + Math.PI / 2, w: 7, d: 5, crop });
+    // Fields outside the walls: square plots in rows, each row a ring round the town, laid out sector by sector between the gate roads, so they line up
+    // with the roads and with each other. The nearest row fills first; the farmhouses sit at the wall side of the first row.
+    const flvl = city.buildings.farm, nf = Math.min(14, flvl * 3 + (city.spec === 'farmland' ? 3 : 0) + 1), fspots = [], PW = 7, PD = 5, GAP = 1.2;
+    const plotOK = p => {
+      if (!dry(Math.atan2(p.z, p.x))) return false;
+      if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 5)) return false;
+      if (L.suburb.some(h => Math.hypot(h.x - p.x, h.z - p.z) < 6.5)) return false;
+      return !streets.some((st, si) => { const u = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, al = p.x * u.x + p.z * u.z; return al > -2 && Math.abs(p.x * u.z - p.z * u.x) < 6.8; });
+    };
+    for (let j = 0; j < 3; j++) {
+      const rr = R + 8 + j * 6.2;
+      gates.forEach((g, gi) => {
+        const a0 = g.angle, span = norm(gates[(gi + 1) % gates.length].angle - a0) || TAU, n = Math.floor(span * rr / (PW + GAP));
+        for (let i = 0; i < n; i++) {
+          const a = a0 + (i + 0.5) * span / n, p = pol(rr, a);
+          if (!plotOK(p)) continue;
+          fspots.push({ x: p.x, z: p.z, rot: Math.atan2(-Math.cos(a), -Math.sin(a)), w: PW, d: PD, crop: (i + j + gi) % 2, row: j, a });
+        }
+      });
     }
     L.fields = fspots.slice(0, nf); L.farmhouses = [];
-    for (let i = 0; i < Math.min(L.fields.length, Math.ceil(flvl / 2)); i++) { const f = L.fields[i], p = pol(Math.hypot(f.x, f.z) + 5, Math.atan2(f.z, f.x)); L.farmhouses.push({ x: p.x, z: p.z, rot: Math.atan2(f.z, f.x) }); }
+    for (const f of L.fields.filter(f => f.row === 0).slice(0, Math.ceil(flvl / 2))) { const p = pol(R + 4, f.a); L.farmhouses.push({ x: p.x, z: p.z, rot: Math.atan2(-Math.cos(f.a), -Math.sin(f.a)) + Math.PI / 2 }); }
 
     // Terrain features that say what the place is known for
     L.features = [];

@@ -97,7 +97,7 @@ VM.City3D = (function () {
   function house(M, h, ci, accent) {
     if (h.style === 0 && VM.StructModels) { tx.add('tent', h.x, 0, h.z, facing(h.x, h.z) + (ci % 2 ? 0.3 : -0.3), 0.85); if (ci % 2) box(M, h.x + 1.6, 0, h.z + 0.9, 0.5, 0.45, 0.5, COL.wood, ci); return; }
     const stone = h.style === 2, post = stone ? '#d6d1c4' : COL.woodDark;
-    const base = stone ? STONE[ci % 3] : [COL.plaster, COL.plaster2, COL.plaster3][ci % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);
+    const dist = h.district !== undefined ? h.district : ci, base = stone ? STONE[dist % 3] : [COL.plaster, COL.plaster2, COL.plaster3][dist % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);     // a district (the houses facing one street) shares its facade colour
     const lb = (lx, yb, lz, w, hh, d, color, shade) => M.add(place(new THREE.BoxGeometry(w, hh, d).translate(lx, yb + hh / 2, lz), h.x, 0, h.z, h.rot), color, shade);
     box(M, h.x, 0, h.z, h.w + 0.12, 0.2, h.d + 0.12, COL.stoneDark, h.rot);                                    // stone footing
     box(M, h.x, 0.2, h.z, h.w, h.h - 0.2, h.d, base, h.rot, 0.96 + (ci % 3) * 0.02);
