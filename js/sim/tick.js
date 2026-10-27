@@ -14,6 +14,7 @@ VM.Sim = (function () {
     VM.Hazards.step(state, dd);
     VM.AI.step(state);
     VM.Eco.step(state, dd);
+    VM.Trade.step(state, dd);
     state.time += dd;
     if (state.story && VM.Story) VM.Story.step(state);
   }

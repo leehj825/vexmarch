@@ -108,6 +108,8 @@ VM.Commands = (function () {
     storyChoice(state, cmd) { return VM.Story.choose(state, cmd.choice | 0); },
     marry(state, cmd) { return VM.Diplo.marry(state, cmd.faction); },
     exchangeHostages(state, cmd) { return VM.Diplo.exchangeHostages(state, cmd.faction); },
+    openRoute(state, cmd) { return VM.Trade.open(state, cmd.faction, cmd.a, cmd.b); },
+    closeRoute(state, cmd) { return VM.Trade.close(state, cmd.faction, cmd.route); },
     askAid(state, cmd) { return VM.Diplo.askAid(state, cmd.faction); },
     giftFaction(state, cmd) { return VM.Diplo.gift(state, cmd.faction, cmd.to, cmd.gold); },
     proposeMerge(state, cmd) { return VM.Diplo.proposeMerge(state, cmd.faction, cmd.to); },

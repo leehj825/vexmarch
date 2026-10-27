@@ -29,6 +29,7 @@ VM.Panels = (function () {
     const d = b.dataset, st = ui.state;
     switch (d.act) {
       case 'close': ui.selectedCity = -1; ui.selectedArmy = null; break;
+      case 'closeRoute': cmd({ type: 'closeRoute', route: +d.route }); break;
       case 'tax': cmd({ type: 'setTax', city: +d.city, tax: d.tax }); break;
       case 'build': cmd({ type: 'build', city: +d.city, building: d.b }); break;
       case 'recruit': cmd({ type: 'recruit', city: +d.city, troop: d.t, count: +d.n }); break;
@@ -62,6 +63,7 @@ VM.Panels = (function () {
   }
 
   function onChange(e) {
+    if (e.target.id === 'routeSel' && e.target.value !== '') cmd({ type: 'openRoute', a: +e.target.dataset.city, b: +e.target.value });
     if (e.target.id === 'govSel') cmd({ type: 'setGovernor', city: +e.target.dataset.city, officer: e.target.value === '' ? null : +e.target.value });
   }
 
@@ -87,6 +89,10 @@ VM.Panels = (function () {
   const T = (label, tip) => `<span data-tip="${esc(tip)}">${label}</span>`;                       // a label with a hold-to-read explanation (js/ui/tips.js)
   const info = tip => `<i class="info" data-tip="${esc(tip)}">i</i>`;
   const TIPS = {
+    trade: 'A trade route is a road between two of your cities, or one of yours and an ally\'s, through land friendly to both. It pays both houses gold every day, and is cut when an enemy holds a city on the road. Each market in this city allows one more route.',
+    tradeOpen: 'The route is open and paying.',
+    tradeCut: 'An enemy holds a city on the road, so the route pays nothing until it is clear.',
+    tradeClose: 'Close this route. Opening a new one costs gold again.',
     pop: 'People living here. Taxes and recruits come from them. The number after the slash is how many the city can hold; farms, markets and a temple raise it.',
     wall: 'The wall slows an attacker and lets your archers shoot down from it. Siege engines break it fastest. When it falls, the enemy storms the gate.',
     garrison: 'Soldiers stationed in the city. They defend it and are the pool you draw armies from.',
@@ -162,6 +168,16 @@ VM.Panels = (function () {
     if (c.governor !== null) { const g = st.officers[c.governor]; h += `${traitIcon(g.trait)}${loyal(g)}`; }
     h += `</div>`;
     if (c.governor !== null) h += `<div class="ir">` + VM.Officers.POLICIES.map(k => `<button class="ibtn sm${c.policy === k ? ' on' : ''}" data-act="policy" data-city="${c.id}" data-mode="${k}" data-tip="${tipOf(k[0].toUpperCase() + k.slice(1), POLICY_TIP[k])}">${I.svg(M.policy[k])}${I.w(k[0].toUpperCase() + k.slice(1))}</button>`).join('') + `</div>`;
+    // Trade: the routes out of this city (a road to another of your cities, or an ally's, through land friendly to both)
+    const routes = VM.Trade.listFor(st, c.id), limit = VM.Trade.limitOf(c);
+    const partners = st.cities.filter(o => o.id !== c.id && (o.owner === me || VM.Diplo.allied(st, me, o.owner)) && !routes.some(r => r.a === o.id || r.b === o.id) && VM.Trade.onRoad(st, { owner: me, a: c.id, b: o.id }));
+    h += `<div class="sec">${I.t('link', 'Trade', TIPS.trade, '', true)}</div>`;
+    for (const r of routes) {
+      const other = st.cities[r.a === c.id ? r.b : r.a], open = !!VM.Trade.onRoad(st, r);
+      h += `<div class="ir">${open ? I.t('coins', 'Open', TIPS.tradeOpen, 'good', true) : I.t('unlink', 'Cut', TIPS.tradeCut, 'bad', true)}<span>${st.map.nodes[other.id].name}</span>${I.btn('unlink', 'Close route', { 'data-act': 'closeRoute', 'data-route': r.id }, 'sm', TIPS.tradeClose, true)}</div>`;
+    }
+    if (routes.length < limit && partners.length) h += `<div class="ir">${I.t('go', 'Open a route to', '', '', true)}<select id="routeSel" data-city="${c.id}"><option value="">…</option>` + partners.map(o => `<option value="${o.id}">${st.map.nodes[o.id].name}</option>`).join('') + `</select></div>`;
+    else if (routes.length >= limit) h += `<div class="ir dim">${I.t('info', 'No more routes from here: build markets', '', '', true)}</div>`;
     h += `<div class="sec">${I.t('house', 'Buildings', '', '', true)}</div><div class="ir">`;
     for (const k of Object.keys(VM.CFG.BUILD)) {
       const B = VM.CFG.BUILD[k], lvl = c.buildings[k], building = c.build && c.build.type === k;

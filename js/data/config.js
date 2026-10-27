@@ -125,6 +125,9 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Trade routes (js/sim/trade.js): a road between two of your cities, or one of yours and an ally's, through land friendly to both
+  TRADE: { setup: 150, base: 1, perMarket: 1, perDay: 4, bonus: 1.5 },
+
   // Random events (js/sim/hazards.js): chances per city per day, and what they do
   HAZARDS: {
     blight: 0.0004, bounty: 0.0005, plague: 0.0003, bandits: 0.0005, unrest: 0.01,
