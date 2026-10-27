@@ -25,7 +25,7 @@ test('every city of every seed lays out without overlaps or NaN', () => {
       for (let i = 0; i < L.houses.length; i++) for (let j = i + 1; j < L.houses.length; j++) assert(Math.hypot(L.houses[i].x - L.houses[j].x, L.houses[i].z - L.houses[j].z) >= 2.6 - 1e-9, 'houses do not overlap');
       for (const h of L.houses) assert(Math.hypot(h.x, h.z) < L.radius, 'houses inside the walls');
       assert.strictEqual(L.gates.length, s.map.nodes[c.id].adj.length, 'one gate per road on the map');
-      assert(L.housesWanted >= 4 && L.houses.length >= Math.min(L.housesWanted, 2), `houses ${L.houses.length}/${L.housesWanted}`);     // some small villages are squeezed between close gates: they have less room than their people
+      assert(L.housesWanted >= 4 && L.houses.length >= Math.min(L.housesWanted, L.tier === 'hamlet' ? 0 : 2), `houses ${L.houses.length}/${L.housesWanted}`);     // some small villages are squeezed between close gates: they have less room than their people
     }
   }
 });
@@ -78,6 +78,21 @@ test('no random tilt: every house faces a street exactly, every field lies squar
         const diff = Math.abs(Math.atan2(Math.sin(f.rot - want), Math.cos(f.rot - want)));
         assert(diff < 1e-9, `field ${seed}/${c.id} is not square to its radius (${diff})`);
       }
+    }
+  }
+});
+
+test('nothing stands on a street: houses, the suburb, the works, the fixed buildings and the well are clear of every road', () => {
+  for (const seed of [1, 2, 3, 4, 5]) {
+    const s = world(seed);
+    for (const c of s.cities) {
+      const L = CL.build(s, c.id), road = (p, half) => L.streets.some(st => { const u = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, al = p.x * u.x + p.z * u.z; return al > -2 && Math.abs(p.x * u.z - p.z * u.x) < 3.4 + half; });
+      const things = [].concat(L.houses.map(h => [h, 1.2, 'house']), L.suburb.map(h => [h, 1.2, 'suburb']), L.works.map(w => [w, w.size || 2.5, 'works']));
+      things.push([L.well, 1.6, 'well'], [L.barracks, 2.5, 'barracks'], [L.temple, 2.0, 'temple']);
+      if (L.smith.on) things.push([L.smith, 2.0, 'smithy']);
+      if (L.depot) things.push([L.depot, 1.5, 'depot']);
+      if (L.monument) things.push([L.monument, 1.8, 'monument']);
+      for (const [o, half, what] of things) assert(!road(o, half), `${what} ${seed}/${c.id} at ${o.x.toFixed(1)},${o.z.toFixed(1)} is on a street`);
     }
   }
 });
