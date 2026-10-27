@@ -125,6 +125,9 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Generals' duels (js/sim/duel.js): the loser's army loses morale and its general loses loyalty; each general rests `cool` days after one
+  DUEL: { cool: 40, loserMorale: 25, winnerMorale: 10, loserLoyalty: 12, winnerLoyalty: 4 },
+
   // Doctrines (js/sim/doctrine.js): the first offer comes after `first` days, then one every `every` days
   DOCTRINE: { first: 365, every: 365 },
 

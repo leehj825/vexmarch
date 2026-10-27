@@ -29,6 +29,7 @@ VM.Panels = (function () {
     const d = b.dataset, st = ui.state;
     switch (d.act) {
       case 'close': ui.selectedCity = -1; ui.selectedArmy = null; break;
+      case 'duel': { const r = cmd({ type: 'duel', army: +d.army, target: +d.target }); if (r.ok) VM.Panels.toast(`${r.loser} is beaten by ${r.winner}`); break; }
       case 'closeRoute': cmd({ type: 'closeRoute', route: +d.route }); break;
       case 'tax': cmd({ type: 'setTax', city: +d.city, tax: d.tax }); break;
       case 'build': cmd({ type: 'build', city: +d.city, building: d.b }); break;
@@ -225,7 +226,7 @@ VM.Panels = (function () {
     h += `<div class="ir">${I.t('pin', 'Location')}<span>${a.at !== null ? N[a.at].name : N[a.edge.to].name}</span>${a.at === null ? I.t('go', 'On the road', '', '', true) : ''}${a.dest !== null && !a.routed ? I.t('go', 'Heading to', '', '', true) + `<b>${N[a.dest].name}</b>` : ''}</div>`;
     if (a.routed) h += `<div class="ir bad">${I.t('back', 'Routed', 'Fleeing to safety.', '', true)}</div>`;
     else if (a.reserve) h += `<div class="ir">${I.t('shield', 'In reserve', 'The front is full: only the three biggest armies of a house fight at once. This army waits and steps in as the front thins.', '', true)}</div>`;
-    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}${hbtn('eye', 'Watch battle', { 'data-act': 'watch', 'data-army': a.id }, '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
+    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}${hbtn('eye', 'Watch battle', { 'data-act': 'watch', 'data-army': a.id }, '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e && VM.Diplo.hostile(st, a.owner, e.owner) && !(st.officers[a.officer].duelReady > st.time) && !(st.officers[e.officer].duelReady > st.time) ? hbtn('swords', 'Challenge ' + st.officers[e.officer].name, { 'data-act': 'duel', 'data-army': a.id, 'data-target': e.id }, '', true) : ''; }).join('') + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
     else if (VM.War.sieging(a) && VM.Diplo.hostile(st, a.owner, st.cities[a.at].owner)) h += `<div class="ir bad">${I.t('siege', 'Besieging', '', '', true)}<b>${N[a.at].name}</b></div>`;
     const s = a.supply;
     if (s) {
