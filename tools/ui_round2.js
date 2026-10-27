@@ -12,6 +12,13 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push(String(e)));
     await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(300);
     const ev = (fn, arg) => p.evaluate(fn, arg), ok = (c, m) => { assert(c, `[${w}px] ${m}`); n++; };
+    // the guide from the title screen: nine pages, Next and Back, Close
+    await p.click('#guideBtn'); await p.waitForTimeout(300);
+    ok(await p.locator('#story.on [data-g="next"]').count() === 1, 'the guide opens');
+    const first = await p.locator('#storyT').innerText(); await p.click('#story [data-g="next"]'); await p.waitForTimeout(150);
+    ok((await p.locator('#storyT').innerText()) !== first, 'the next page is another system');
+    await p.click('#story [data-g="prev"]'); await p.waitForTimeout(150); ok((await p.locator('#storyT').innerText()) === first, 'and back again');
+    await p.click('#storyBtn'); await p.waitForTimeout(200); ok(await p.locator('#story.on').count() === 0, 'closed');
     // the scenarios on the title screen: the siege loads with Vexholm held by another house
     await p.click('#scenSel [data-s="siege"]'); await p.waitForTimeout(300);
     ok(await ev(() => __vm.state.cities.some(c => __vm.state.map.nodes[c.id].name === 'Vexholm' && c.owner !== 0 && c.owner !== __vm.state.player)), 'the siege scenario loads');

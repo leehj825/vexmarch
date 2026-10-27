@@ -99,6 +99,7 @@
     else if (b.dataset.pm === 'settings') { closePause(); document.getElementById('setBtn').click(); }
     else if (b.dataset.pm === 'chronicle') { closePause(); VM.StoryUI.chronicle(); }
     else if (b.dataset.pm === 'slots') { closePause(); VM.SlotsUI.open('save'); }
+    else if (b.dataset.pm === 'guide') { closePause(); VM.Guide.show(); }
     else { $pm.classList.remove('on'); exitToMenu(); }
   });
   addEventListener('keydown', e => {
@@ -112,7 +113,7 @@
   document.getElementById('mapctl').addEventListener('click', e => { const b = e.target.closest('[data-mc]'); if (b) VM.MapView.control(b.dataset.mc); });
   VM.City3D.init(document.getElementById('city3d'), ui); VM.Field3D.init(document.getElementById('field3d'), ui); document.getElementById('fbBack').addEventListener('click', () => ui.closeField());
   VM.UIPrefs.apply(); VM.I18N.start();
-  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.DoctrineUI.init(ui); VM.SlotsUI.init(ui); VM.Walk.init(ui); VM.DiploUI.init(ui); VM.Tips.init(); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
+  VM.Panels.init(ui); VM.StoryUI.init(ui); VM.DoctrineUI.init(ui); VM.SlotsUI.init(ui); VM.Guide.init(ui); VM.Walk.init(ui); VM.DiploUI.init(ui); VM.Tips.init(); VM.Alerts.init(ui); VM.Sheets.init(ui); VM.Tutorial.init(ui); VM.Title.init(ui);
   addEventListener('pointerdown', () => VM.Audio.init(), { once: true }); addEventListener('keydown', () => VM.Audio.init(), { once: true });
   document.getElementById('hud').style.visibility = 'hidden';
   VM.Title.roll(false); VM.Title.show();
