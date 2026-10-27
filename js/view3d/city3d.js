@@ -154,9 +154,9 @@ VM.City3D = (function () {
       const [x, z] = polar(R, s.angle), rot = yawFor(-Math.sin(s.angle), Math.cos(s.angle));
       if (s.damage === 2) { for (let k = 0; k < 4; k++) box(M, x + (k - 1.5) * 0.5, 0, z + (k % 2) * 0.4, 0.8, 0.5 + (k % 3) * 0.3, 0.8, COL.rockDark, k); return; }
       const h = s.damage === 1 ? wh * 0.62 : wh;
-      if (VM.StructModels) tx.add('wall', x, 0, z, rot, chord / 3, h / 1.64, Math.max(1, th / 0.6)); else box(M, x, 0, z, chord, h, th, COL.stone, rot, s.damage ? 0.8 : 1);
+      box(M, x, 0, z, chord, h, th, COL.stone, rot, s.damage ? 0.8 : 1);                       // a plain stone wall, like the towers and the gate
       if (s.damage === 1) box(M, x + 0.3, 0, z, 0.9, 0.5, 0.9, COL.rockDark, 0.6);
-      else if (!VM.StructModels && lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
+      else if (lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
     });
     for (const a of W.towers) {
       const [x, z] = polar(R, a), th2 = lvl >= 2 ? 1.5 : 1.1, hh = wh + (lvl >= 2 ? 1.4 : 0.8);
