@@ -12,6 +12,11 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push(String(e)));
     await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(300);
     const ev = (fn, arg) => p.evaluate(fn, arg), ok = (c, m) => { assert(c, `[${w}px] ${m}`); n++; };
+    // the scenarios on the title screen: the siege loads with Vexholm held by another house
+    await p.click('#scenSel [data-s="siege"]'); await p.waitForTimeout(300);
+    ok(await ev(() => __vm.state.cities.some(c => __vm.state.map.nodes[c.id].name === 'Vexholm' && c.owner !== 0 && c.owner !== __vm.state.player)), 'the siege scenario loads');
+    await p.click('#scenSel [data-s="open"]'); await p.waitForTimeout(300);
+    ok(await ev(() => !__vm.state.story && __vm.state.factions.filter(f => !f.neutral).length >= 4), 'back to open ground');
     await p.click('#startBtn'); await p.waitForTimeout(300);
     await ev(() => { __vm.speed = 0; __vm.state.aiOn = false; });
     // a trade route from the city panel

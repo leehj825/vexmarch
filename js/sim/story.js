@@ -60,6 +60,7 @@ VM.Story = (function () {
       mine[0].role = 'governor'; s.cities[capital[h]].governor = mine[0].id;
     }
     s.events = []; s.nextEvent = 0;
+    if (opts.noStory) { VM.Eco.refresh(s); return s; }                             // the fixed map with no story: a scenario or a skirmish on these places
     s.story = { campaign: true, house: player, fired: {}, chronicle: [], queue: [], seen: 0, flags: {} };
     VM.Eco.refresh(s);
     opening(s);

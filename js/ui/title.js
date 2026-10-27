@@ -2,14 +2,14 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.Title = (function () {
-  let ui, box, count = 5, seed = 1, difficulty = 'normal', fog = false, hazards = true;
+  let ui, box, count = 5, seed = 1, difficulty = 'normal', fog = false, hazards = true, scenario = 'open';
   const $ = id => document.getElementById(id);
   const hasSave = () => { try { return !!localStorage.getItem('vexmarch.save'); } catch (e) { return false; } };
 
   function roll(keepSeed) {
     if (!keepSeed) seed = (Math.random() * 65535 | 0) + 1;
     const player = ui.state ? ui.state.player : 1;
-    ui.setState(VM.Sim.create({ seed, factions: count, player: Math.min(player, count), ai: true, difficulty }));
+    ui.setState(scenario === 'open' ? VM.Sim.create({ seed, factions: count, player: Math.min(player, count), ai: true, difficulty }) : VM.Scenario.create(scenario, { player: Math.min(player, 6), difficulty }));
     VM.Fog.setOn(ui.state, fog); VM.Hazards.setOn(ui.state, hazards);
     VM.MapView.fit(); render();
   }
@@ -20,6 +20,7 @@ VM.Title = (function () {
       const cap = st.map.nodes[f.capital].name, n = st.cities.filter(c => c.owner === f.id).length;
       return `<button class="fac${f.id === st.player ? ' on' : ''}" data-f="${f.id}">${VM.Icons.crest(f.id, f.color, 24)}<b>${f.name}</b><small>capital ${cap} · ${n} nodes</small></button>`;
     }).join('');
+    document.querySelectorAll('#scenSel button').forEach(b => { b.classList.toggle('on', b.dataset.s === scenario); });
     document.querySelectorAll('#countSel button').forEach(b => b.classList.toggle('on', +b.dataset.n === count));
     $('hazBtn').classList.toggle('on', hazards); $('hazBtn').textContent = hazards ? 'Random events: on' : 'Random events: off';
     $('fogBtn').classList.toggle('on', fog); $('fogBtn').textContent = fog ? 'Fog of war: on' : 'Fog of war: off';
@@ -34,6 +35,7 @@ VM.Title = (function () {
     $('diffSel').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { difficulty = b.dataset.d; ui.state.difficulty = difficulty; render(); } });
     $('fogBtn').addEventListener('click', () => { fog = !fog; VM.Fog.setOn(ui.state, fog); render(); });
     $('hazBtn').addEventListener('click', () => { hazards = !hazards; VM.Hazards.setOn(ui.state, hazards); render(); });
+    $('scenSel').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { scenario = b.dataset.s; roll(true); } });
     $('rerollBtn').addEventListener('click', () => roll(false));
     $('setTitleBtn').addEventListener('click', () => { ui.sheet = ui.sheet === 'settings' ? null : 'settings'; VM.Sheets.update(); });
     $('campBtn').addEventListener('click', showCampaign);

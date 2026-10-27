@@ -103,6 +103,8 @@ Watch a fight that happens on the road, away from any city. `FieldLayout.start` 
 - **Vassals and tribute** (`js/sim/diplo.js`): a weaker house can accept vassalage: it keeps its cities and name, pays tribute daily, cannot ally elsewhere, and rebels when it grows much stronger than its lord.
 - **Generals' duels** (`js/sim/duel.js`): while your army fights an enemy army, challenge the enemy general; decided at once by stats and trait, with a rival bonus; loser's army loses morale and its general loyalty; a cool-down after each.
 - **Battle reports** (`js/sim/report.js`): each fight is recorded with start and end sizes, who held the field and where; the last 40 are kept.
+- **House crests and ruler portraits** (`Icons.crest`, `Icons.portrait`): each house has a crest in its colour with its emblem (sword, anchor, sprout, mountain, cross, horse) on the title and campaign screens; the campaign shows its ruler's portrait.
+- **Scenario maps** (`js/sim/scenarios.js`): Open ground (the random map), The fixed realm (the campaign's 30 places, no story), and Siege of Vexholm (the realm with Vexholm walled and held by another house, your army at its gates). Chosen on the title screen.
 - **Chronicle as a history book** (`js/ui/story.js`): year headings, a summary of the current year, and battles written as sentences; available in every game from the pause menu.
 
 ## Ideas for next (not started, none agreed)
