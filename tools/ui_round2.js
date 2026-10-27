@@ -12,6 +12,12 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push(String(e)));
     await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(300);
     const ev = (fn, arg) => p.evaluate(fn, arg), ok = (c, m) => { assert(c, `[${w}px] ${m}`); n++; };
+    // Settings > New games remembers fog and random events for the next game
+    await p.click('#setTitleBtn'); await p.waitForTimeout(300); await p.click('[data-act="fogPref"]'); await p.waitForTimeout(200);
+    ok(await ev(() => VM.UIPrefs.get('fog') === true), 'fog is remembered');
+    await p.click('[data-act="sheetClose"]'); await p.waitForTimeout(200);
+    ok((await p.locator('#fogBtn').innerText()).includes('on'), 'and the title button shows it');
+    await p.click('#fogBtn'); await p.waitForTimeout(150); ok(await ev(() => VM.UIPrefs.get('fog') === false), 'the title button changes it too');
     // the guide from the title screen: nine pages, Next and Back, Close
     await p.click('#guideBtn'); await p.waitForTimeout(300);
     ok(await p.locator('#story.on [data-g="next"]').count() === 1, 'the guide opens');

@@ -51,6 +51,8 @@ VM.Sheets = (function () {
       case 'lang': VM.I18N.set(d.l); lastHTML = ''; break;
       case 'size': VM.UIPrefs.set('size', d.v); lastHTML = ''; break;
       case 'map3d': VM.UIPrefs.set('map3d', d.v); lastHTML = ''; break;
+      case 'fogPref': VM.UIPrefs.set('fog', !VM.UIPrefs.get('fog')); lastHTML = ''; if (VM.Title && !ui.running) VM.Title.render(); break;
+      case 'hazPref': VM.UIPrefs.set('hazards', VM.UIPrefs.get('hazards') === false); lastHTML = ''; if (VM.Title && !ui.running) VM.Title.render(); break;
       case 'tutorial': VM.Tutorial.finish(false); ui.sheet = null; VM.Title.startTutorial(); break;
       case 'delsave': try { localStorage.removeItem('vexmarch.save'); VM.Panels.toast('Saved game deleted'); } catch (e) { /* ignore */ } break;
       case 'dAlly': case 'dGift': case 'dMerge': case 'dBreak': case 'dBreakNo': case 'dBreakYes': case 'dAnswer': VM.DiploUI.act(d, cmd); lastHTML = ''; break;
@@ -125,6 +127,7 @@ VM.Sheets = (function () {
     h += `<div class="sec">Text size</div><div class="row">` + [['small', 'Small'], ['normal', 'Normal'], ['large', 'Large']].map(([v, n]) => `<button data-act="size" data-v="${v}" class="chip${VM.UIPrefs.get('size') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Interface</div><div class="row">` + [['icons', 'Icons only'], ['mixed', 'Icons and words'], ['text', 'Words and labels']].map(([v, n]) => `<button data-act="uimode" data-v="${v}" class="chip${(VM.UIPrefs.get('ui') || 'mixed') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Map</div><div class="row">` + [['on', '3D terrain'], ['off', 'Flat map']].map(([v, n]) => `<button data-act="map3d" data-v="${v}" class="chip${(VM.UIPrefs.get('map3d') || 'on') === v ? ' on' : ''}">${n}</button>`).join('') + `</div><div class="row dim">The map style changes the next time the game starts.</div>`;
+    h += `<div class="sec">New games start with</div><div class="row">` + `<button data-act="fogPref" class="chip${VM.UIPrefs.get('fog') ? ' on' : ''}">${VM.UIPrefs.get('fog') ? 'Fog of war: on' : 'Fog of war: off'}</button>` + `<button data-act="hazPref" class="chip${VM.UIPrefs.get('hazards') !== false ? ' on' : ''}">${VM.UIPrefs.get('hazards') !== false ? 'Random events: on' : 'Random events: off'}</button></div>`;
     h += `<div class="sec">Help</div><div class="row"><button data-act="tutorial" class="btn">Replay the tutorial</button></div>`;
     h += `<div class="row"><button data-act="delsave" class="btn">Delete saved game</button></div>`;
     h += `<div class="row dim">Pausing for alerts is chosen in the Alerts list.</div>`;

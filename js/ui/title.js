@@ -2,7 +2,9 @@
 var VM = globalThis.VM = globalThis.VM || {};
 
 VM.Title = (function () {
-  let ui, box, count = 5, seed = 1, difficulty = 'normal', fog = false, hazards = true, scenario = 'open';
+  let ui, box, count = 5, seed = 1, difficulty = 'normal', scenario = 'open';
+  // the fog and random-event choices are remembered on this device (Settings > New games can change them too)
+  const fogOn = () => !!VM.UIPrefs.get('fog'), hazOn = () => VM.UIPrefs.get('hazards') !== false;
   const $ = id => document.getElementById(id);
   const hasSave = () => { try { return !!localStorage.getItem('vexmarch.save'); } catch (e) { return false; } };
 
@@ -10,7 +12,7 @@ VM.Title = (function () {
     if (!keepSeed) seed = (Math.random() * 65535 | 0) + 1;
     const player = ui.state ? ui.state.player : 1;
     ui.setState(scenario === 'open' ? VM.Sim.create({ seed, factions: count, player: Math.min(player, count), ai: true, difficulty }) : VM.Scenario.create(scenario, { player: Math.min(player, 6), difficulty }));
-    VM.Fog.setOn(ui.state, fog); VM.Hazards.setOn(ui.state, hazards);
+    VM.Fog.setOn(ui.state, fogOn()); VM.Hazards.setOn(ui.state, hazOn());
     VM.MapView.fit(); render();
   }
 
@@ -22,8 +24,8 @@ VM.Title = (function () {
     }).join('');
     document.querySelectorAll('#scenSel button').forEach(b => { b.classList.toggle('on', b.dataset.s === scenario); });
     document.querySelectorAll('#countSel button').forEach(b => b.classList.toggle('on', +b.dataset.n === count));
-    $('hazBtn').classList.toggle('on', hazards); $('hazBtn').textContent = hazards ? 'Random events: on' : 'Random events: off';
-    $('fogBtn').classList.toggle('on', fog); $('fogBtn').textContent = fog ? 'Fog of war: on' : 'Fog of war: off';
+    $('hazBtn').classList.toggle('on', hazOn()); $('hazBtn').textContent = hazOn() ? 'Random events: on' : 'Random events: off';
+    $('fogBtn').classList.toggle('on', fogOn()); $('fogBtn').textContent = fogOn() ? 'Fog of war: on' : 'Fog of war: off';
     document.querySelectorAll('#diffSel button').forEach(b => b.classList.toggle('on', b.dataset.d === difficulty));
     $('contBtn').style.display = hasSave() ? '' : 'none';
     $('loadSlotBtn').style.display = VM.Slots.list().some(x => x.has) ? '' : 'none';
@@ -34,8 +36,8 @@ VM.Title = (function () {
     $('facList').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { ui.state.player = +b.dataset.f; render(); } });
     $('countSel').addEventListener('click', e => { const b = e.target.closest('[data-n]'); if (b) { count = +b.dataset.n; roll(false); } });
     $('diffSel').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { difficulty = b.dataset.d; ui.state.difficulty = difficulty; render(); } });
-    $('fogBtn').addEventListener('click', () => { fog = !fog; VM.Fog.setOn(ui.state, fog); render(); });
-    $('hazBtn').addEventListener('click', () => { hazards = !hazards; VM.Hazards.setOn(ui.state, hazards); render(); });
+    $('fogBtn').addEventListener('click', () => { VM.UIPrefs.set('fog', !fogOn()); VM.Fog.setOn(ui.state, fogOn()); render(); });
+    $('hazBtn').addEventListener('click', () => { VM.UIPrefs.set('hazards', !hazOn()); VM.Hazards.setOn(ui.state, hazOn()); render(); });
     $('scenSel').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { scenario = b.dataset.s; roll(true); } });
     $('rerollBtn').addEventListener('click', () => roll(false));
     $('setTitleBtn').addEventListener('click', () => { ui.sheet = ui.sheet === 'settings' ? null : 'settings'; VM.Sheets.update(); });
@@ -76,10 +78,10 @@ VM.Title = (function () {
   }
   function beginCampaign() {
     VM.Audio.init(); VM.Audio.play('horn');
-    ui.setState(VM.Story.create({ player: house, difficulty })); VM.Fog.setOn(ui.state, fog); VM.Hazards.setOn(ui.state, hazards); VM.MapView.fit(); $('campaign').classList.remove('on'); ui.start();
+    ui.setState(VM.Story.create({ player: house, difficulty })); VM.Fog.setOn(ui.state, fogOn()); VM.Hazards.setOn(ui.state, hazOn()); VM.MapView.fit(); $('campaign').classList.remove('on'); ui.start();
   }
 
   function show() { if (ui.state && ui.state.story) roll(false); box.classList.add('on'); render(); $('tutBtn').classList.toggle('pulse', !VM.Tutorial.done()); }
 
-  return { init, show, roll, startTutorial };
+  return { init, show, roll, startTutorial, render };
 })();
