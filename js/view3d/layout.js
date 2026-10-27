@@ -153,7 +153,7 @@ VM.CityLayout = (function () {
     const onRoad = (p, half) => dirs.some(d => { const t = p.x * d.x + p.z * d.z; return t > -2 && Math.abs(p.x * d.z - p.z * d.x) < half; });            // inside the strip of street that runs from a gate to the keep
     // The plaza round the keep, with a well and, in a great city, a monument; the sites of the works outside the walls and the suburb along the roads are reserved too
     const wp = pol(R * 0.56 + 2, main - 0.55); L.well = { x: wp.x, z: wp.z }; take(wp.x, wp.z, 1.6);
-    L.plaza = stage >= 2 ? { r: 9 + stage } : null;
+    L.plaza = stage >= 2 ? { r: 8.5 } : null;                                       // a fixed size: the plaza never changes the houses around it
     { const mp = pol(R * 0.56 + 2, main + 0.55); take(mp.x, mp.z, 1.8); L.monument = stage >= 4 ? { x: mp.x, z: mp.z } : null; }          // the monument's ground is reserved from the start
     const freeAngle = a => { for (let k = 0; k < 24; k++) { if (!gates.some(g => angDiff(g.angle, a) < 0.42)) return a; a += 0.3; } return a; };
     L.works = [];
@@ -170,18 +170,31 @@ VM.CityLayout = (function () {
     });
     for (const q of sub) take(q.x, q.z, 2.4);
     L.suburb = sub.slice(0, stage >= 4 ? 16 : stage >= 3 ? 7 : 0);
-    for (let tries = 0; tries < 2500 && spots.length < 48; tries++) {
-      const a = rH() * TAU, rr = 8.5 + Math.sqrt(rH()) * (R - 11), p = pol(rr, a);
-      const rot = a + (rH() - 0.5) * 0.6, w = 1.6 + rH() * 0.8, d = 1.6 + rH() * 0.8, h = 1.1 + rH() * 0.7, roof = Math.floor(rH() * 3), chimney = rH() < 0.4;
-      if (onRoad(p, 3.4) && rr > 4) continue;                                       // keep the street from each gate clear
-      if (rr < 13) continue;                                                        // the plaza's ground is kept free from the start, whatever its stage
+    // Blocks: houses stand in rows along each street, on both sides, a set distance back from the road and facing it. A second row sits behind the first.
+    // The rows are laid out from the centre out, so a growing town fills the nearest blocks first and the houses already built never move.
+    const rMin = 9.5, rMax = R - 3.5, LANE = 4.4, ROW = 3.6;     // just outside the plaza (a fixed size), so no house ever moves when the plaza appears
+    const cands = [];
+    streets.forEach((st, si) => {
+      const u = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, t = { x: -u.z, z: u.x };          // u: outward along the street; t: across it
+      for (const row of [0, 1, 2]) for (const side of [-1, 1]) for (let r = rMin; r <= rMax; r += ROW) {
+        const lat = side * (LANE + row * ROW), p = { x: u.x * r + t.x * lat, z: u.z * r + t.z * lat }, pr = Math.hypot(p.x, p.z);
+        if (pr < rMin || pr > rMax) continue;
+        if (streets.some((o, oi) => { const ou = { x: Math.cos(o.angle), z: Math.sin(o.angle) }, along = p.x * ou.x + p.z * ou.z; return along > -2 && Math.abs(p.x * ou.z - p.z * ou.x) < (oi === si ? 0 : 4.0); })) continue;
+        cands.push({ p, si, side, row, pr, front: { x: -side * t.x, z: -side * t.z } });
+      }
+    });
+    cands.sort((x, y) => x.pr - y.pr || x.row - y.row || x.si - y.si || x.side - y.side);
+    for (const c of cands) {
+      if (spots.length >= 48) break;
+      const p = c.p, w = 1.6 + rH() * 0.8, d = 1.6 + rH() * 0.8, h = 1.1 + rH() * 0.7, roof = c.si % 3, chimney = rH() < 0.4;
+      if (!dry(Math.atan2(p.z, p.x))) continue;
       if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 1.5)) continue;
       if (spots.some(h2 => Math.hypot(h2.x - p.x, h2.z - p.z) < 3.4)) continue;
-      spots.push({ x: p.x, z: p.z, rot, w, d, h, roof, chimney });
+      spots.push({ x: p.x, z: p.z, rot: Math.atan2(c.front.x, c.front.z), w, d, h, roof, chimney, district: c.si, ratio: c.pr / R });
     }
-    // The look of each home follows the stage of the place: tents and huts, then timber, then stone (older homes first, so a growing town changes house by house)
-    const styleOf = (i, st) => st <= 1 ? (i % 3 === 0 ? 1 : 0) : st === 2 ? (i % 5 === 0 ? 0 : 1) : st === 3 ? (i % 2 ? 2 : 1) : (i % 4 === 3 ? 1 : 2);
-    spots.forEach((h, i) => { h.style = styleOf(i, stage); });
+    // The look of each home follows the stage of the place and how near the keep it stands: stone near the centre of a big place, timber and then tents out at the edge
+    const styleOf = (h, st) => st <= 1 ? (h.ratio > 0.6 ? 0 : 1) : st === 2 ? (h.ratio > 0.7 ? 0 : 1) : st === 3 ? (h.ratio < 0.6 ? 2 : 1) : (h.ratio < 0.75 ? 2 : 1);
+    spots.forEach(h => { h.style = styleOf(h, stage); });
     L.suburb.forEach((h, i) => { h.style = stage >= 4 ? 2 : 1; });
     L.houses = spots.slice(0, wanted);
     L.housesWanted = wanted;
