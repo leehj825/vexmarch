@@ -201,3 +201,15 @@ body.titlemode:has(#sheet.open) #hud { z-index: 45; }
 body.titlemode #sheet.open { visibility: visible; top: calc(16px + env(safe-area-inset-top)); }
 #speed button[data-s] .ic { width: 20px; height: 20px; }
 #storyB .btns { flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
+
+/* Field battle view: its own canvas and a card (bottom-left, a bottom sheet on a phone) that says where, who and how it stands. The Back button is always there. */
+#field3d { position: fixed; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; pointer-events: none; transition: opacity 0.35s; touch-action: none; background: #6b86b8; }
+#field3d.on { opacity: 1; pointer-events: auto; }
+#fieldbar { position: fixed; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); width: 340px; max-height: 40vh; overflow-y: auto; padding: 8px 12px 10px; background: rgba(12, 10, 14, 0.9); border: 1px solid rgba(242, 210, 122, 0.4); border-radius: 6px; font-size: 13px; line-height: 1.45; display: none; pointer-events: auto; z-index: 5; }
+body.infield #fieldbar { display: block; }
+body.infield #panel, body.infield #mapctl, body.infield #hint3d { display: none !important; }
+#fieldbar .fbh { display: flex; align-items: center; gap: 8px; position: sticky; top: -8px; background: rgba(12, 10, 14, 0.97); padding: 4px 0; } #fieldbar .fbh b { flex: 1; font-size: 16px; color: #f2d27a; }
+#fieldbar .fbh .go { padding: 6px 14px; font-size: 13px; } #fbS { margin: 4px 0 6px; opacity: 0.9; }
+#fbArmies .ir { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; } #fbArmies .dim { opacity: 0.65; }
+#fbArmies .mb { display: inline-block; width: 44px; height: 5px; background: rgba(0, 0, 0, 0.6); border-radius: 3px; overflow: hidden; } #fbArmies .mb i { display: block; height: 100%; background: #c8e070; }
+@media (max-width: 720px) { #fieldbar { left: 0; right: 0; bottom: 0; width: auto; border-radius: 10px 10px 0 0; max-height: 34vh; padding-bottom: calc(10px + env(safe-area-inset-bottom)); } }

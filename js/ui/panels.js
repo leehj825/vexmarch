@@ -52,6 +52,7 @@ VM.Panels = (function () {
       case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
       case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
       case 'view3d': ui.openCity(+d.city); break;
+      case 'watch': ui.openField(+d.army); break;
       case 'detailsToggle': VM.UIPrefs.set('det', !VM.UIPrefs.get('det')); lastHTML = ''; break;
       case 'panelToggle': ui.panelMin = !ui.panelMin; lastHTML = ''; break;
       case 'backmap': ui.closeCity(); break;
@@ -208,7 +209,7 @@ VM.Panels = (function () {
     h += `<div class="ir">${I.t('pin', 'Location')}<span>${a.at !== null ? N[a.at].name : N[a.edge.to].name}</span>${a.at === null ? I.t('go', 'On the road', '', '', true) : ''}${a.dest !== null && !a.routed ? I.t('go', 'Heading to', '', '', true) + `<b>${N[a.dest].name}</b>` : ''}</div>`;
     if (a.routed) h += `<div class="ir bad">${I.t('back', 'Routed', 'Fleeing to safety.', '', true)}</div>`;
     else if (a.reserve) h += `<div class="ir">${I.t('shield', 'In reserve', 'The front is full: only the three biggest armies of a house fight at once. This army waits and steps in as the front thins.', '', true)}</div>`;
-    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
+    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}${hbtn('eye', 'Watch battle', { 'data-act': 'watch', 'data-army': a.id }, '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
     else if (VM.War.sieging(a) && VM.Diplo.hostile(st, a.owner, st.cities[a.at].owner)) h += `<div class="ir bad">${I.t('siege', 'Besieging', '', '', true)}<b>${N[a.at].name}</b></div>`;
     const s = a.supply;
     if (s) {

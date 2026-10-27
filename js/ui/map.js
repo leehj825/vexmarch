@@ -97,6 +97,14 @@ VM.MapView = (function () {
   function hit(px, py) {
     const st = S(), slots = {}, fs = VM.Fog.on(st) ? VM.Fog.sources(st, st.player) : null;
     let best = null, bd = 20 * 20;
+    for (const a of st.armies) for (const id of a.fighting) {                       // the red cross of a battle: tap it to watch the fight
+      if (id < a.id) continue; const e = st.armies.find(x => x.id === id); if (!e) continue;
+      if (fs && !(VM.Fog.seesArmy(st, st.player, a, fs) && VM.Fog.seesArmy(st, st.player, e, fs))) continue;
+      const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), pq = P((p.x + q.x) / 2, (p.y + q.y) / 2, 1.5), dx = pq.x - px, dy = pq.y - 4 - py, d = dx * dx + dy * dy;
+      if (d < 18 * 18 && d < bd) { bd = d; best = { kind: 'battle', id: a.id }; }
+    }
+    if (best) return best;
+    bd = 20 * 20;
     for (const a of st.armies) {
       if (fs && !VM.Fog.seesArmy(st, st.player, a, fs)) continue;
       const k = a.at !== null ? a.at : -1 - a.id, slot = slots[k] || 0; slots[k] = slot + 1;
