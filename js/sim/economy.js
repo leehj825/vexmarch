@@ -25,8 +25,8 @@ VM.Eco = (function () {
       + 0.05 * b.temple + 0.03 * b.market + S.pros - city.devastation, 0.1, 1.3);
     return {
       cap: capacity, security, prosperity, target: capacity * prosperity,
-      gold: city.contested ? 0 : city.pop * E.tax * T.gold * S.gold * (1 + 0.25 * b.market) * (1 + VM.Story.bonus(state, city.owner, 'gold')) * VM.Hazards.mult(city, 'gold'),
-      foodProd: capacity * (E.foodBase + E.foodFarm * b.farm) * S.food * (1 + VM.Story.bonus(state, city.owner, 'food')) * VM.Hazards.mult(city, 'food'),
+      gold: city.contested ? 0 : city.pop * E.tax * T.gold * S.gold * (1 + 0.25 * b.market) * (1 + VM.Story.bonus(state, city.owner, 'gold') + VM.Doctrine.bonus(state, city.owner, 'gold')) * VM.Hazards.mult(city, 'gold'),
+      foodProd: capacity * (E.foodBase + E.foodFarm * b.farm) * S.food * (1 + VM.Story.bonus(state, city.owner, 'food') + VM.Doctrine.bonus(state, city.owner, 'food')) * VM.Hazards.mult(city, 'food'),
       foodCons: (city.pop + troops) * E.foodPerHead,
       upkeep: upkeepOf(city), troops
     };

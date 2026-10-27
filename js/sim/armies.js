@@ -37,7 +37,7 @@ VM.Armies = (function () {
   function speedOf(army, state) {
     let s = Infinity;
     for (const k in army.troops) if (army.troops[k] > 0) s = Math.min(s, VM.CFG.TROOPS[k].speed);
-    return s === Infinity ? 0 : s * (1 + VM.Story.bonus(state, army.owner, 'speed'));
+    return s === Infinity ? 0 : s * (1 + VM.Story.bonus(state, army.owner, 'speed') + VM.Doctrine.bonus(state, army.owner, 'speed'));
   }
   const sizeOf = army => { let n = 0; for (const k in army.troops) n += army.troops[k]; return n; };
 

@@ -125,6 +125,9 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Doctrines (js/sim/doctrine.js): the first offer comes after `first` days, then one every `every` days
+  DOCTRINE: { first: 365, every: 365 },
+
   // Trade routes (js/sim/trade.js): a road between two of your cities, or one of yours and an ally's, through land friendly to both
   TRADE: { setup: 150, base: 1, perMarket: 1, perDay: 4, bonus: 1.5 },
 

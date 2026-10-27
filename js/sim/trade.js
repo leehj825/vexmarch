@@ -44,8 +44,9 @@ VM.Trade = (function () {
       const A = state.cities[r.a], B = state.cities[r.b], pay = C().perDay * dd;
       const fa = state.factions[A.owner], fb = state.factions[B.owner];
       const bonusA = A.spec === 'market' || A.spec === 'port' ? C().bonus : 1, bonusB = B.spec === 'market' || B.spec === 'port' ? C().bonus : 1;
-      if (fa === fb) fa.gold += pay * Math.max(bonusA, bonusB);                 // both ends are one house's
-      else { fa.gold += pay * bonusA * 0.6; fb.gold += pay * bonusB * 0.4; }   // an ally's route: the house whose city it starts from earns a bit more
+      const cara = 1 + VM.Doctrine.bonus(state, A.owner, 'trade'), carb = 1 + VM.Doctrine.bonus(state, B.owner, 'trade');
+      if (fa === fb) fa.gold += pay * Math.max(bonusA, bonusB) * cara;          // both ends are one house's
+      else { fa.gold += pay * bonusA * 0.6 * cara; fb.gold += pay * bonusB * 0.4 * carb; }   // an ally's route: the house whose city it starts from earns a bit more
     }
   }
   const listFor = (state, city) => routes(state).filter(r => r.a === city || r.b === city);
