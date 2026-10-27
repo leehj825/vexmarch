@@ -30,6 +30,21 @@ test('every city of every seed lays out without overlaps or NaN', () => {
   }
 });
 
+test('streets: a road from every gate, cross streets only between gates far apart, and no house on a street', () => {
+  for (const seed of [1, 2, 3]) {
+    const s = world(seed);
+    for (const c of s.cities) {
+      const L = CL.build(s, c.id), gs = L.streets.filter(x => x.gate), xs = L.streets.filter(x => !x.gate);
+      assert.strictEqual(gs.length, L.gates.length, 'one street per gate');
+      for (const x of xs) { assert(L.tier !== 'hamlet', 'no cross streets in a hamlet'); }
+      for (const h of L.houses) for (const st of L.streets) {
+        const d = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, t = h.x * d.x + h.z * d.z, lat = Math.abs(h.x * d.z - h.z * d.x);
+        assert(!(t > -2 && lat < 3.4), `house ${h.x.toFixed(1)},${h.z.toFixed(1)} is on a street`);
+      }
+    }
+  }
+});
+
 test('size: capitals are bigger than towns; the tier follows capacity', () => {
   const s = world(); const cap = s.cities[s.factions[1].capital];
   assert.strictEqual(CL.build(s, cap.id).tier, 'capital'); assert(CL.build(s, cap.id).radius > CL.RADIUS.hamlet);

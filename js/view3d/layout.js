@@ -144,7 +144,11 @@ VM.CityLayout = (function () {
     // adds houses without moving the old ones.
     if (city.spec === 'port') { const a = main + Math.PI * 0.9; L.water = { angle: a, r: R + 38, radius: 26 }; }
     const dry = a => !L.water || angDiff(a, L.water.angle) > 0.85;
-    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 11), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
+    // Streets: a road from every gate to the keep, and a cross street halfway between two gates that sit far apart (not in a hamlet), so the town is cut into blocks
+    const streets = gates.map(g => ({ angle: g.angle, gate: true }));
+    if (tier !== 'hamlet' && gates.length > 1) gates.forEach((g, i) => { const gap = norm(gates[(i + 1) % gates.length].angle - g.angle) || TAU; if (gap > 1.5) streets.push({ angle: norm(g.angle + gap / 2), gate: false }); });
+    L.streets = streets;
+    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 11), 4, 48), spots = [], dirs = streets.map(s => ({ x: Math.cos(s.angle), z: Math.sin(s.angle) }));
     L.stage = stage; L.paved = stage >= 3;
     const onRoad = (p, half) => dirs.some(d => { const t = p.x * d.x + p.z * d.z; return t > -2 && Math.abs(p.x * d.z - p.z * d.x) < half; });            // inside the strip of street that runs from a gate to the keep
     // The plaza round the keep, with a well and, in a great city, a monument; the sites of the works outside the walls and the suburb along the roads are reserved too

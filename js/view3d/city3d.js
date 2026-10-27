@@ -141,6 +141,10 @@ VM.City3D = (function () {
       box(M, cx, 0, cz, len, 0.05, 2.8, COL.dirt, yawFor(dx, dz), 0.95);
       box(M, dx * R * 0.5, 0, dz * R * 0.5, R, 0.05, L.paved ? 3.2 : 2.4, L.paved ? '#a39d8e' : COL.dirt, yawFor(dx, dz), L.paved ? 1 : 0.9);
     }
+    for (const st of L.streets) if (!st.gate) {                            // cross streets between the gates: the same road as a gate's, from the keep to the wall
+      const dx = Math.cos(st.angle), dz = Math.sin(st.angle);
+      box(M, dx * R * 0.5, 0, dz * R * 0.5, R, 0.05, L.paved ? 3.2 : 2.4, L.paved ? '#a39d8e' : COL.dirt, yawFor(dx, dz), L.paved ? 1 : 0.9);
+    }
     if (lvl === 0) {
       for (const g of L.gates) for (const side of [-1, 1]) { const a = g.angle + side * 0.11, p = polar(R, a); cyl(M, p[0], 0, p[1], 0.22, 0.25, 3, COL.woodDark, 6); box(M, p[0], 2.8, p[1], 0.1, 0.7, 0.5, L.color, 0); }
       return;
