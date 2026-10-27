@@ -201,7 +201,7 @@ VM.City3D = (function () {
     for (let i = -2; i <= 2; i++) for (const side of [-1, 1]) { box(M, i * (w / 5), hh, side * (w / 2 - 0.2), 0.8, 0.6, 0.5, COL.stoneDark); box(M, side * (w / 2 - 0.2), hh, i * (w / 5), 0.5, 0.6, 0.8, COL.stoneDark); }
     const dh = L.tier === 'capital' ? 6.5 : 4.6;
     tbox(M, 'stone', 0, hh, 0, w * 0.45, dh, w * 0.45, COL.stoneLight);
-    tcone(M, 'shingle', 0, hh + dh, 0, w * 0.4, 3.2, L.color, 4, 1.0);
+    texPiece(M, 'shingle', new THREE.ConeGeometry(w * 0.4, 3.2, 4).rotateY(Math.PI / 4).translate(0, 1.6, 0), 0, hh + dh, 0, 0, L.color, 1.0);   // the four-sided roof turned 45 degrees, so its edges run on the diagonals
     box(M, 0, 0, w / 2 + 0.05, 1.8, 2.2, 0.3, COL.door);
     cyl(M, 0, hh + dh + 3.2, 0, 0.07, 0.07, 2.2, COL.woodDark, 4);          // flagpole (the flag itself is animated)
   }
