@@ -38,6 +38,24 @@ VM.City3D = (function () {
     const p = u(d.pos, Int16Array), uv = u(d.uv, Uint16Array), nr = u(d.nor, Int8Array), idx = u(d.idx, Uint16Array);
     return (structGeos[key] = { t: d.t, p: Float32Array.from(p, v => v / 1000), n: Float32Array.from(nr, v => v / 127), uv: Float32Array.from(uv, v => v / 65535), idx });
   }
+  // Light grey bricks in a running bond, with slightly different shades and a few speckles, and darker mortar between (drawn once, reused)
+  let brickTex = null;
+  function brickTexture() {
+    if (brickTex) return brickTex;
+    const c = document.createElement('canvas'), S = 256, g = c.getContext('2d'), BW = 64, BH = 32, M = 4;
+    c.width = c.height = S; g.fillStyle = '#6c6c71'; g.fillRect(0, 0, S, S);
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let row = 0; row < S / BH; row++) {
+      const off = row % 2 ? BW / 2 : 0;
+      for (let col = -1; col <= S / BW; col++) {
+        const x = col * BW + off, y = row * BH, v = 196 + Math.floor(rnd() * 40);
+        g.fillStyle = `rgb(${v},${v},${v + 2})`; g.fillRect(x + M / 2, y + M / 2, BW - M, BH - M);
+        for (let k = 0; k < 16; k++) { const sv = Math.floor(rnd() * 255); g.fillStyle = `rgba(${sv},${sv},${sv},0.10)`; g.fillRect(x + M / 2 + rnd() * (BW - M), y + M / 2 + rnd() * (BH - M), 2, 2); }
+      }
+    }
+    brickTex = new THREE.CanvasTexture(c); brickTex.wrapS = brickTex.wrapT = THREE.RepeatWrapping;
+    return brickTex;
+  }
   function TexMerger() { this.by = {}; this.tris = 0; }
   TexMerger.prototype.add = function (key, x, y, z, rot, sx, sy, sz) {            // model with its front toward +z, scaled, turned about Y by rot, set down at (x, y, z)
     if (!VM.StructModels) return;
@@ -69,11 +87,9 @@ VM.City3D = (function () {
       const B = this.by[t], geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(B.nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
       geo.setIndex(B.idx);
-      if (t === 'wall' && !structMats.wall) {                                      // the brick wall, turned into grey castle stone: the texture's light and dark, none of its red
-        const tex = new THREE.TextureLoader().load(VM.StructModels.tex.t3); tex.flipY = true; tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        const m = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x2c2c30), side: THREE.DoubleSide });
-        m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); l = clamp((l - 0.5) * 2.4 + 0.5, 0.0, 1.0); diffuseColor.rgb = vec3(l) * 0.9; }'); };
-        m.customProgramCacheKey = () => 'vmwall'; m.userData.shared = true; structMats.wall = m;
+      if (t === 'wall' && !structMats.wall) {                                      // the wall's brick: light grey bricks in a running bond, darker mortar, drawn on a canvas (no image file)
+        const m = new THREE.MeshLambertMaterial({ map: brickTexture(), emissive: new THREE.Color(0x1e1e22), side: THREE.DoubleSide });
+        m.userData.shared = true; structMats.wall = m;
       }
       if (t !== 'wall' && !structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
       return new THREE.Mesh(geo, structMats[t]);

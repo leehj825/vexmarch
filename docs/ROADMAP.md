@@ -117,7 +117,7 @@ Watch a fight that happens on the road, away from any city. `FieldLayout.start` 
 - **Districts**: the houses facing one street share a roof and facade colour; stone is near the centre of a bigger place, tents at the edge of a village.
 - **Outside the walls**: the suburb in two rows along each gate road, and square field plots in rows between the roads.
 - **No random tilt**: a test checks every house faces a street and every field lies square to its radius.
-- **Walls, towers and the gate** are built in code, like the towers and the gate, and wear the Nightfall stone texture (the same image as the Nightfall wall, shaded to grey castle stone). The texture comes from `js/view3d/struct_models.js`, already in this repo; no other repository is needed.
+- **Walls, towers and the gate** are built in code, like the towers and the gate, and wear a light grey brick texture drawn in code on a canvas (running bond, darker mortar, varied shades), like the reference picture. The earlier Nightfall stone image is no longer used for them.
 - Some small villages are squeezed between close gates and stay sparse; the test allows that.
 - The market, temple, barracks and smithy keep their fixed sites.
 
