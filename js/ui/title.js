@@ -18,7 +18,7 @@ VM.Title = (function () {
     const st = ui.state;
     $('facList').innerHTML = st.factions.filter(f => !f.neutral).map(f => {
       const cap = st.map.nodes[f.capital].name, n = st.cities.filter(c => c.owner === f.id).length;
-      return `<button class="fac${f.id === st.player ? ' on' : ''}" data-f="${f.id}"><span class="dot" style="background:${f.color}"></span><b>${f.name}</b><small>capital ${cap} · ${n} nodes</small></button>`;
+      return `<button class="fac${f.id === st.player ? ' on' : ''}" data-f="${f.id}">${VM.Icons.crest(f.id, f.color, 24)}<b>${f.name}</b><small>capital ${cap} · ${n} nodes</small></button>`;
     }).join('');
     document.querySelectorAll('#countSel button').forEach(b => b.classList.toggle('on', +b.dataset.n === count));
     $('hazBtn').classList.toggle('on', hazards); $('hazBtn').textContent = hazards ? 'Random events: on' : 'Random events: off';
@@ -62,9 +62,9 @@ VM.Title = (function () {
   function campRender() {
     const D = VM.StoryData, tx = VM.Story.tx, ko = VM.Story.lang() === 'ko', nm = id => tx({ en: VM.CFG.FACTIONS[id].name, ko: VM.Story.koOf(VM.CFG.FACTIONS[id].name) });
     $('campTag').textContent = tx(D.HISTORY.intro[2]);
-    $('campList').innerHTML = D.FACTIONS.map(f => `<button class="fac${f.id === house ? ' on' : ''}" data-h="${f.id}"><span class="dot" style="background:${VM.CFG.FACTIONS[f.id].color}"></span><b>${nm(f.id)}</b><small>${tx(f.title)}</small></button>`).join('');
+    $('campList').innerHTML = D.FACTIONS.map(f => `<button class="fac${f.id === house ? ' on' : ''}" data-h="${f.id}">${VM.Icons.crest(f.id, VM.CFG.FACTIONS[f.id].color, 26)}<b>${nm(f.id)}</b><small>${tx(f.title)}</small></button>`).join('');
     const f = D.FACTIONS[house - 1], cast = D.OFFICERS.filter(o => o.house === house);
-    $('campInfo').innerHTML = `<p><b>${tx(f.ruler)}</b> · ${tx(f.title)}</p><p>${tx(f.creed)}</p><p class="dim">${ko ? '상처' : 'The wound'}: ${tx(f.wound)}</p><p class="dim">${ko ? '위험' : 'The danger'}: ${tx(f.danger)}</p>` +
+    $('campInfo').innerHTML = `<p class="ruler">${VM.Icons.portrait(tx(f.ruler), VM.CFG.FACTIONS[f.id].color, 44)}${VM.Icons.crest(f.id, VM.CFG.FACTIONS[f.id].color, 40)}<span><b>${tx(f.ruler)}</b> · ${tx(f.title)}</span></p><p>${tx(f.creed)}</p><p class="dim">${ko ? '상처' : 'The wound'}: ${tx(f.wound)}</p><p class="dim">${ko ? '위험' : 'The danger'}: ${tx(f.danger)}</p>` +
       `<p><b>${ko ? '특성' : 'Gift'}: ${tx(D.TRAITS[house].name)}</b> · ${tx(D.TRAITS[house].text)}</p><p><b>${ko ? '고유 승리' : 'Own victory'}: ${tx(D.VICTORIES[house].name)}</b> · ${tx(D.VICTORIES[house].text)}</p>` +
       `<p class="dim">${ko ? '장수' : 'Officers'}: ${cast.map(o => (ko ? o.ko : o.name) + ' (' + tx(o.role) + ')').join(' · ')}</p>`;
     if (VM.I18N && VM.I18N.flush) VM.I18N.flush();

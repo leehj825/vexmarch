@@ -214,3 +214,6 @@ body.infield #panel, body.infield #mapctl, body.infield #hint3d { display: none 
 #fbArmies .ir { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0; } #fbArmies .dim { opacity: 0.65; }
 #fbArmies .mb { display: inline-block; width: 44px; height: 5px; background: rgba(0, 0, 0, 0.6); border-radius: 3px; overflow: hidden; } #fbArmies .mb i { display: block; height: 100%; background: #c8e070; }
 @media (max-width: 720px) { #fieldbar { left: 0; right: 0; bottom: 0; width: auto; border-radius: 10px 10px 0 0; max-height: 34vh; padding-bottom: calc(10px + env(safe-area-inset-bottom)); } }
+
+.crest { vertical-align: middle; flex: none; margin-right: 6px; } .fac .crest { display: inline-block; }
+.ruler { display: flex; align-items: center; gap: 8px; } .ruler .pt { border-radius: 50%; flex: none; } .ruler span { flex: 1; }
