@@ -31,14 +31,15 @@ jobs:
           java-version: 17
       - name: Check the signing secrets are set
         env:
-          KEYSTORE: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          for v in KEYSTORE KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if [ -z "${!v}" ]; then echo "::error::Secret for $v is not set (see the top of .github/workflows/android-release.yml)"; exit 1; fi
+          for v in KEYSTORE_B64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Secret $v is empty or not visible to this run (see the top of .github/workflows/android-release.yml)"; exit 1; fi
           done
+          echo "All four signing secrets are visible to this run"
       - name: Accept Android SDK licenses (the runner already has the SDK)
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
       - name: Test the game logic
