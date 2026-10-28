@@ -3,10 +3,10 @@
 # Both are uploaded as artifacts: "vexmarch-release-<version>" holds the .aab and the .apk.
 # The release build uses Vexmarch's REAL AdMob ids (tools/ads_ids.js), as a store build must.
 # It needs these repository secrets (Settings -> Secrets and variables -> Actions):
-#   ANDROID_KEYSTORE_BASE64   the upload keystore file, base64 encoded (base64 -w0 your.jks)
-#   ANDROID_KEYSTORE_PASSWORD the keystore password
-#   ANDROID_KEY_ALIAS         the key alias inside the keystore
-#   ANDROID_KEY_PASSWORD      the key password
+#   KEYSTORE_B64   the upload keystore file, base64 encoded (base64 -w0 your.jks)
+#   KEYSTORE_PASSWORD the keystore password
+#   KEY_ALIAS         the key alias inside the keystore
+#   KEY_PASSWORD      the key password
 # The version code is the workflow run number, so every upload is higher than the last one (Play refuses a code it has seen).
 name: Android release
 on:
@@ -31,10 +31,10 @@ jobs:
           java-version: 17
       - name: Check the signing secrets are set
         env:
-          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           for v in KEYSTORE KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
             if [ -z "${!v}" ]; then echo "::error::Secret for $v is not set (see the top of .github/workflows/android-release.yml)"; exit 1; fi
@@ -45,7 +45,7 @@ jobs:
         run: npm ci && npm test
       - name: Decode the keystore
         env:
-          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE: ${{ secrets.KEYSTORE_B64 }}
         run: echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
       - name: Generate the Android project, the game and the release signing
         env:
@@ -53,9 +53,9 @@ jobs:
           VX_VERSION_CODE: ${{ github.run_number }}
           VX_VERSION_NAME: ${{ github.run_number }}
           VX_KEYSTORE: ${{ runner.temp }}/release.jks
-          VX_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          VX_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          VX_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VX_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VX_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          VX_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           npm run www
           [ -d android ] || npx cap add android
@@ -64,9 +64,9 @@ jobs:
       - name: Build the app bundle and the release APK
         working-directory: android
         env:
-          VX_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          VX_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          VX_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VX_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VX_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          VX_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: chmod +x gradlew && ./gradlew bundleRelease assembleRelease --no-daemon
       - name: Name the files after the version and commit
         id: name
