@@ -92,6 +92,7 @@ VM.CFG = {
   // Troop types beat each other in a cycle: spear > cavalry > archer > infantry > spear.
   WAR: {
     contact: 16,            // map units: armies this close are in battle
+    front: 3, siegeFront: 3, // how many armies of one house fight at once in a field battle, or press a city (the biggest ones; the rest wait in reserve and step in as the front thins)
     k: 0.035,               // casualties per day = k x effective strength of the enemy
     strong: 1.4, weak: 0.7, // matchup multipliers
     siegeField: 0,          // siege engines fight at this strength against troops: none, they only break gates and walls and stay behind the line
@@ -106,6 +107,7 @@ VM.CFG = {
     siegeWall: 4,           // wall hit points per siege engine per day
     chip: 1.5,              // wall hit points per other soldier per day
     wallRepair: 0.01,       // fraction of max per day when nobody threatens the city
+    pressRatio: 2,          // an army in a breached city stays while it is at least half as strong as what is left to fight
     captureMin: 0,          // garrison at or below this falls
     captureLoss: 0.15,      // population lost when a city is taken
     foreignFood: 3,         // food eaten per soldier in enemy or neutral land
@@ -123,12 +125,34 @@ VM.CFG = {
   },
 
   // ---- AI factions (Phase 5). Difficulty changes how fast and how boldly the AI acts, never its income: it plays by the same rules and commands. ----
+  // Generals' duels (js/sim/duel.js): the loser's army loses morale and its general loses loyalty; each general rests `cool` days after one
+  DUEL: { cool: 40, loserMorale: 25, winnerMorale: 10, loserLoyalty: 12, winnerLoyalty: 4 },
+
+  // Doctrines (js/sim/doctrine.js): the first offer comes after `first` days, then one every `every` days
+  DOCTRINE: { first: 365, every: 365 },
+
+  // Trade routes (js/sim/trade.js): a road between two of your cities, or one of yours and an ally's, through land friendly to both
+  TRADE: { setup: 150, base: 1, perMarket: 1, perDay: 4, bonus: 1.5 },
+
+  // Random events (js/sim/hazards.js): chances per city per day, and what they do
+  HAZARDS: {
+    blight: 0.0004, bounty: 0.0005, plague: 0.0003, bandits: 0.0005, unrest: 0.01,
+    blightFood: 0.5, blightDays: 60, bountyFood: 1.4, bountyDays: 60, plagueLoss: 0.12, plagueGold: 0.8, plagueDays: 30, plagueMinPop: 100, banditGold: 0.6, banditDays: 40,
+    unrestLoyalty: 30, unrestSecurity: 0.5, unrestLoss: 0.3, unrestDevastation: 0.15
+  },
+
+  // Fog of war (js/sim/fog.js): how far a city or an army sees, in map units (the map is 1000 x 700); cavalry see further
+  FOG: { city: 260, army: 190, cavalry: 1.4 },
+
   // Diplomacy (docs/DIPLOMACY.md): two states, enemy and ally; a strong faction may offer terms (merge) to a weak one
   DIPLO: {
     allyAt: 25, mergeAt: 50, mergeRatio: 3, mergeCool: 60, refuseCool: 30, mergeRefuseCool: 60, breakCool: 90, offerDays: 20,
     decay: 0.15, drift: 0.1, driftMax: 60, trustHeal: 0.05, breakTrust: -30, breakOpinion: -30, breakOpinionAlly: -60, captureOpinion: -15,
     giftSmall: 100, giftBig: 300, giftOpinion: 4, giftEvery: 10, aiEvery: 12,
+    marryCost: 300, marryOpinion: 30, marryAge: 60, marryBond: 25, hostageOpinion: 10, hostageAge: 30, hostageBond: 5, marriedAid: 1,   // a marriage binds a pact; hostages are officers held in the partner's capital
+    aidDays: 40, aidCool: 30, aidArmies: 2, aidMorale: 50, aidOpinion: 0,      // an ally sends up to aidArmies armies to a threatened city and keeps them there aidDays
     betrayAge: 90, betrayRatio: 3, betrayShare: 0.45, betrayLeft: 2, popWeight: 0.1,
+    vassalAt: 30, tribute: 3, rebelRatio: 1.6, rebelAge: 120, vassalOpinion: 20,      // vassalage: the score a weak house needs; tribute gold per city a day; a vassal rebels at this strength over its lord
     mergeTrait: { Cautious: 20, Greedy: 10, Schemer: 10, Loyal: 0, Rash: -30, Brave: -35, none: 0 }
   },
   AI: {

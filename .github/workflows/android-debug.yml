@@ -2,10 +2,16 @@
 # It runs on every push to ANY branch (and on tags) that changes the game, so each branch gets its own APK; the manual "Run workflow"
 # button (Actions -> "Android debug APK") appears once this file is on the default branch, and lets you pick any branch.
 # When a run finishes, open it and download the "vexmarch-debug-apk-<branch>" artifact (a zip holding the .apk), then install it on a phone.
-# The debug build shows Google's TEST ad banner.
+# The debug build shows Google's TEST ad banner. "Run workflow" has an option, ads = real, that builds with Vexmarch's real AdMob ids (tools/ads_ids.js) for a test on your own phone: do not click those ads.
 name: Android debug APK
 on:
   workflow_dispatch:
+    inputs:
+      ads:
+        description: 'Banner ads: test (Google sample ads, safe) or real (Vexmarch AdMob ids)'
+        type: choice
+        options: [test, real]
+        default: test
   push:
     branches: ['**']
     tags: ['v*']
@@ -31,6 +37,8 @@ jobs:
       - name: Test the game logic
         run: npm ci && npm test
       - name: Generate the Android project and copy the game into it
+        env:
+          VX_ADS: ${{ inputs.ads == 'real' && 'real' || '' }}
         run: |
           npm run www
           [ -d android ] || npx cap add android

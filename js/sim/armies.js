@@ -34,10 +34,10 @@ VM.Armies = (function () {
   }
   const distance = (state, a, b) => shortest(state, a).dist[b];
 
-  function speedOf(army) {
+  function speedOf(army, state) {
     let s = Infinity;
     for (const k in army.troops) if (army.troops[k] > 0) s = Math.min(s, VM.CFG.TROOPS[k].speed);
-    return s === Infinity ? 0 : s;
+    return s === Infinity ? 0 : s * (1 + VM.Story.bonus(state, army.owner, 'speed') + VM.Doctrine.bonus(state, army.owner, 'speed'));
   }
   const sizeOf = army => { let n = 0; for (const k in army.troops) n += army.troops[k]; return n; };
 
@@ -77,6 +77,7 @@ VM.Armies = (function () {
     if (!city || city.owner !== faction) return { ok: false, reason: 'not your city' };
     if (!o || o.owner !== faction) return { ok: false, reason: 'not your officer' };
     if (o.army !== null) return { ok: false, reason: 'officer already leads an army' };
+    if (o.role === 'hostage') return { ok: false, reason: 'officer is a hostage' };
     if (city.governor === o.id) return { ok: false, reason: 'officer is governing; relieve them first' };
     if (o.loc !== cityId) return { ok: false, reason: 'officer is not in this city' };
     if (VM.Eco.troopsOf(city.garrison) <= 0) return { ok: false, reason: 'no troops in the garrison' };
@@ -201,8 +202,8 @@ VM.Armies = (function () {
 
   function step(state, dd) {
     for (const army of state.armies) {
-      if (army.fighting.length) continue;                 // locked in battle
-      let left = speedOf(army) * dd * (army.routed ? VM.CFG.WAR.routSpeed : 1), guard = 0;
+      if (army.fighting.length || army.reserve) continue;                 // locked in battle, or held back in the reserve
+      let left = speedOf(army, state) * dd * (army.routed ? VM.CFG.WAR.routSpeed : 1), guard = 0;
       while (left > 1e-9 && guard++ < 20) {
         if (army.at !== null) {
           if (!army.path.length) { army.dest = null; break; }
@@ -223,6 +224,12 @@ VM.Armies = (function () {
     }
   }
 
+  // An army with nothing to do: standing in a city with no march ordered, no standing order, not in a fight, not besieging, not routed, not sent to help an ally
+  function idleOf(state, owner) {
+    return state.armies.filter(a => a.owner === owner && a.at !== null && !a.path.length && a.dest === null && a.order === 'hold' && !a.routed && !a.fighting.length && !a.reserve
+      && !a.aid && !a.rest && !VM.Diplo.hostile(state, owner, state.cities[a.at].owner));
+  }
+
   // Route the army's food would travel from its home city (drawn as the supply line).
   function supplyPath(state, army) {
     const o = army.at !== null ? army.at
@@ -230,5 +237,5 @@ VM.Armies = (function () {
     return path(state, o, army.home);
   }
 
-  return { form, spawn, merge, reinforce, transfer, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, supplyPath, roadLen };
+  return { form, spawn, merge, reinforce, transfer, move, stop, disband, step, zoneOf, path, distance, position, speedOf, sizeOf, idleOf, supplyPath, roadLen };
 })();

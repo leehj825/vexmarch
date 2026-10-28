@@ -29,6 +29,8 @@ VM.Panels = (function () {
     const d = b.dataset, st = ui.state;
     switch (d.act) {
       case 'close': ui.selectedCity = -1; ui.selectedArmy = null; break;
+      case 'duel': { const r = cmd({ type: 'duel', army: +d.army, target: +d.target }); if (r.ok) VM.Panels.toast(`${r.loser} is beaten by ${r.winner}`); break; }
+      case 'closeRoute': cmd({ type: 'closeRoute', route: +d.route }); break;
       case 'tax': cmd({ type: 'setTax', city: +d.city, tax: d.tax }); break;
       case 'build': cmd({ type: 'build', city: +d.city, building: d.b }); break;
       case 'recruit': cmd({ type: 'recruit', city: +d.city, troop: d.t, count: +d.n }); break;
@@ -52,6 +54,7 @@ VM.Panels = (function () {
       case 'policy': cmd({ type: 'setPolicy', city: +d.city, mode: d.mode }); break;
       case 'order': cmd({ type: 'setOrder', army: +d.army, mode: d.mode }); break;
       case 'view3d': ui.openCity(+d.city); break;
+      case 'watch': ui.openField(+d.army); break;
       case 'detailsToggle': VM.UIPrefs.set('det', !VM.UIPrefs.get('det')); lastHTML = ''; break;
       case 'panelToggle': ui.panelMin = !ui.panelMin; lastHTML = ''; break;
       case 'backmap': ui.closeCity(); break;
@@ -61,6 +64,7 @@ VM.Panels = (function () {
   }
 
   function onChange(e) {
+    if (e.target.id === 'routeSel' && e.target.value !== '') cmd({ type: 'openRoute', a: +e.target.dataset.city, b: +e.target.value });
     if (e.target.id === 'govSel') cmd({ type: 'setGovernor', city: +e.target.dataset.city, officer: e.target.value === '' ? null : +e.target.value });
   }
 
@@ -86,6 +90,10 @@ VM.Panels = (function () {
   const T = (label, tip) => `<span data-tip="${esc(tip)}">${label}</span>`;                       // a label with a hold-to-read explanation (js/ui/tips.js)
   const info = tip => `<i class="info" data-tip="${esc(tip)}">i</i>`;
   const TIPS = {
+    trade: 'A trade route is a road between two of your cities, or one of yours and an ally\'s, through land friendly to both. It pays both houses gold every day, and is cut when an enemy holds a city on the road. Each market in this city allows one more route.',
+    tradeOpen: 'The route is open and paying.',
+    tradeCut: 'An enemy holds a city on the road, so the route pays nothing until it is clear.',
+    tradeClose: 'Close this route. Opening a new one costs gold again.',
     pop: 'People living here. Taxes and recruits come from them. The number after the slash is how many the city can hold; farms, markets and a temple raise it.',
     wall: 'The wall slows an attacker and lets your archers shoot down from it. Siege engines break it fastest. When it falls, the enemy storms the gate.',
     garrison: 'Soldiers stationed in the city. They defend it and are the pool you draw armies from.',
@@ -127,15 +135,31 @@ VM.Panels = (function () {
     const mine = c.owner === me, fac = st.factions[me], wmax = VM.War.wallMax(c), here = st.armies.filter(a => a.at === c.id && a.owner === me);
     let h = `<div class="ph"><b>${N.name}</b>${I.t(M.spec[c.spec] || 'house', S.label, '', '', true)}<span class="sub"></span>`
       + detBtn() + hbtn(ui.panelMin ? 'down' : 'up', 'Show or hide the details', { 'data-act': 'panelToggle' }, 'tog');
-    h += ui.cityView === c.id ? `${mine ? hbtn('walk', 'Walk', { 'data-act': 'walk' }, '', true) : ''}${hbtn('back', 'Back to map', { 'data-act': 'backmap' }, '', true)}` : `${hbtn('eye', 'View city', { 'data-act': 'view3d', 'data-city': c.id }, '', true)}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}`;
+    h += ui.cityView === c.id ? `${mine ? hbtn('walk', 'Walk', { 'data-act': 'walk' }, '', true) : ''}${hbtn('back', 'Back to map', { 'data-act': 'backmap' }, '', true)}` : `${mine || VM.Fog.seesCity(st, me, c) ? hbtn('eye', 'View city', { 'data-act': 'view3d', 'data-city': c.id }, '', true) : ''}${hbtn('close', 'Close', { 'data-act': 'close' }, 'x')}`;
     h += `</div><div class="ir"><span class="dot" style="background:${f.color}"></span><span>${f.name}</span>${mine ? I.t('star', 'You', 'Your city.', '', true) : (VM.Diplo.allied(st, c.owner, me) ? I.t('handshake', 'Ally', 'Allies do not fight each other.', '', true) : '')}`
       + `${c.besieged ? I.t('swords', 'Under siege', 'Enemy armies are at the gates.', 'bad', true) : (c.contested ? I.t('alert', 'Contested', 'Enemy armies stand in its land and none of its own.', 'bad', true) : '')}</div>`;
+    if (!mine && !VM.Fog.seesCity(st, me, c)) {                       // out of sight: only what was last seen
+      const m = VM.Fog.memory(st, me, c.id);
+      return h + `<div class="ir stats">${I.stat('pop', m ? num(m.pop) : '?', 'Population', TIPS.pop)}${I.stat('helmet', m ? num(m.troops) : '?', 'Garrison', TIPS.garrison)}</div><div class="ir">${I.t('eye', m ? 'Last seen day {0}'.replace('{0}', Math.floor(m.t)) : 'Never seen', 'Out of sight. Send an army or take a city nearby to see it.', '', true)}</div>`;
+    }
     h += `<div class="ir stats">${I.stat('pop', `${num(c.pop)}<small class="dim">/${num(s.cap)}</small>`, 'Population', TIPS.pop)}`;
     if (wmax > 0) h += `<span class="st">${I.t('wall', 'Wall', TIPS.wall)}${I.meter(c.wallHp / wmax, 'wall')}<small class="dim">${num(c.wallHp)}</small></span>`;
     h += `${I.stat('helmet', num(VM.Eco.troopsOf(c.garrison)), 'Garrison', TIPS.garrison)}`;
     for (const k of Object.keys(VM.CFG.TROOPS)) if (c.garrison[k] >= 0.5) h += I.stat(M.troop[k], num(c.garrison[k]), VM.CFG.TROOPS[k].label, '', 'dim');
     h += `</div>`;
-    if (!mine) return h + `<div class="ir">${here.length ? I.t('siege', 'Your army is here and will lay siege.', '', '', true) : I.t('info', 'Not yours', TIPS.siegeHere, '', true)}</div>`;
+    if (!mine) {
+      const hostile = VM.Diplo.hostile(st, me, c.owner), mineArmies = st.armies.filter(a => a.owner === me && !a.routed && VM.Armies.sizeOf(a) > 0 && !(a.at === c.id));
+      if (hostile && mineArmies.length) {                                // what an attack by each of your armies would come to
+        const VERD = { overwhelming: ['star', 'Overwhelming', 'good'], favourable: ['trend', 'Favourable', 'good'], even: ['swords', 'Even', ''], risky: ['alert', 'Risky', 'bad'], hopeless: ['skull', 'Hopeless', 'bad'] };
+        mineArmies.sort((x, y) => VM.Armies.distance(st, VM.Armies.zoneOf(x), c.id) - VM.Armies.distance(st, VM.Armies.zoneOf(y), c.id));
+        h += `<div class="sec">${I.t('swords', 'If attacked by', 'A forecast from the strengths on both sides: the attacker, the garrison and defending armies, the wall and enemy armies close by. The fight itself still has surprises.', '', true)}</div>`;
+        for (const a of mineArmies.slice(0, 3)) {
+          const f2 = VM.War.forecast(st, a, c), v = VERD[f2.verdict];
+          h += `<div class="ir">${I.stat('helmet', num(VM.Armies.sizeOf(a)), st.officers[a.officer].name, '')}${I.t(v[0], v[1], 'Strength ratio {0}'.replace('{0}', f2.ratio.toFixed(1)) + (f2.help ? ' (relief armies counted)' : ''), v[2], true)}</div>`;
+        }
+      }
+      return h + `<div class="ir">${here.length ? I.t('siege', 'Your army is here and will lay siege.', '', '', true) : I.t('info', 'Not yours', TIPS.siegeHere, '', true)}</div>`;
+    }
     h += `<div class="ir stats">${I.stat('trend', s.prosperity.toFixed(2), 'Prosperity', TIPS.prosperity)}${I.stat('shield', s.security.toFixed(2), 'Security', TIPS.security)}`
       + `${I.stat('gold', sgn(s.gold - s.upkeep) + '<small class="dim">/d</small>', 'Gold', TIPS.gold)}`
       + `<span class="st" data-tip="${tipOf('Food', TIPS.food + '\n' + '{0} made, {1} eaten'.replace('{0}', num(s.foodProd)).replace('{1}', num(s.foodCons)))}">${I.svg('food')}<small class="sl">Food</small><b>${sgn(s.foodProd - s.foodCons)}</b><small class="dim">/d</small></span></div>`;
@@ -145,6 +169,16 @@ VM.Panels = (function () {
     if (c.governor !== null) { const g = st.officers[c.governor]; h += `${traitIcon(g.trait)}${loyal(g)}`; }
     h += `</div>`;
     if (c.governor !== null) h += `<div class="ir">` + VM.Officers.POLICIES.map(k => `<button class="ibtn sm${c.policy === k ? ' on' : ''}" data-act="policy" data-city="${c.id}" data-mode="${k}" data-tip="${tipOf(k[0].toUpperCase() + k.slice(1), POLICY_TIP[k])}">${I.svg(M.policy[k])}${I.w(k[0].toUpperCase() + k.slice(1))}</button>`).join('') + `</div>`;
+    // Trade: the routes out of this city (a road to another of your cities, or an ally's, through land friendly to both)
+    const routes = VM.Trade.listFor(st, c.id), limit = VM.Trade.limitOf(c);
+    const partners = st.cities.filter(o => o.id !== c.id && (o.owner === me || VM.Diplo.allied(st, me, o.owner)) && !routes.some(r => r.a === o.id || r.b === o.id) && VM.Trade.onRoad(st, { owner: me, a: c.id, b: o.id }));
+    h += `<div class="sec">${I.t('link', 'Trade', TIPS.trade, '', true)}</div>`;
+    for (const r of routes) {
+      const other = st.cities[r.a === c.id ? r.b : r.a], open = !!VM.Trade.onRoad(st, r);
+      h += `<div class="ir">${open ? I.t('coins', 'Open', TIPS.tradeOpen, 'good', true) : I.t('unlink', 'Cut', TIPS.tradeCut, 'bad', true)}<span>${st.map.nodes[other.id].name}</span>${I.btn('unlink', 'Close route', { 'data-act': 'closeRoute', 'data-route': r.id }, 'sm', TIPS.tradeClose, true)}</div>`;
+    }
+    if (routes.length < limit && partners.length) h += `<div class="ir">${I.t('go', 'Open a route to', '', '', true)}<select id="routeSel" data-city="${c.id}"><option value="">…</option>` + partners.map(o => `<option value="${o.id}">${st.map.nodes[o.id].name}</option>`).join('') + `</select></div>`;
+    else if (routes.length >= limit) h += `<div class="ir dim">${I.t('info', 'No more routes from here: build markets', '', '', true)}</div>`;
     h += `<div class="sec">${I.t('house', 'Buildings', '', '', true)}</div><div class="ir">`;
     for (const k of Object.keys(VM.CFG.BUILD)) {
       const B = VM.CFG.BUILD[k], lvl = c.buildings[k], building = c.build && c.build.type === k;
@@ -191,7 +225,8 @@ VM.Panels = (function () {
     h += `<div class="ir stats">` + Object.keys(VM.CFG.TROOPS).filter(k => a.troops[k] >= 0.5).map(k => I.stat(M.troop[k], num(a.troops[k]), VM.CFG.TROOPS[k].label)).join('') + `${I.stat('banner', Math.round(a.morale), 'Morale', TIPS.morale)}${I.meter(a.morale / 100)}</div>`;
     h += `<div class="ir">${I.t('pin', 'Location')}<span>${a.at !== null ? N[a.at].name : N[a.edge.to].name}</span>${a.at === null ? I.t('go', 'On the road', '', '', true) : ''}${a.dest !== null && !a.routed ? I.t('go', 'Heading to', '', '', true) + `<b>${N[a.dest].name}</b>` : ''}</div>`;
     if (a.routed) h += `<div class="ir bad">${I.t('back', 'Routed', 'Fleeing to safety.', '', true)}</div>`;
-    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
+    else if (a.reserve) h += `<div class="ir">${I.t('shield', 'In reserve', 'The front is full: only the three biggest armies of a house fight at once. This army waits and steps in as the front thins.', '', true)}</div>`;
+    else if (a.fighting.length) h += `<div class="ir bad">${I.t('swords', 'In battle', '', '', true)}${hbtn('eye', 'Watch battle', { 'data-act': 'watch', 'data-army': a.id }, '', true)}` + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e && VM.Diplo.hostile(st, a.owner, e.owner) && !(st.officers[a.officer].duelReady > st.time) && !(st.officers[e.officer].duelReady > st.time) ? hbtn('swords', 'Challenge ' + st.officers[e.officer].name, { 'data-act': 'duel', 'data-army': a.id, 'data-target': e.id }, '', true) : ''; }).join('') + a.fighting.map(id => { const e = st.armies.find(x => x.id === id); return e ? `<span class="st"><span class="dot" style="background:${st.factions[e.owner].color}"></span><b>${num(VM.Armies.sizeOf(e))}</b></span>` : ''; }).join('') + `</div>`;
     else if (VM.War.sieging(a) && VM.Diplo.hostile(st, a.owner, st.cities[a.at].owner)) h += `<div class="ir bad">${I.t('siege', 'Besieging', '', '', true)}<b>${N[a.at].name}</b></div>`;
     const s = a.supply;
     if (s) {

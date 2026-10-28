@@ -33,7 +33,7 @@ VM.Officers = (function () {
   function defect(state, o) {
     const from = o.owner, c = state.cities.find(x => x.governor === o.id);
     if (c) { c.governor = null; }
-    o.role = 'idle'; o.idleDays = 0;
+    o.role = 'idle'; o.idleDays = 0; o.hostage = null;
     let best = -1, bd = Infinity;
     for (const x of state.cities) { if (x.owner === 0 || x.owner === from) continue; const d = hops(state, o.loc, x.id); if (d < bd) { bd = d; best = x.id; } }
     if (best >= 0) { o.owner = state.cities[best].owner; o.loc = best; o.loyalty = 50; } else { o.owner = 0; o.loyalty = 50; }
@@ -264,6 +264,7 @@ VM.Officers = (function () {
     const s = a.supply, here = a.at !== null ? state.cities[a.at] : null;
     if (here && here.owner === a.owner) decideSortie(state, a, here);
     if (a.order === 'hold') return;
+    if (VM.Diplo.aiding(state, a) && a.at === a.aid.city) return;           // sent to help an ally: it stays
     const weary = !!VM.War.retreatReason(state, a);                    // the food would run out, or the men have lost heart (how far they are pushed depends on the officer)
     if (!weary && !a.rest && here && VM.Diplo.hostile(state, here.owner, a.owner) && VM.War.sieging(a)) return;     // a hostile city in the way is being fought: stay until it falls
     if (weary || a.rest) {                                            // fall back and recover

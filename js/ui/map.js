@@ -95,9 +95,18 @@ VM.MapView = (function () {
   }
 
   function hit(px, py) {
-    const st = S(), slots = {};
+    const st = S(), slots = {}, fs = VM.Fog.on(st) ? VM.Fog.sources(st, st.player) : null;
     let best = null, bd = 20 * 20;
+    for (const a of st.armies) for (const id of a.fighting) {                       // the red cross of a battle: tap it to watch the fight
+      if (id < a.id) continue; const e = st.armies.find(x => x.id === id); if (!e) continue;
+      if (fs && !(VM.Fog.seesArmy(st, st.player, a, fs) && VM.Fog.seesArmy(st, st.player, e, fs))) continue;
+      const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), pq = P((p.x + q.x) / 2, (p.y + q.y) / 2, 1.5), dx = pq.x - px, dy = pq.y - 4 - py, d = dx * dx + dy * dy;
+      if (d < 18 * 18 && d < bd) { bd = d; best = { kind: 'battle', id: a.id }; }
+    }
+    if (best) return best;
+    bd = 20 * 20;
     for (const a of st.armies) {
+      if (fs && !VM.Fog.seesArmy(st, st.player, a, fs)) continue;
       const k = a.at !== null ? a.at : -1 - a.id, slot = slots[k] || 0; slots[k] = slot + 1;
       const pos = armyScreenPos(a, slot), dx = pos.x - px, dy = pos.y - 6 - py, d = dx * dx + dy * dy;
       if (d < bd) { bd = d; best = { kind: 'army', id: a.id }; }
@@ -182,7 +191,7 @@ VM.MapView = (function () {
   function render() {
     const st = S(); if (!st) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, innerWidth, innerHeight);
-    const N = st.map.nodes, me = st.player;
+    const N = st.map.nodes, me = st.player, fog = VM.Fog.on(st) ? VM.Fog.sources(st, me) : null;
     const changed = buildTerritory();
     if (use3d) { if (changed || !terr3) { T.setTerritory(terr); terr3 = true; } T.render(); }                  // the ground, its colours and roads are drawn by the 3D layer
     else {
@@ -197,6 +206,7 @@ VM.MapView = (function () {
     const sel = ui.selectedArmy !== null ? st.armies.find(a => a.id === ui.selectedArmy) : null;
     for (const a of st.armies) {
       if (a.owner !== me && a !== sel) continue;
+      if (fog && !VM.Fog.seesArmy(st, me, a, fog)) continue;
       if (a.dest === null && !a.path.length) continue;
       const pos = VM.Armies.position(st, a), mp = [{ x: pos.x, y: pos.y }];
       if (a.edge) mp.push({ x: N[a.edge.to].x, y: N[a.edge.to].y });
@@ -214,6 +224,7 @@ VM.MapView = (function () {
     // Nodes
     const order = st.cities.map(c => ({ c, q: P(N[c.id].x, N[c.id].y, 1.5) })); if (use3d) order.sort((a, b) => b.q.depth - a.q.depth);        // far ones first, so near ones cover them
     for (const { c, q } of order) {
+      const unseen = fog && !VM.Fog.seesCity(st, me, c, fog);
       const n = N[c.id], f = st.factions[c.owner], x = q.x, y = q.y, zoom = use3d ? Math.max(0.55, Math.min(1.6, q.k)) : q.k, fs = Math.max(use3d ? 9 : 10, Math.min(14, 11 * zoom));
       const r = (c.spec === 'capital' ? 13 : 9 + 3 * Math.min(1, c.pop / Math.max(1, c.stats ? c.stats.cap : 1))) * (use3d ? zoom : Math.min(1.5, Math.max(0.85, zoom)));
       if (c.owner !== me && VM.Diplo.allied(st, c.owner, me)) { ctx.strokeStyle = '#8fd08a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r + 5, 0, 7); ctx.stroke(); }
@@ -221,15 +232,16 @@ VM.MapView = (function () {
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = f.color; ctx.fill();
       ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.stroke();
       if (c.id === ui.selectedCity) { ctx.beginPath(); ctx.arc(x, y, r + 8, 0, 7); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke(); }
-      if (c.build) { ctx.beginPath(); ctx.arc(x, y, r + 2.5, -Math.PI / 2, -Math.PI / 2 + 6.283 * (1 - c.build.left / c.build.total)); ctx.strokeStyle = '#c8e070'; ctx.lineWidth = 3; ctx.stroke(); }
-      const wmax = VM.War.wallMax(c);
+      if (c.build && !unseen) { ctx.beginPath(); ctx.arc(x, y, r + 2.5, -Math.PI / 2, -Math.PI / 2 + 6.283 * (1 - c.build.left / c.build.total)); ctx.strokeStyle = '#c8e070'; ctx.lineWidth = 3; ctx.stroke(); }
+      const wmax = unseen ? 0 : VM.War.wallMax(c);
       if (wmax > 0) {                                           // wall hit points
         ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(x - 13, y - r - 9, 26, 4);
         ctx.fillStyle = c.wallHp < wmax * 0.35 ? '#e0483a' : '#d0b080'; ctx.fillRect(x - 13, y - r - 9, 26 * Math.max(0, Math.min(1, c.wallHp / wmax)), 4);
       }
-      if (c.depot) { ctx.fillStyle = '#f2d27a'; ctx.fillRect(x + r - 2, y - r - 2, 7, 7); ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 1; ctx.strokeRect(x + r - 2, y - r - 2, 7, 7); }
-      if (c.besieged || c.contested) { ctx.strokeStyle = '#e0483a'; ctx.lineWidth = 2.5; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 11 + (Math.sin(Date.now() / 250) + 1) * 1.5, 0, 7); ctx.stroke(); dashed(false); }
+      if (c.depot && !unseen) { ctx.fillStyle = '#f2d27a'; ctx.fillRect(x + r - 2, y - r - 2, 7, 7); ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 1; ctx.strokeRect(x + r - 2, y - r - 2, 7, 7); }
+      if ((c.besieged || c.contested) && !unseen) { ctx.strokeStyle = '#e0483a'; ctx.lineWidth = 2.5; dashed(true); ctx.beginPath(); ctx.arc(x, y, r + 11 + (Math.sin(Date.now() / 250) + 1) * 1.5, 0, 7); ctx.stroke(); dashed(false); }
       drawMark(c.spec, x, y, r);
+      if (unseen) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = 'rgba(7,6,10,0.5)'; ctx.fill(); }          // out of sight: dimmed, what is there is not known
       ctx.font = fs + 'px system-ui'; ctx.textAlign = 'center';
       const label = VM.I18N ? VM.I18N.tr(n.name) : n.name;                    // names on the canvas follow the language too
       ctx.fillStyle = 'rgba(7,6,10,0.8)'; ctx.fillText(label, x + 1, y + r + fs + 5); ctx.fillStyle = c.owner === me ? '#f2d27a' : 'rgba(238,230,214,0.9)'; ctx.fillText(label, x, y + r + fs + 4);
@@ -241,6 +253,7 @@ VM.MapView = (function () {
     // Armies
     const slots = {};
     for (const a of st.armies) {
+      if (fog && !VM.Fog.seesArmy(st, me, a, fog)) continue;
       const k = a.at !== null ? a.at : -1 - a.id, slot = slots[k] = slots[k] || 0; slots[k]++;
       const pos = armyScreenPos(a, slot);
       const n = VM.Armies.sizeOf(a), lbl = n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(Math.round(n));
@@ -255,6 +268,7 @@ VM.MapView = (function () {
     for (const a of st.armies) for (const id of a.fighting) {
       if (id < a.id) continue;
       const e = st.armies.find(x => x.id === id); if (!e) continue;
+      if (fog && !(VM.Fog.seesArmy(st, me, a, fog) && VM.Fog.seesArmy(st, me, e, fog))) continue;
       const p = VM.Armies.position(st, a), q = VM.Armies.position(st, e), pq = P((p.x + q.x) / 2, (p.y + q.y) / 2, 1.5), bx = pq.x, by = pq.y - 4, z = 7 + Math.sin(Date.now() / 120);
       ctx.strokeStyle = '#ff5a48'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx - z, by - z); ctx.lineTo(bx + z, by + z); ctx.moveTo(bx + z, by - z); ctx.lineTo(bx - z, by + z); ctx.stroke();
     }

@@ -36,6 +36,13 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
     // the chronicle, from the pause menu
     await p.click('#menuBtn'); await p.waitForTimeout(200); await p.click('[data-pm="chronicle"]'); await p.waitForTimeout(300);
     ok(await p.locator('#story.on').count() === 1 && (await p.locator('#storyB .chr').count()) >= 1, 'the chronicle lists what happened'); await p.click('#storyBtn'); await p.waitForTimeout(200);
+    // a decision: two buttons, no Continue until one is picked, then the result
+    await ev(() => { const st = __vm.state; st.story.queue.length = 0; st.story.lastDay = -1; st.time = Math.max(st.time, 205); st.story.lastDecision = 0; __vm.speed = 1; }); await p.waitForTimeout(700);
+    ok(await p.locator('#story.on [data-choice]').count() === 2, 'a decision shows two choices'); ok(!(await p.locator('#storyBtn').isVisible()), 'no Continue before choosing');
+    const gold0 = await ev(() => __vm.state.factions[__vm.state.player].honor === undefined && __vm.state.story.honor === undefined);
+    await p.click('#story [data-choice="0"]'); await p.waitForTimeout(200);
+    ok(await p.locator('#storyBtn').isVisible() && await ev(() => __vm.state.story.honor !== undefined), 'the choice is made and its result shown');
+    await p.click('#storyBtn'); await p.waitForTimeout(200); while (await p.locator('#story.on').count()) { await p.click('#storyBtn'); await p.waitForTimeout(200); }
     // an ending
     await ev(() => { __vm.state.over = { type: 'win', winner: 4, t: __vm.state.time }; __vm.state.story.lastDay = -1; VM.Story.step(__vm.state); }); await p.waitForTimeout(500);
     ok(await p.locator('#story.end.on').count() === 1, 'the ending page'); await p.click('#storyBtn'); await p.waitForTimeout(500);

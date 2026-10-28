@@ -33,13 +33,15 @@ VM.War = (function () {
     const o = state.officers[a.officer], city = state.cities[VM.Armies.zoneOf(a)];
     let m = (1 + W().cmdBonus * o.command / 100) * (0.5 + 0.5 * a.morale / 100);
     if (a.buff && a.buff.until > state.time) m *= a.buff.mult;
+    m *= (1 + VM.Story.bonus(state, a.owner, 'army')) * (1 + VM.Doctrine.bonus(state, a.owner, 'army'));
     if (city.owner === a.owner) m *= W().home * (VM.CFG.SPEC[city.spec].defense || 1);
     return m;
   }
 
   function garrisonMods(state, city) {
     const gov = city.governor !== null ? state.officers[city.governor].command / 100 : 0;
-    let m = 1 + 0.2 * gov;
+    let m = (1 + 0.2 * gov) * (1 + VM.Story.bonus(state, city.owner, 'defense'));
+    m *= 1 + VM.Doctrine.bonus(state, city.owner, 'wall') * (city.wallHp > 0 ? 1 : 0.5);      // fortifications help the garrison everywhere, the walls most
     if (city.wallHp > 0) m *= W().wallBonus;
     return m * (VM.CFG.SPEC[city.spec].defense || 1);
   }
@@ -141,13 +143,36 @@ VM.War = (function () {
   const carryOf = o => o.carry || (o.carry = {});
 
   // Why an officer would pull his army back from a campaign, if at all: the food would run out, or the men have lost heart (the limit depends on his nature)
+  // An army inside a hostile city whose walls are down is in the final assault: pulling out then only hands the city to whoever comes next. It stays unless it is too small for what is left to fight.
+  function pressing(state, a) {
+    if (a.at === null || a.routed || !sieging(a)) return false;
+    const c = state.cities[a.at];
+    if (!c.besieged || !VM.Diplo.hostile(state, a.owner, c.owner) || (wallMax(c) > 0 && c.wallHp > 0)) return false;
+    const pool = {}; for (const src of [c.garrison].concat(state.armies.filter(h => h.owner === c.owner && h.at === c.id).map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
+    return power(a.troops, pool) * W().pressRatio >= power(pool, a.troops);
+  }
   function retreatReason(state, a) {
     const o = state.officers[a.officer], s = a.supply, n = VM.Armies.sizeOf(a);
     if (s && s.starving) return 'food';
     if (s && s.line !== 'ok' && !s.depot) { const eat = n * VM.CFG.ECON.foodPerHead * (s.mult || 1); if (eat > 0 && a.rations / eat < W().retreatFoodDays) return 'food'; }
+    if (pressing(state, a)) return null;
     const lim = W().retreatMorale;
     if (a.morale < (o && lim[o.trait] !== undefined ? lim[o.trait] : lim.other)) return 'morale';
     return null;
+  }
+
+  // How an attack by army `a` on `city` would go, from what the attacker can see: its strength against the garrison, the defending armies in the city, the wall and the
+  // enemy armies near enough to join in. ratio >= 1.8 is what the AI wants before it attacks. With fog the armies out of sight are not counted.
+  function forecast(state, a, city) {
+    const pool = {}; for (const src of [city.garrison].concat(state.armies.filter(h => h.owner === city.owner && h.at === city.id).map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
+    const mine = power(a.troops, pool, roleOpts(state, a)) * armyMods(state, a);
+    const wall = city.wallHp > 0 ? city.wallHp * ((a.troops.siege || 0) > 0 ? 0.02 : 0.08) : 0;
+    const theirs = Math.max(1, power(pool, a.troops) * garrisonMods(state, city)) + wall;
+    const src = VM.Fog.on(state) ? VM.Fog.sources(state, a.owner) : null;
+    let help = 0;
+    for (const e of state.armies) if (e.owner === city.owner && e.at !== city.id && !e.routed && VM.Armies.distance(state, VM.Armies.zoneOf(e), city.id) <= 220 && VM.Fog.seesArmy(state, a.owner, e, src)) help += power(e.troops, a.troops);
+    const ratio = mine / (theirs + help);
+    return { ratio, verdict: ratio >= 3 ? 'overwhelming' : ratio >= 1.8 ? 'favourable' : ratio >= 1 ? 'even' : ratio >= 0.6 ? 'risky' : 'hopeless', help: help > 0 };
   }
 
   // ---- Roles in the field: infantry hold the line, archers shoot from behind it, cavalry charge, fall back and swing round, engines stay out of it ----
@@ -237,6 +262,21 @@ VM.War = (function () {
       if (b.retreat > 0) a.fighting.push(b.id);
     }
     const byId = new Map(armies.map(a => [a.id, a]));
+    // Front width: of the armies of one house in the same fight only the biggest few engage; the others wait in reserve (they do not strike, are not struck, and do not move)
+    for (const a of armies) a.reserve = false;
+    {
+      const group = new Map(), find = x => { while (group.get(x) !== x) { group.set(x, group.get(group.get(x))); x = group.get(x); } return x; };
+      for (const a of armies) if (a.fighting.length) group.set(a.id, a.id);
+      for (const a of armies) for (const e of a.fighting) if (group.has(e)) group.set(find(a.id), find(e));
+      const comps = new Map(); for (const a of armies) if (group.has(a.id)) { const k = find(a.id); if (!comps.has(k)) comps.set(k, new Map()); const m = comps.get(k); if (!m.has(a.owner)) m.set(a.owner, []); m.get(a.owner).push(a); }
+      const held = new Set();
+      for (const m of comps.values()) for (const list of m.values()) {
+        if (list.length <= W().front) continue;
+        list.sort((x, y) => VM.Armies.sizeOf(y) - VM.Armies.sizeOf(x) || x.id - y.id);
+        for (const a of list.slice(W().front)) { a.reserve = true; held.add(a.id); }
+      }
+      if (held.size) for (const a of armies) a.fighting = held.has(a.id) ? [] : a.fighting.filter(id => !held.has(id));
+    }
     // Army against army: the front line trades blows, archers shoot over it, cavalry come and go (see the roles above); siege engines do not fight here
     for (const a of armies) {
       if (a.retreat > 0 || !a.fighting.length) continue;
@@ -251,7 +291,8 @@ VM.War = (function () {
     const sieges = {};
     for (const a of armies) if (sieging(a) && VM.Diplo.hostile(state, a.owner, state.cities[a.at].owner)) (sieges[a.at] = sieges[a.at] || []).push(a);
     for (const cid in sieges) {
-      const city = state.cities[cid], list = sieges[cid], walled = city.wallHp > 0;
+      const city = state.cities[cid], all = sieges[cid], walled = city.wallHp > 0;
+      const list = all.length > W().siegeFront ? all.slice().sort((x, y) => VM.Armies.sizeOf(y) - VM.Armies.sizeOf(x) || x.id - y.id).slice(0, W().siegeFront) : all;      // the rest wait their turn
       const holders = walled ? armies.filter(h => h.owner === city.owner && h.at === city.id && inWalls(state, h)) : [];
       const pool = {}; for (const src of [city.garrison].concat(holders.map(h => h.troops))) for (const k in src) pool[k] = (pool[k] || 0) + src[k];
       const gt = total(pool), poolPow = walled ? Object.assign({}, pool, { archer: (pool.archer || 0) * W().wallArcher }) : pool;
@@ -298,6 +339,7 @@ VM.War = (function () {
         destroy(state, a, killer ? killer.owner : z.owner);
         continue;
       }
+      if (a.morale <= 0 && !a.routed && pressing(state, a)) a.morale = 1;       // no rout in the breach while the assault is still winnable
       if (a.morale <= 0 && !a.routed) {
         const from = VM.Armies.zoneOf(a), home = nearestOwnCity(state, from, a.owner, state.cities[from].owner === a.owner ? from : -1);
         a.fighting = []; a.buff = null;
@@ -393,5 +435,5 @@ VM.War = (function () {
     return { ok: true };
   }
 
-  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, total, updateZones, nearestOwnCity, checkOver };
+  return { step, hurt, carryOf, retreatReason, cavMult, cavPhase, flanker, inWalls, power, matchup, wallMax, armyMods, garrisonMods, abilityOf, useAbility, buildDepot, capture, sieging, pressing, forecast, total, updateZones, nearestOwnCity, checkOver };
 })();

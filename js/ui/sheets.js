@@ -12,6 +12,11 @@ VM.Sheets = (function () {
     box.addEventListener('click', onClick);
     box.addEventListener('change', e => { if (e.target.dataset.pause) VM.Alerts.setPause(e.target.dataset.pause, e.target.checked); });
     $('offBtn').addEventListener('click', () => toggle('officers'));
+    $('idleBtn').addEventListener('click', () => {                          // jump to the next army with no orders
+      const st = ui.state, list = VM.Armies.idleOf(st, st.player).sort((a, b) => a.id - b.id); if (!list.length) { VM.Panels.toast('Every army has orders'); return; }
+      const next = list.find(a => a.id > (ui.idleLast || 0)) || list[0]; ui.idleLast = next.id;
+      ui.selectedCity = -1; ui.selectedArmy = next.id; ui.sheet = null; ui.centerOn(next.at);
+    });
     $('dipBtn').addEventListener('click', () => toggle('diplo'));
     $('alertBtn').addEventListener('click', () => toggle('alerts'));
     $('setBtn').addEventListener('click', () => toggle('settings'));
@@ -46,6 +51,8 @@ VM.Sheets = (function () {
       case 'lang': VM.I18N.set(d.l); lastHTML = ''; break;
       case 'size': VM.UIPrefs.set('size', d.v); lastHTML = ''; break;
       case 'map3d': VM.UIPrefs.set('map3d', d.v); lastHTML = ''; break;
+      case 'fogPref': VM.UIPrefs.set('fog', !VM.UIPrefs.get('fog')); lastHTML = ''; if (VM.Title && !ui.running) VM.Title.render(); break;
+      case 'hazPref': VM.UIPrefs.set('hazards', VM.UIPrefs.get('hazards') === false); lastHTML = ''; if (VM.Title && !ui.running) VM.Title.render(); break;
       case 'tutorial': VM.Tutorial.finish(false); ui.sheet = null; VM.Title.startTutorial(); break;
       case 'delsave': try { localStorage.removeItem('vexmarch.save'); VM.Panels.toast('Saved game deleted'); } catch (e) { /* ignore */ } break;
       case 'dAlly': case 'dGift': case 'dMerge': case 'dBreak': case 'dBreakNo': case 'dBreakYes': case 'dAnswer': VM.DiploUI.act(d, cmd); lastHTML = ''; break;
@@ -57,6 +64,7 @@ VM.Sheets = (function () {
     const st = ui.state, N = st.map.nodes;
     if (o.travel) return `travelling to ${N[o.travel.to].name} (${Math.ceil(o.travel.arrive - st.time)}d)`;
     if (o.searching) return `searching near ${N[o.searching.city].name} (${Math.ceil(o.searching.until - st.time)}d)`;
+    if (o.role === 'hostage') return `held as a hostage by ${st.factions[o.hostage].name}`;
     if (o.role === 'governor') { const c = st.cities.find(x => x.governor === o.id); return c ? `governs ${N[c.id].name}` : 'governor'; }
     if (o.role === 'commander') { const a = st.armies.find(x => x.id === o.army); return a ? `leads an army (${num(VM.Armies.sizeOf(a))})` : 'commander'; }
     return `idle in ${N[o.loc].name}`;
@@ -119,6 +127,7 @@ VM.Sheets = (function () {
     h += `<div class="sec">Text size</div><div class="row">` + [['small', 'Small'], ['normal', 'Normal'], ['large', 'Large']].map(([v, n]) => `<button data-act="size" data-v="${v}" class="chip${VM.UIPrefs.get('size') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Interface</div><div class="row">` + [['icons', 'Icons only'], ['mixed', 'Icons and words'], ['text', 'Words and labels']].map(([v, n]) => `<button data-act="uimode" data-v="${v}" class="chip${(VM.UIPrefs.get('ui') || 'mixed') === v ? ' on' : ''}">${n}</button>`).join('') + `</div>`;
     h += `<div class="sec">Map</div><div class="row">` + [['on', '3D terrain'], ['off', 'Flat map']].map(([v, n]) => `<button data-act="map3d" data-v="${v}" class="chip${(VM.UIPrefs.get('map3d') || 'on') === v ? ' on' : ''}">${n}</button>`).join('') + `</div><div class="row dim">The map style changes the next time the game starts.</div>`;
+    h += `<div class="sec">New games start with</div><div class="row">` + `<button data-act="fogPref" class="chip${VM.UIPrefs.get('fog') ? ' on' : ''}">${VM.UIPrefs.get('fog') ? 'Fog of war: on' : 'Fog of war: off'}</button>` + `<button data-act="hazPref" class="chip${VM.UIPrefs.get('hazards') !== false ? ' on' : ''}">${VM.UIPrefs.get('hazards') !== false ? 'Random events: on' : 'Random events: off'}</button></div>`;
     h += `<div class="sec">Help</div><div class="row"><button data-act="tutorial" class="btn">Replay the tutorial</button></div>`;
     h += `<div class="row"><button data-act="delsave" class="btn">Delete saved game</button></div>`;
     h += `<div class="row dim">Pausing for alerts is chosen in the Alerts list.</div>`;
@@ -130,6 +139,7 @@ VM.Sheets = (function () {
     const db = $('dipBtn'), dn = VM.DiploUI.pending(), badge = c => c ? `<i class="badge">${c}</i>` : '';
     const dh = VM.Icons.svg('handshake') + VM.Icons.w('Diplomacy', 'tbw') + badge(dn); if (db.dataset.h !== dh) { db.dataset.h = dh; db.innerHTML = dh; } db.classList.toggle('hot', dn > 0); db.classList.toggle('on', ui.sheet === 'diplo');
     const ab = $('alertBtn'), ah = VM.Icons.svg('bell') + VM.Icons.w('Alerts', 'tbw') + badge(n); if (ab.dataset.h !== ah) { ab.dataset.h = ah; ab.innerHTML = ah; } ab.classList.toggle('hot', n > 0);
+    const ib = $('idleBtn'), idn = VM.Armies.idleOf(st, st.player).length, ih = VM.Icons.svg('flag') + VM.Icons.w('Idle', 'tbw') + badge(idn); if (ib.dataset.h !== ih) { ib.dataset.h = ih; ib.innerHTML = ih; } ib.classList.toggle('hot', idn > 0);
     const oh = VM.Icons.svg('pop') + VM.Icons.w('Officers', 'tbw'); if ($('offBtn').dataset.h !== oh) { $('offBtn').dataset.h = oh; $('offBtn').innerHTML = oh; }
     $('offBtn').classList.toggle('on', ui.sheet === 'officers'); ab.classList.toggle('on', ui.sheet === 'alerts'); $('setBtn').classList.toggle('on', ui.sheet === 'settings');
     box.classList.toggle('open', !!ui.sheet);

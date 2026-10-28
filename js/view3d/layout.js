@@ -41,6 +41,18 @@ VM.CityLayout = (function () {
       gates, roads: gates.map(g => ({ angle: g.angle, toward: g.toward })), mainGate: main
     };
 
+    // Streets: a road from every gate to the keep, and a cross street halfway between two gates that sit far apart (not in a hamlet), so the town is cut into blocks
+    const streets = gates.map(g => ({ angle: g.angle, gate: true }));
+    if (tier !== 'hamlet' && gates.length > 1) gates.forEach((g, i) => { const gap = norm(gates[(i + 1) % gates.length].angle - g.angle) || TAU; if (gap > 1.5) streets.push({ angle: norm(g.angle + gap / 2), gate: false }); });
+    L.streets = streets;
+    // Nothing that stands on the ground may sit on a street: onStreet tells whether a spot is within half a road's width plus `half` of one; clearAngle turns a
+    // fixed site round its ring until it is clear of the streets
+    const onStreet = (p, half) => streets.some(st => { const u = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, al = p.x * u.x + p.z * u.z; return al > -2 && Math.abs(p.x * u.z - p.z * u.x) < 3.4 + half; });
+    const clearSpot = (a, r, half) => {                                       // the nearest spot to (a, r) that is clear: turn round the ring, then move in or out a little
+      for (const dr of [0, 1, -1, 2, -2, 3, -3, 4]) for (let k = 0; k < 80; k++) { const aa = a + k * 0.05, rr = r + dr; if (!onStreet(pol(rr, aa), half)) return { angle: aa, r: rr }; }
+      return { angle: a, r };
+    };
+
     // Armies at this node, and armies marching on the roads into or out of it
     const armies = [], ROAD = 140, SCALE = 0.35;
     const mixOf = (a, soldiers) => {                               // visible soldiers by type, by the largest remainder
@@ -111,10 +123,10 @@ VM.CityLayout = (function () {
     // Fixed sites for the buildings that have levels
     const sites = {
       market: { angle: main, r: R * 0.62 },
-      barracks: { angle: main + Math.PI, r: R * 0.55 },
-      temple: { angle: main + Math.PI / 2, r: R * 0.55 },
-      depot: { angle: main - 0.5, r: R * 0.82 },
-      smith: { angle: main - Math.PI / 2, r: R * 0.55 }
+      barracks: clearSpot(main + Math.PI, R * 0.55, 3),
+      temple: clearSpot(main + Math.PI / 2, R * 0.55, 2.6),
+      depot: clearSpot(main - 0.5, R * 0.82, 2),
+      smith: clearSpot(main - Math.PI / 2, R * 0.55, 3.2)
     };
     for (const k in sites) Object.assign(sites[k], pol(sites[k].r, sites[k].angle));
     const obstacles = [{ x: 0, z: 0, r: 6.5 }];                                    // the keep
@@ -137,62 +149,90 @@ VM.CityLayout = (function () {
     take(sites.temple.x, sites.temple.z, 2.6);
     L.depot = city.depot ? { x: sites.depot.x, z: sites.depot.z, crates: clamp(Math.ceil(city.depot.food / 400), 1, 8) } : null;
     take(sites.depot.x, sites.depot.z, 2);
-    L.smith = { on: city.spec === 'iron' || blvl >= 3 || tier === 'city' || tier === 'capital', x: sites.smith.x, z: sites.smith.z, rot: sites.smith.angle };      // a smithy where iron is worked or the army is strong
+    L.smith = { on: (city.spec === 'iron' || blvl >= 3 || tier === 'city' || tier === 'capital') && !onStreet(sites.smith, 2), x: sites.smith.x, z: sites.smith.z, rot: sites.smith.angle };      // not drawn where no clear ground is left (a town full of roads)      // a smithy where iron is worked or the army is strong
     take(sites.smith.x, sites.smith.z, tier === "hamlet" ? 2.2 : 3.2);
 
     // Houses: decorative, as many as the people need. The candidate spots come from a fixed sequence and only the first `wanted` are used, so a growing town
     // adds houses without moving the old ones.
     if (city.spec === 'port') { const a = main + Math.PI * 0.9; L.water = { angle: a, r: R + 38, radius: 26 }; }
     const dry = a => !L.water || angDiff(a, L.water.angle) > 0.85;
-    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 11), 4, 48), spots = [], dirs = gates.map(g => ({ x: Math.cos(g.angle), z: Math.sin(g.angle) }));
+    const stage = stageOf(city), wanted = clamp(Math.round(city.pop / 11), 4, 48), spots = [], dirs = streets.map(s => ({ x: Math.cos(s.angle), z: Math.sin(s.angle) }));
     L.stage = stage; L.paved = stage >= 3;
     const onRoad = (p, half) => dirs.some(d => { const t = p.x * d.x + p.z * d.z; return t > -2 && Math.abs(p.x * d.z - p.z * d.x) < half; });            // inside the strip of street that runs from a gate to the keep
     // The plaza round the keep, with a well and, in a great city, a monument; the sites of the works outside the walls and the suburb along the roads are reserved too
-    const wp = pol(R * 0.56 + 2, main - 0.55); L.well = { x: wp.x, z: wp.z }; take(wp.x, wp.z, 1.6);
-    L.plaza = stage >= 2 ? { r: 9 + stage } : null;
-    { const mp = pol(R * 0.56 + 2, main + 0.55); take(mp.x, mp.z, 1.8); L.monument = stage >= 4 ? { x: mp.x, z: mp.z } : null; }          // the monument's ground is reserved from the start
-    const freeAngle = a => { for (let k = 0; k < 24; k++) { if (!gates.some(g => angDiff(g.angle, a) < 0.42)) return a; a += 0.3; } return a; };
+    const wsp = clearSpot(main - 0.55, R * 0.56 + 2, 1.6), wp = pol(wsp.r, wsp.angle); L.well = { x: wp.x, z: wp.z }; take(wp.x, wp.z, 1.6);
+    L.plaza = stage >= 2 ? { r: 8.5 } : null;                                       // a fixed size: the plaza never changes the houses around it
+    { const msp = clearSpot(main + 0.55, R * 0.56 + 2, 1.8), mp = pol(msp.r, msp.angle); take(mp.x, mp.z, 1.8); L.monument = stage >= 4 ? { x: mp.x, z: mp.z } : null; }          // the monument's ground is reserved from the start
+
     L.works = [];
-    const work = (kind, a, r, size) => { const aa = freeAngle(a), p = pol(r, aa); take(p.x, p.z, size); return { kind, x: p.x, z: p.z, rot: aa }; };
+    const work = (kind, a, r, size) => { const sp = clearSpot(a, r, size), aa = sp.angle, p = pol(sp.r, aa); take(p.x, p.z, size); return { kind, x: p.x, z: p.z, rot: aa }; };
     const wk = { windmill: work('windmill', main + 2.0, R + 12, 5), lumber: work('lumber', main + 3.7, R + 11, 5), quarry: work('quarry', main + 5.0, R + 12, 5) };
     if (city.buildings.farm >= 3) L.works.push(wk.windmill);
     if (stage >= 2) L.works.push(wk.lumber);
     if (city.spec === 'iron' || city.spec === 'pass') L.works.push(wk.quarry);
-    const sub = [];                                                                // the suburb: houses either side of each road, just outside the gate
-    for (let k = 0; k < 7; k++) gates.forEach((g, gi) => {
-      const side = (k + gi) % 2 ? 1 : -1, t = R + 4.5 + Math.floor(k / 2) * 4.2, lat = side * (4.4 + (k % 3) * 0.7), d = dirs[gi], p = { x: d.x * t - d.z * lat, z: d.z * t + d.x * lat };
+    // The suburb: outside the walls, houses in rows along each gate road, both sides, facing the road. Built out from the gate, so it grows along the road.
+    const sub = [];
+    for (let k = 0; k < 8; k++) for (let row = 0; row < 2; row++) gates.forEach((g, gi) => {
+      const d = dirs[gi], t = R + 5.5 + k * 4.2, side = gi % 2 ? 1 : -1, lat = side * (5.0 + row * 4.2), along = { x: d.x * t, z: d.z * t }, across = { x: -d.z * lat, z: d.x * lat };
+      const p = { x: along.x + across.x, z: along.z + across.z };
       if (!dry(Math.atan2(p.z, p.x))) return;
-      sub.push({ x: p.x, z: p.z, rot: Math.atan2(d.z, d.x) + (side > 0 ? -Math.PI / 2 : Math.PI / 2) + (k % 2 ? 0.12 : -0.1), w: 1.8 + (k % 3) * 0.25, d: 1.8 + ((k + 1) % 3) * 0.25, h: 1.2 + (k % 2) * 0.4, roof: (k + gi) % 3, chimney: k % 3 === 0 });
+      if (onStreet(p, 1.4)) return;
+      sub.push({ x: p.x, z: p.z, rot: Math.atan2(-across.x / Math.abs(lat), -across.z / Math.abs(lat)), w: 1.8 + (k % 3) * 0.25, d: 1.8 + ((k + 1) % 3) * 0.25, h: 1.2 + (k % 2) * 0.4, roof: gi % 3, chimney: k % 3 === 0, district: 100 + gi, ratio: 1, gate: gi, k });
     });
     for (const q of sub) take(q.x, q.z, 2.4);
     L.suburb = sub.slice(0, stage >= 4 ? 16 : stage >= 3 ? 7 : 0);
-    for (let tries = 0; tries < 2500 && spots.length < 48; tries++) {
-      const a = rH() * TAU, rr = 8.5 + Math.sqrt(rH()) * (R - 11), p = pol(rr, a);
-      const rot = a + (rH() - 0.5) * 0.6, w = 1.6 + rH() * 0.8, d = 1.6 + rH() * 0.8, h = 1.1 + rH() * 0.7, roof = Math.floor(rH() * 3), chimney = rH() < 0.4;
-      if (onRoad(p, 3.4) && rr > 4) continue;                                       // keep the street from each gate clear
-      if (rr < 13) continue;                                                        // the plaza's ground is kept free from the start, whatever its stage
+    // Blocks: houses stand in rows along each street, on both sides, a set distance back from the road and facing it. A second row sits behind the first.
+    // The rows are laid out from the centre out, so a growing town fills the nearest blocks first and the houses already built never move.
+    const rMin = 9.5, rMax = R - 3.5, LANE = 5.0, ROW = 3.6;     // just outside the plaza (a fixed size), so no house ever moves when the plaza appears
+    const cands = [];
+    streets.forEach((st, si) => {
+      const u = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, t = { x: -u.z, z: u.x };          // u: outward along the street; t: across it
+      for (const row of [0, 1, 2]) for (const side of [-1, 1]) for (let r = rMin; r <= rMax; r += ROW) {
+        const lat = side * (LANE + row * ROW), p = { x: u.x * r + t.x * lat, z: u.z * r + t.z * lat }, pr = Math.hypot(p.x, p.z);
+        if (pr < rMin || pr > rMax) continue;
+        if (streets.some((o, oi) => { const ou = { x: Math.cos(o.angle), z: Math.sin(o.angle) }, along = p.x * ou.x + p.z * ou.z; return along > -2 && Math.abs(p.x * ou.z - p.z * ou.x) < (oi === si ? 0 : 4.6); })) continue;
+        cands.push({ p, si, side, row, pr, front: { x: -side * t.x, z: -side * t.z } });
+      }
+    });
+    cands.sort((x, y) => x.pr - y.pr || x.row - y.row || x.si - y.si || x.side - y.side);
+    for (const c of cands) {
+      if (spots.length >= 48) break;
+      const p = c.p, w = 1.6 + rH() * 0.8, d = 1.6 + rH() * 0.8, h = 1.1 + rH() * 0.7, roof = c.si % 3, chimney = rH() < 0.4;
+      if (!dry(Math.atan2(p.z, p.x))) continue;
       if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 1.5)) continue;
       if (spots.some(h2 => Math.hypot(h2.x - p.x, h2.z - p.z) < 3.4)) continue;
-      spots.push({ x: p.x, z: p.z, rot, w, d, h, roof, chimney });
+      spots.push({ x: p.x, z: p.z, rot: Math.atan2(c.front.x, c.front.z), w, d, h, roof, chimney, district: c.si, ratio: c.pr / R });
     }
-    // The look of each home follows the stage of the place: tents and huts, then timber, then stone (older homes first, so a growing town changes house by house)
-    const styleOf = (i, st) => st <= 1 ? (i % 3 === 0 ? 1 : 0) : st === 2 ? (i % 5 === 0 ? 0 : 1) : st === 3 ? (i % 2 ? 2 : 1) : (i % 4 === 3 ? 1 : 2);
-    spots.forEach((h, i) => { h.style = styleOf(i, stage); });
+    // The look of each home follows the stage of the place and how near the keep it stands: stone near the centre of a big place, timber and then tents out at the edge
+    const styleOf = (h, st) => st <= 1 ? (h.ratio > 0.6 ? 0 : 1) : st === 2 ? (h.ratio > 0.7 ? 0 : 1) : st === 3 ? (h.ratio < 0.6 ? 2 : 1) : (h.ratio < 0.75 ? 2 : 1);
+    spots.forEach(h => { h.style = styleOf(h, stage); });
     L.suburb.forEach((h, i) => { h.style = stage >= 4 ? 2 : 1; });
     L.houses = spots.slice(0, wanted);
     L.housesWanted = wanted;
 
 
-    // Fields and farmhouses outside the walls: a fixed list of spots, the first few used as the farms grow
-    const flvl = city.buildings.farm, nf = Math.min(14, flvl * 3 + (city.spec === 'farmland' ? 3 : 0) + 1), fspots = [];
-    for (let tries = 0; tries < 600 && fspots.length < 14; tries++) {
-      const a = rF() * TAU, rr = R + 7 + rF() * 16, p = pol(rr, a), crop = rF() < 0.5 ? 0 : 1;
-      if (gates.some(g => angDiff(g.angle, a) < 0.3) || !dry(a)) continue;
-      if (fspots.some(f => Math.hypot(f.x - p.x, f.z - p.z) < 8) || obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 5)) continue;
-      fspots.push({ x: p.x, z: p.z, rot: a + Math.PI / 2, w: 7, d: 5, crop });
+    // Fields outside the walls: square plots in rows, each row a ring round the town, laid out sector by sector between the gate roads, so they line up
+    // with the roads and with each other. The nearest row fills first; the farmhouses sit at the wall side of the first row.
+    const flvl = city.buildings.farm, nf = Math.min(14, flvl * 3 + (city.spec === 'farmland' ? 3 : 0) + 1), fspots = [], PW = 7, PD = 5, GAP = 1.2;
+    const plotOK = p => {
+      if (!dry(Math.atan2(p.z, p.x))) return false;
+      if (obstacles.some(o => Math.hypot(o.x - p.x, o.z - p.z) < o.r + 5)) return false;
+      if (L.suburb.some(h => Math.hypot(h.x - p.x, h.z - p.z) < 6.5)) return false;
+      return !streets.some((st, si) => { const u = { x: Math.cos(st.angle), z: Math.sin(st.angle) }, al = p.x * u.x + p.z * u.z; return al > -2 && Math.abs(p.x * u.z - p.z * u.x) < 6.8; });
+    };
+    for (let j = 0; j < 3; j++) {
+      const rr = R + 8 + j * 6.2;
+      gates.forEach((g, gi) => {
+        const a0 = g.angle, span = norm(gates[(gi + 1) % gates.length].angle - a0) || TAU, n = Math.floor(span * rr / (PW + GAP));
+        for (let i = 0; i < n; i++) {
+          const a = a0 + (i + 0.5) * span / n, p = pol(rr, a);
+          if (!plotOK(p)) continue;
+          fspots.push({ x: p.x, z: p.z, rot: Math.atan2(-Math.cos(a), -Math.sin(a)), w: PW, d: PD, crop: (i + j + gi) % 2, row: j, a });
+        }
+      });
     }
     L.fields = fspots.slice(0, nf); L.farmhouses = [];
-    for (let i = 0; i < Math.min(L.fields.length, Math.ceil(flvl / 2)); i++) { const f = L.fields[i], p = pol(Math.hypot(f.x, f.z) + 5, Math.atan2(f.z, f.x)); L.farmhouses.push({ x: p.x, z: p.z, rot: Math.atan2(f.z, f.x) }); }
+    for (const f of L.fields.filter(f => f.row === 0).slice(0, Math.ceil(flvl / 2))) { const p = pol(R + 4, f.a); L.farmhouses.push({ x: p.x, z: p.z, rot: Math.atan2(-Math.cos(f.a), -Math.sin(f.a)) + Math.PI / 2 }); }
 
     // Terrain features that say what the place is known for
     L.features = [];

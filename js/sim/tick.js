@@ -8,10 +8,15 @@ VM.Sim = (function () {
     const dd = VM.CFG.STEP_DAYS;
     VM.Armies.step(state, dd);
     VM.War.step(state, dd);
+    VM.Report.step(state);
     VM.Officers.step(state, dd);
     VM.Diplo.step(state, dd);
+    VM.Fog.update(state);
+    VM.Hazards.step(state, dd);
     VM.AI.step(state);
     VM.Eco.step(state, dd);
+    VM.Trade.step(state, dd);
+    VM.Doctrine.step(state);
     state.time += dd;
     if (state.story && VM.Story) VM.Story.step(state);
   }

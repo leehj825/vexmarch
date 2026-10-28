@@ -185,7 +185,7 @@ Multiplayer; the hero joining wars; free-form building placement; more than 4 tr
 - **Supply:** each army traces a road route to the nearest uncontested city of its own. **Enemy armies on that route cut it.** Soldiers eat 3x in enemy or neutral land. A cut army lives on its carried rations (12 days), loses 3 morale a day while cut and 8 a day plus 2% desertion once the rations are gone. A **forward depot** (300 gold, stocked from the food pool at 40 a day up to a target) feeds armies within 230 map units at the normal rate, even deep in enemy land and even when the line is cut.
 - **Abilities (40-day cooldown):** by the officer's best stat: Might = Charge (+60% damage for 6 days), Intellect = Fire attack (6 to 14% of the enemy's troops and 15 morale, or the garrison and wall), Command = Rally (+30 morale).
 - **A city in the way:** an army marching through a city that is not its own (an enemy's or a free one) stops there and lays siege instead of walking past (a toast says so); it stays until the city falls or you give a new order. Your own cities, routed armies and retreating armies pass through. Guard, defend, reinforce and AI orders respect this.
-- Not yet: front-width cap on stacking; diplomacy; naval movement for ports.
+- Front width: of the armies of one house in one fight or one siege only the three biggest engage (`WAR.front`, `WAR.siegeFront`); the rest wait in reserve. Not yet: naval movement for ports.
 
 ### Officers and delegation as built (Phase 4)
 

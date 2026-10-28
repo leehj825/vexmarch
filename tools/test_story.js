@@ -82,5 +82,35 @@ test('the end: holding every place raises the house\'s own ending; losing everyt
   const t = VM.Story.create({ player: 4 }); VM.Sim.advance(t, 1); t.over = { type: 'lose', winner: null, t: t.time }; t.story.lastDay = -1; VM.Story.step(t); assert(t.story.queue.some(q => q.ending === 'lose'));
 });
 
+test('house gifts: each house has one, only in the campaign; a house wins by its own aim after holding it long enough', () => {
+  const s = VM.Story.create({ player: 6 }), plain = VM.World.create({ seed: 3, factions: 4, player: 1 });
+  for (let h = 1; h <= 6; h++) { assert(D.TRAITS[h] && D.VICTORIES[h] && D.TRAITS[h].text.ko && D.VICTORIES[h].text.ko, 'gift and aim for house ' + h); }
+  assert.strictEqual(VM.Story.bonus(s, 6, 'speed'), 0.2); assert.strictEqual(VM.Story.bonus(s, 1, 'speed'), 0); assert.strictEqual(VM.Story.bonus(plain, 1, 'army'), 0);
+  const vex = D.PLACES.findIndex(p => p.name === 'Vexholm'), horse = D.PLACES.map((p, i) => p.spec === 'horse' ? i : -1).filter(i => i >= 0);
+  assert(!VM.Story.victoryView(s, 6).met, 'not met at the start');
+  for (const i of horse.concat(vex)) s.cities[i].owner = 6;
+  assert(VM.Story.victoryView(s, 6).met, 'met once the places are held');
+  for (let d = 0; d < 70 && !s.over; d++) { s.time += 1; s.story.lastDay = -1; VM.Story.step(s); }
+  assert(s.over && s.over.special && s.over.type === 'win' && s.over.winner === 6, 'won by the aim after 60 days');
+  const t = VM.Story.create({ player: 1 }); for (const i of horse.concat(vex)) t.cities[i].owner = 6;
+  for (let d = 0; d < 70 && !t.over; d++) { t.time += 1; t.story.lastDay = -1; VM.Story.step(t); }
+  assert(t.over && t.over.type === 'lose' && t.over.winner === 6, 'a rival can win that way too');
+});
+
+test('decisions: they come by day and by event, one at a time, with a price; honor moves officer loyalty', () => {
+  const s = VM.Story.create({ player: 1 }); s.story.queue.length = 0; s.story.fired.history = 1;
+  for (const k in D.DECISIONS) { const B = D.DECISIONS[k]; assert(B.choices.length === 2 && B.title.ko && B.text.ko, k); B.choices.forEach(c => assert(c.label.ko && c.result.ko && c.fx, k)); }
+  s.time = 121; s.story.lastDay = -1; VM.Story.step(s);
+  const it = s.story.queue.find(q => q.choices); assert(it && it.id === 'festival', 'the feast at day 120');
+  const gold = s.factions[1].gold, loy = s.officers.find(o => o.owner === 1).loyalty;
+  const r = VM.Commands.exec(s, { type: 'storyChoice', faction: 1, choice: 0 }); assert(r.ok && r.result.en);
+  assert(s.factions[1].gold === gold - 200 && s.officers.find(o => o.owner === 1).loyalty === loy + 4 && VM.Story.honorOf(s.story) === 54, 'the price is paid');
+  assert(!VM.Commands.exec(s, { type: 'storyChoice', faction: 1, choice: 1 }).ok, 'one choice only');
+  s.story.queue.length = 0; s.time = 161; s.story.lastDay = -1; VM.Story.step(s); assert(!s.story.queue.some(q => q.choices), 'not before 40 days have passed');
+  s.story.queue.length = 0; s.time = 201; s.story.lastDay = -1; VM.Story.step(s); assert(s.story.queue.some(q => q.id === 'deserters'));
+  s.story.honor = 100; const o = s.officers.find(o => o.owner === 1 && o.key); assert(VM.Story.loyaltyMod(s, o) >= 5, 'a high honor steadies the officers');
+  const t = VM.Sim.load(VM.Sim.save(s)); assert(t.story.queue.some(q => q.id === 'deserters'), 'saved with the game');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

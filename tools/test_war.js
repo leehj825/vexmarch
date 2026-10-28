@@ -392,5 +392,49 @@ test('retreat: only food or morale pulls an army back; how low the morale may fa
   c.size; c.troops.infantry = 5; c.morale = 60; c.supply = { line: 'ok', starving: false, mult: 1 }; assert(!VM.War.retreatReason(s, c), 'losses alone are no reason');
 });
 
+test('breach: an army in a breached city does not retreat or rout on morale, unless it is far too small', () => {
+  const { s, x, c } = siegeWorld(0, 30); c.owner = 2;
+  const a = army(s, 1, x, { infantry: 40 }); run(s, 1);
+  a.morale = 5; a.supply = { line: 'ok', starving: false, mult: 1 };
+  assert(VM.War.pressing(s, a), 'pressing the assault'); assert(!VM.War.retreatReason(s, a), 'no morale retreat in the breach');
+  a.morale = 0; run(s, 0.25); assert(!a.routed, 'no rout in the breach');
+  a.troops.infantry = 3; assert(!VM.War.pressing(s, a), 'too small to press on'); assert(VM.War.retreatReason(s, a), 'a tiny army may still retreat');
+});
+
+test('forecast: a big army against a small garrison is overwhelming and wins; a tiny one is hopeless; relief armies and walls count', () => {
+  const { s, x, c } = siegeWorld(0, 10); c.owner = 2;
+  const big = army(s, 1, x, { infantry: 80 }), small = army(s, 1, x, { infantry: 2 });
+  const fb = VM.War.forecast(s, big, c), fs = VM.War.forecast(s, small, c);
+  assert(fb.verdict === 'overwhelming' && fs.verdict === 'hopeless', fb.verdict + ' ' + fs.verdict + ' ' + fb.ratio + ' ' + fs.ratio);
+  const c2 = siegeWorld(0, 10); c2.c.owner = 2; const a2 = army(c2.s, 1, c2.x, { infantry: 80 });
+  c2.c.buildings.wall = 3; c2.c.wallHp = VM.War.wallMax(c2.c);
+  assert(VM.War.forecast(c2.s, a2, c2.c).ratio < fb.ratio, 'a wall lowers the odds');
+  run(s, 30); assert(c.owner === 1, 'the overwhelming attack took the city');
+});
+
+test('front width: of five armies in one fight only the three biggest engage; the rest wait unharmed', () => {
+  const s = world(), x = neutralNode(s), sizes = [40, 38, 36, 34, 32], five = sizes.map(n => army(s, 1, x, { infantry: n })), foe = army(s, 2, x, { infantry: 400 });
+  run(s, 0.5);
+  assert.strictEqual(five.filter(a => a.fighting.length).length, W.front, 'front width'); assert.deepStrictEqual(five.map(a => a.reserve), [false, false, false, true, true], 'the biggest three fight');
+  assert(!foe.fighting.some(id => five.slice(3).some(a => a.id === id)), 'the enemy does not fight the reserve');
+  assert(five.slice(3).every((a, i) => size(a) === sizes[3 + i]), 'the reserve takes no damage'); assert(five.slice(0, 3).every((a, i) => size(a) < sizes[i]), 'the front does');
+  const w2 = world(), y = neutralNode(w2), three = [30, 30, 30].map(n => army(w2, 1, y, { infantry: n })); army(w2, 2, y, { infantry: 100 }); run(w2, 0.5);
+  assert(three.every(a => !a.reserve && a.fighting.length), 'three armies all fight');
+});
+
+test('front width at a siege: only the three biggest besiegers press the city; the others wait unharmed', () => {
+  const { s, x, c } = siegeWorld(2, 60); c.owner = 2; const sizes = [50, 45, 40, 35, 30], list = sizes.map(n => army(s, 1, x, { infantry: n }));
+  const hp0 = c.wallHp; run(s, 2);
+  assert(c.wallHp < hp0, 'the wall is hit'); assert(list.slice(0, 3).every((a, i) => size(a) < sizes[i]), 'the three in front are hurt by the garrison'); assert(list.slice(3).every((a, i) => size(a) === sizes[3 + i]), 'the two waiting are not');
+});
+
+test('idle armies: one standing in a city with no orders counts; marching, defending, fighting or besieging ones do not', () => {
+  const s = world(), mine = s.cities.find(c => c.owner === 1), a = army(s, 1, mine.id, { infantry: 20 }), b = army(s, 1, mine.id, { infantry: 20 });
+  assert.strictEqual(VM.Armies.idleOf(s, 1).length, 2);
+  b.order = 'defend'; assert.deepStrictEqual(VM.Armies.idleOf(s, 1).map(x => x.id), [a.id], 'a standing order is an order');
+  VM.Armies.move(s, a, s.cities.find(c => c.owner === 1 && c.id !== mine.id).id); assert.strictEqual(VM.Armies.idleOf(s, 1).length, 0, 'a march is an order');
+  const x = neutralNode(s); s.cities[x].garrison = T({ infantry: 500 }); const c = army(s, 1, x, { infantry: 30 }); run(s, 0.25); assert(!VM.Armies.idleOf(s, 1).includes(c), 'besieging is not idle');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

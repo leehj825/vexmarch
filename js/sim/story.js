@@ -60,6 +60,7 @@ VM.Story = (function () {
       mine[0].role = 'governor'; s.cities[capital[h]].governor = mine[0].id;
     }
     s.events = []; s.nextEvent = 0;
+    if (opts.noStory) { VM.Eco.refresh(s); return s; }                             // the fixed map with no story: a scenario or a skirmish on these places
     s.story = { campaign: true, house: player, fired: {}, chronicle: [], queue: [], seen: 0, flags: {} };
     VM.Eco.refresh(s);
     opening(s);
@@ -95,6 +96,7 @@ VM.Story = (function () {
     const S = state.story; if (!S || !S.campaign) return;
     opening(state);
     const day = dayOf(state); if (S.lastDay === day) return; S.lastDay = day;
+    checkVictories(state);
     const fresh = state.events.filter(e => e.n > S.seen); for (const e of fresh) S.seen = Math.max(S.seen, e.n);
     const me = state.player;
     for (const e of fresh) {
@@ -123,6 +125,7 @@ VM.Story = (function () {
       if (e.type === 'merged' && e.from !== me) note(state, `${state.factions[e.from].name} bent the knee to ${state.factions[e.owner].name}.`, `${koOf(state.factions[e.from].name)}이(가) ${koOf(state.factions[e.owner].name)}에게 무릎을 꿇었다.`);
       if (e.type === 'eliminated') fire(state, 'eliminated', { house: house(state, e.owner) });
     }
+    decisions(state, day, fresh);
     // beats that wait for a time or for a pair of officers
     const sera = officer(state, 'sera'), tomas = officer(state, 'tomas'), varek = officer(state, 'varek'), isaure = officer(state, 'isaure'), cael = officer(state, 'cael'), ysolde = officer(state, 'ysolde');
     if (day >= 90 && alive(cael) && alive(ysolde) && cael.owner !== ysolde.owner) fire(state, 'letter');
@@ -140,10 +143,77 @@ VM.Story = (function () {
         note(state, 'The house bent the knee.', '가문이 무릎을 꿇었다.'); return;
       }
       const win = state.over.type === 'win' && state.over.winner === me;
-      const text = win ? D().ENDINGS[S.house] : (state.over.type === 'win' ? { en: `${state.factions[state.over.winner].name} holds the whole realm. ` + D().DEFEAT.en, ko: `${koOf(state.factions[state.over.winner].name)}이(가) 온 나라를 차지했다. ` + D().DEFEAT.ko } : D().DEFEAT);
+      const text = win ? D().ENDINGS[S.house] : (state.over.winner && state.over.winner !== me ? { en: `${state.factions[state.over.winner].name} ${state.over.special ? 'has done what it set out to do: ' + D().VICTORIES[state.over.winner].name.en + '.' : 'holds the whole realm.'} ` + D().DEFEAT.en, ko: `${koOf(state.factions[state.over.winner].name)}이(가) ${state.over.special ? '뜻한 바를 이루었다: ' + D().VICTORIES[state.over.winner].name.ko + '.' : '온 나라를 차지했다.'} ` + D().DEFEAT.ko } : D().DEFEAT);
       S.queue.push({ id: win ? 'victory' : 'defeat', t: state.time, title: win ? D().FACTIONS[S.house - 1].title : { en: 'The End of the House', ko: '가문의 끝' }, text, ending: win ? 'win' : 'lose' });
       note(state, win ? 'The realm was won.' : 'The house fell.', win ? '나라를 얻었다.' : '가문이 무너졌다.');
     }
+  }
+
+  // ---- a house's gift (campaign only): 0 for everyone else ----
+  function bonus(state, owner, kind) {
+    if (!state || !state.story || !state.story.campaign) return 0;
+    const t = D().TRAITS[owner]; return t && t.kind === kind ? t.v : 0;
+  }
+  // ---- a house's own way to win: which parts it holds now, and for how many days in a row ----
+  function victoryView(state, h) {
+    const V = D().VICTORIES[h], n = V.need, places = D().PLACES, parts = [];
+    const own = i => state.cities[i].owner === h;
+    for (const nmv of n.names || []) parts.push({ label: nm(nmv), done: own(places.findIndex(p => p.name === nmv)) });
+    for (const sp of n.specs || []) { const ids = places.map((p, i) => p.spec === sp ? i : -1).filter(i => i >= 0); parts.push({ spec: sp, have: ids.filter(own).length, of: ids.length, done: ids.every(own) }); }
+    if (n.min) { const have = state.cities.filter(c => c.owner === h).length; parts.push({ have, of: n.min, done: have >= n.min }); }
+    if (n.allies) { const have = state.factions.filter(f => f.id !== h && f.alive && !f.neutral && VM.Diplo.allied(state, h, f.id)).length; parts.push({ allies: true, have, of: n.allies, done: have >= n.allies }); }
+    return { met: parts.every(p => p.done), parts, days: V.days, held: (state.story.hold && state.story.hold[h]) || 0 };
+  }
+  function checkVictories(state) {
+    const S = state.story; if (state.over) return; S.hold = S.hold || {};
+    for (const f of state.factions) {
+      if (f.neutral || !f.alive || !D().VICTORIES[f.id]) continue;
+      const v = victoryView(state, f.id); S.hold[f.id] = v.met ? (S.hold[f.id] || 0) + 1 : 0;
+      if (S.hold[f.id] >= v.days) { state.over = { type: f.id === state.player ? 'win' : 'lose', winner: f.id, special: true, t: state.time }; return; }
+    }
+  }
+
+  // ---- the ruler's decisions: a page with two choices, each with a price (docs/STORY.md). Your honor shifts how loyal your officers are. ----
+  const honorOf = S => S.honor === undefined ? 50 : S.honor;
+  function decide(state, id, vals) {
+    const S = state.story, B = D().DECISIONS[id]; if (S.fired[id]) return; S.fired[id] = state.time; S.lastDecision = state.time;
+    S.queue.push({ id, t: state.time, title: fill(B.title, vals || {}), text: fill(B.text, vals || {}), choices: B.choices.map(c => ({ label: fill(c.label, vals || {}), result: fill(c.result, vals || {}), fx: c.fx })) });
+  }
+  function choose(state, idx) {
+    const S = state.story, it = S && S.queue[0]; if (!it || !it.choices || it.chosen !== undefined) return { ok: false, reason: 'nothing to decide' };
+    const c = it.choices[idx]; if (!c) return { ok: false, reason: 'no such choice' };
+    const fx = c.fx, me = state.player, f = state.factions[me];
+    if (fx.gold) f.gold = Math.max(0, f.gold + fx.gold);
+    if (fx.food) f.food = Math.max(0, f.food + fx.food);
+    if (fx.honor) S.honor = clamp(honorOf(S) + fx.honor, 0, 100);
+    if (fx.loyalty) for (const o of state.officers) if (o.owner === me) VM.Officers.bump(state, o.id, fx.loyalty);
+    for (const x of state.factions) {
+      if (x.neutral || !x.alive || x.id === me) continue;
+      if (fx.opinion) VM.Diplo.addOp(state, x.id, me, fx.opinion);
+      if (fx.rival && it.vals && it.vals.rivalId === x.id) VM.Diplo.addOp(state, x.id, me, fx.rival);
+    }
+    it.chosen = idx; note(state, `${it.title.en}: ${c.label.en}.`, `${it.title.ko}: ${c.label.ko}.`);
+    return { ok: true, result: c.result };
+  }
+  function decisions(state, day, fresh) {
+    const S = state.story, me = state.player; S.flags = S.flags || {};
+    for (const e of fresh) {
+      if (e.type === 'captured' && e.owner === me) S.flags.took = true;
+      if (e.type === 'officerDied' && e.owner === me) S.flags.lost = true;
+    }
+    if (S.queue.length || (S.lastDecision !== undefined && state.time - S.lastDecision < 40)) return;
+    const mine = state.cities.filter(c => c.owner === me).length;
+    if (day >= 120 && !S.fired.festival) return decide(state, 'festival');
+    if (day >= 200 && !S.fired.deserters) return decide(state, 'deserters');
+    if (S.flags.took && !S.fired.refugees) return decide(state, 'refugees');
+    if (day >= 260 && !S.fired.envoy) {
+      let r = null; for (const x of state.factions) if (!x.neutral && x.alive && x.id !== me && !VM.Diplo.allied(state, me, x.id) && (!r || VM.Diplo.power(state, x.id) > VM.Diplo.power(state, r.id))) r = x;
+      if (r) { decide(state, 'envoy', { rival: nm(r.name) }); S.queue[S.queue.length - 1].vals = { rivalId: r.id }; return; }
+    }
+    if (day >= 330 && !S.fired.taxes) return decide(state, 'taxes');
+    if (S.flags.lost && !S.fired.funeral) return decide(state, 'funeral');
+    if (day >= 420 && !S.fired.winter) return decide(state, 'winter');
+    if (mine >= 15 && !S.fired.half) return decide(state, 'half');
   }
 
   // ---- ties between officers: small effects on loyalty, on who joins whom when captured, and on a fight between rivals ----
@@ -151,7 +221,7 @@ VM.Story = (function () {
   const isOfficer = key => D().OFFICERS.some(o => o.key === key);
   function loyaltyMod(state, o) {
     if (!state.story || !o.key) return 0;
-    let m = 0;
+    let m = bonus(state, o.owner, 'loyalty') + (o.owner === state.player ? clamp((honorOf(state.story) - 50) / 10, -5, 5) : 0);
     for (const t of tiesOf(o.key)) {
       const other = t[1] === o.key ? t[2] : t[1];
       if (t[0] === 'debt' && t[1] === o.key) { const c = officer(state, other); if (alive(c) && c.owner !== o.owner) m -= 10; }       // an unpaid debt to a rival house
@@ -186,5 +256,5 @@ VM.Story = (function () {
     return tiesOf(o.key).map(t => { const first = t[1] === o.key; return { label: D().TIE_LABEL[t[0]][first ? 0 : 1], who: whoIs(state, first ? t[2] : t[1]), key: first ? t[2] : t[1] }; });
   }
 
-  return { create, buildMap, step, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
+  return { create, buildMap, step, bonus, choose, honorOf, victoryView, whoIs, tiesView, loyaltyMod, tieBonus, rivalMult, tiesOf, tx, lang, koOf, officerInfo: o => D().OFFICERS.find(x => x.key === o.key) || null };
 })();

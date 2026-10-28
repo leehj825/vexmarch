@@ -14,6 +14,11 @@ VM.DiploUI = (function () {
     gift: 'Give 100 gold to raise their opinion of you. One gift every ten days.',
     merge: 'Offer terms: a much weaker house may join you, with all its cities, armies and officers, rather than be destroyed. It may refuse.',
     breakIt: 'End the alliance at once. You lose their trust and everybody else\'s, and your officers grumble. You cannot ally with them again for 90 days.',
+    marry: 'A marriage between the two houses: 300 gold dowry. It raises their opinion of you, a married ally never betrays you, sends one more army when asked for help, and breaking the bond costs twice as much. Needs a pact at least 60 days old and a friendly ally.',
+    hostages: 'Each side sends its least valuable idle officer to live at the other\'s capital. An AI ally never betrays you while hostages are held. If a pact is broken, the breaker\'s hostage stays and joins the wronged side; otherwise they go home.',
+    vassal: 'A weaker house keeps its cities, officers and name, pays you tribute every day, and is bound to you by a pact. It rebels if it grows much stronger than you.',
+    vassalOf: 'This house pays you tribute each day. It is bound to you and cannot ally elsewhere.',
+    lord: 'You pay tribute to this house. You cannot ally elsewhere while you are its vassal.',
     intro: 'Every house is your enemy until you ally. A pact can be broken at any time, at the price of your name. A house that is much weaker may be offered terms.'
   };
 
@@ -26,9 +31,10 @@ VM.DiploUI = (function () {
     const dot = f => `<span class="dot" style="background:${f.color}"></span>`;
     let h = `<div class="ph">${I.t('handshake', 'Diplomacy', TIPS.intro, '', true)}<span class="sub"></span>${I.btn('close', 'Close', { 'data-act': 'sheetClose' }, 'sm x')}</div>`;
     for (const o of offers()) {
-      const f = st.factions[o.from], al = o.kind === 'alliance';
-      h += `<div class="card2 hot"><div class="ir">${dot(f)}<b>${f.name}</b>${I.t(al ? 'handshake' : 'crown', al ? 'Offers an alliance' : 'Asks you to bend the knee', al ? 'Allies do not fight each other.' : 'If you accept, your game ends here; refuse, and you fight on.', '', true)}`
-        + `${I.stat('clock', Math.ceil(o.until - st.time), 'Open for days', 'Days left to answer.', 'dim')}</div><div class="ir">${I.btn('all', al ? 'Accept' : 'Bend the knee', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '1' }, 'sm', undefined, true)}${I.btn('none', al ? 'Decline' : 'Fight on', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '0' }, 'sm', undefined, true)}</div></div>`;
+      const f = st.factions[o.from], al = o.kind === 'alliance', va = o.kind === 'vassal';
+      const head = al ? ['handshake', 'Offers an alliance', 'Allies do not fight each other.'] : va ? ['link', 'Asks to become your vassal', 'It keeps its cities and name and pays you tribute. It is bound to you by a pact.'] : ['crown', 'Asks you to bend the knee', 'If you accept, your game ends here; refuse, and you fight on.'];
+      h += `<div class="card2 hot"><div class="ir">${dot(f)}<b>${f.name}</b>${I.t(head[0], head[1], head[2], '', true)}`
+        + `${I.stat('clock', Math.ceil(o.until - st.time), 'Open for days', 'Days left to answer.', 'dim')}</div><div class="ir">${I.btn('all', al || va ? 'Accept' : 'Bend the knee', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '1' }, 'sm', undefined, true)}${I.btn('none', al || va ? 'Decline' : 'Fight on', { 'data-act': 'dAnswer', 'data-o': o.id, 'data-yes': '0' }, 'sm', undefined, true)}</div></div>`;
     }
     const ally = D.allyOf(st, me), facs = st.factions.filter(f => !f.neutral && f.id !== me && f.alive), top = Math.max(1, ...st.factions.filter(f => !f.neutral && f.alive).map(f => D.power(st, f.id)));
     for (const f of facs) {
@@ -38,9 +44,20 @@ VM.DiploUI = (function () {
       h += `<div class="ir stats">${I.stat('house', cities, 'Cities')}<span class="st" data-tip="${esc('Strength\n' + TIPS.strength + '\n' + num(D.power(st, f.id)))}">${I.svg('helmet')}${I.meter(D.power(st, f.id) / top)}<b>${num(D.power(st, f.id))}</b></span>`
         + `<span class="st" data-tip="${esc('Opinion of you\n' + TIPS.opinion + '\n' + feel(o))}">${I.svg(mood)}<b>${Math.round(o)}</b></span></div><div class="ir">`;
       if (isAlly) h += ui.confirmBreak === f.id ? `${I.t('unlink', 'Break the pact?', 'You will lose trust.', 'bad', true)}${I.btn('all', 'Yes, break it', { 'data-act': 'dBreakYes' }, 'sm', undefined, true)}${I.btn('none', 'No', { 'data-act': 'dBreakNo' }, 'sm', undefined, true)}` : I.btn('unlink', 'Break the pact', { 'data-act': 'dBreak', 'data-f': f.id }, 'sm', TIPS.breakIt, true);
-      else h += I.btn('handshake', 'Propose alliance', Object.assign({ 'data-act': 'dAlly', 'data-f': f.id }, why ? { disabled: '' } : {}), 'sm', why ? why.charAt(0).toUpperCase() + why.slice(1) : TIPS.ally, true);
+      if (isAlly) {
+        const pact = D.pactOf(st, me), hs = (pact.hostages || []).map(x => st.officers[x.officer].name + ' (' + st.factions[x.holder].name + ')').join(', ');
+        if (pact.married) h += I.t('heart', 'Married', 'The houses are bound by marriage.', 'good', true);
+        else h += I.btn('heart', 'Marry', Object.assign({ 'data-act': 'dMarry', 'data-f': f.id }, st.factions[me].gold < C.marryCost || st.time - pact.since < C.marryAge ? { disabled: '' } : {}), 'sm', TIPS.marry, true);
+        if (hs) h += I.t('link', 'Hostages held', hs, 'good', true);
+        else h += I.btn('link', 'Exchange hostages', Object.assign({ 'data-act': 'dHostage', 'data-f': f.id }, st.time - pact.since < C.hostageAge ? { disabled: '' } : {}), 'sm', TIPS.hostages, true);
+      }
+      if (isAlly) h += I.btn('shield', 'Ask for help', { 'data-act': 'dAid', 'data-f': f.id }, 'sm', 'Your ally sends its idle armies to one of your cities that is under attack.', true);
+      if (!isAlly) h += I.btn('handshake', 'Propose alliance', Object.assign({ 'data-act': 'dAlly', 'data-f': f.id }, why ? { disabled: '' } : {}), 'sm', why ? why.charAt(0).toUpperCase() + why.slice(1) : TIPS.ally, true);
       h += `<button class="ibtn sm" data-act="dGift" data-f="${f.id}" data-tip="${esc('Gift\n' + TIPS.gift)}"${st.factions[me].gold < C.giftSmall ? ' disabled' : ''}>${I.svg('gift')}${I.w('Gift')}${I.svg('gold')}<b>${C.giftSmall}</b></button>`;
       if (!merge) h += I.btn('scroll', 'Offer terms', { 'data-act': 'dMerge', 'data-f': f.id }, 'sm', TIPS.merge, true);
+      if (!merge && !D.vassalOf(st, f.id)) h += I.btn('link', 'Offer vassalage', { 'data-act': 'dVassal', 'data-f': f.id }, 'sm', TIPS.vassal, true);
+      if (D.vassalOf(st, f.id) === me) h += I.t('link', 'Your vassal', TIPS.vassalOf, 'good', true);
+      else if (D.vassalsOf(st, me).includes(f.id)) h += I.t('link', 'Your lord', TIPS.lord, 'bad', true);
       h += `</div></div>`;
     }
     const log = st.diplo.log.slice(-6).reverse();
@@ -55,7 +72,11 @@ VM.DiploUI = (function () {
     const st = ui.state, f = +d.f, name = id => st.factions[id].name;
     switch (d.act) {
       case 'dAlly': { const r = cmd({ type: 'proposeAlliance', to: f }); if (r.ok) VM.Panels.toast(r.accepted ? `${name(f)} accepts the alliance` : `${name(f)} declines: ` + (WHY[r.why] || 'they see no need for it')); break; }
+      case 'dAid': { const r = cmd({ type: 'askAid' }); if (r.ok) VM.Panels.toast(`${name(f)} sends ${r.sent > 1 ? r.sent + ' armies' : 'an army'} to ${st.cities[r.city].name}`); else VM.Panels.toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); break; }
+      case 'dMarry': { const r = cmd({ type: 'marry' }); VM.Panels.toast(r.ok ? `${name(f)} and you are wed` : r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); break; }
+      case 'dHostage': { const r = cmd({ type: 'exchangeHostages' }); VM.Panels.toast(r.ok ? `Hostages exchanged: ${st.officers[r.mine].name} for ${st.officers[r.theirs].name}` : r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); break; }
       case 'dGift': { const r = cmd({ type: 'giftFaction', to: f, gold: VM.CFG.DIPLO.giftSmall }); if (r.ok) VM.Panels.toast(`${name(f)} thanks you`); break; }
+      case 'dVassal': { const r = cmd({ type: 'proposeVassal', to: f }); if (r.ok) VM.Panels.toast(r.accepted ? `${name(f)} becomes your vassal` : r.pending ? `${name(f)} is asked` : `${name(f)} will not bend that far`); else VM.Panels.toast(r.reason.charAt(0).toUpperCase() + r.reason.slice(1)); break; }
       case 'dMerge': { const r = cmd({ type: 'proposeMerge', to: f }); if (r.ok) VM.Panels.toast(r.accepted ? `${name(f)} joins you` : `${name(f)} will fight on`); break; }
       case 'dBreak': ui.confirmBreak = f; break;
       case 'dBreakNo': ui.confirmBreak = null; break;

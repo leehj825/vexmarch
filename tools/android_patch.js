@@ -48,10 +48,12 @@ console.log('copied launcher icons and splash screens');
 const manF = path.join(root, 'android/app/src/main/AndroidManifest.xml');
 let man = fs.readFileSync(manF, 'utf8');
 if (!man.includes('ACCESS_NETWORK_STATE')) man = man.replace(/(<\/manifest>)/, '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n$1');
-const appId = process.env.VX_APP_ID || 'ca-app-pub-3940256099942544~3347511713';      // the second is Google's sample app id
-if (!man.includes('com.google.android.gms.ads.APPLICATION_ID')) man = man.replace(/(<application[^>]*>)/, `$1\n        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${appId}" />`);
+const real = process.env.VX_ADS === 'real', appId = process.env.VX_APP_ID || (real ? require('./ads_ids').appId : 'ca-app-pub-3940256099942544~3347511713');      // the other is Google's sample app id
+const meta = `<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${appId}" />`;
+if (!man.includes('com.google.android.gms.ads.APPLICATION_ID')) man = man.replace(/(<application[^>]*>)/, `$1\n        ${meta}`);
+else man = man.replace(/<meta-data android:name="com\.google\.android\.gms\.ads\.APPLICATION_ID"[^>]*\/>/, meta);      // run again with other ids: the id is replaced
 fs.writeFileSync(manF, man);
-console.log('AdMob app id set (' + (process.env.VX_APP_ID ? 'real' : 'test') + ')');
+console.log('AdMob app id set (' + (real || process.env.VX_APP_ID ? 'real' : 'test') + ')');
 
 const stylesF = path.join(res, 'values/styles.xml');
 let styles = fs.readFileSync(stylesF, 'utf8');

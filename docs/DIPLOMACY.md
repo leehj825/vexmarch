@@ -66,3 +66,9 @@ Status: **built** (Phase 11): sim (`js/sim/diplo.js`), commands, AI, Diplomacy s
 - Campaign: `FACTIONS[i].diplo` (`ally`, `merge` bonuses; Kaldrath and Thornreach never bend the knee, Orsolyn allies and yields more easily), start opinions from ties between houses, chronicle notes for pacts, betrayals and merges, and a *merged* ending page ("Under Another Banner").
 - Tests: `tools/test_diplo.js` (21), `tools/ui_diplo.js` (26 checks, desktop and phone); the 30-year AI-vs-AI tournament still finishes (8 of 8 games).
 - Not done: marriage alliances, hostages, asking an ally for help, a per-house merged ending text (one shared page is used), alliance marks in the 3D city view.
+
+## Added later: help, marriage, hostages
+- **Ask for help** (`Diplo.askAid`, command `askAid`): an ally sends up to 2 of its idle armies (3 if married) to one of your besieged or contested cities, 40 days, 30-day cool-down per asker. AI allies do this on their own for a partner under threat (`Diplo.sendAid` from the daily step). Armies on help (`army.aid`) are not ordered around by the AI until it ends.
+- **Marriage** (`marry`): 300 gold dowry to the ally, pact at least 60 days old, ally's opinion of you 30 or more. Married pact: AI never betrays it, +1 army when asked for help, breaking it costs double trust and opinion.
+- **Hostages** (`exchangeHostages`): the weakest idle officer of each side goes to the other's capital with role `hostage` (cannot lead or govern). An AI ally does not betray while hostages are held. On a break the breaker's hostage joins the wronged house; in all other ends (a house falls, a merge) they go home.
+- Only the player proposes marriages and hostages; the AI never does.

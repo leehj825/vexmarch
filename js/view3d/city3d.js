@@ -38,10 +38,59 @@ VM.City3D = (function () {
     const p = u(d.pos, Int16Array), uv = u(d.uv, Uint16Array), nr = u(d.nor, Int8Array), idx = u(d.idx, Uint16Array);
     return (structGeos[key] = { t: d.t, p: Float32Array.from(p, v => v / 1000), n: Float32Array.from(nr, v => v / 127), uv: Float32Array.from(uv, v => v / 65535), idx });
   }
+  // The textures of the city, drawn on canvases in code (no image files), each once and reused. They are greyscale: the colour of a building is its vertex
+  // colour, multiplied in, so one texture serves every district. brick: the walls, towers and gate; stone: the keep, footings and stone houses; plaster: house
+  // and barracks walls; wood: the beams; shingle: the roofs (after the Nightfall procTex kinds). TILE is how many metres one tile of each covers.
+  const TILE = { brick: 2.2, stone: 2.4, plaster: 3, wood: 1.2, shingle: 1.8 };
+  const procTexes = {};
+  function procTexture(kind) {
+    if (procTexes[kind]) return procTexes[kind];
+    const c = document.createElement('canvas'), S = 256, g = c.getContext('2d');
+    c.width = c.height = S;
+    let seed = 7 + kind.length * 31; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const gray = (v, a) => `rgba(${v},${v},${v},${a === undefined ? 1 : a})`;
+    const blocks = (BW, BH, M, mortar, lo, hi) => {                              // a running bond: rows of blocks, every other row shifted by half a block
+      g.fillStyle = mortar; g.fillRect(0, 0, S, S);
+      for (let row = 0; row < S / BH; row++) {
+        const off = row % 2 ? BW / 2 : 0;
+        for (let col = -1; col <= S / BW; col++) {
+          const x = col * BW + off, y = row * BH, v = lo + Math.floor(rnd() * (hi - lo));
+          g.fillStyle = `rgb(${v},${v},${v + 2})`; g.fillRect(x + M / 2, y + M / 2, BW - M, BH - M);
+          for (let k = 0; k < 16; k++) { g.fillStyle = gray(Math.floor(rnd() * 255), 0.10); g.fillRect(x + M / 2 + rnd() * (BW - M), y + M / 2 + rnd() * (BH - M), 2, 2); }
+        }
+      }
+    };
+    if (kind === 'brick') blocks(64, 32, 4, '#6c6c71', 196, 236);
+    else if (kind === 'stone') blocks(128, 64, 8, '#6a6870', 150, 200);
+    else if (kind === 'plaster') {                                              // limewash: a mottled off-white
+      g.fillStyle = gray(226); g.fillRect(0, 0, S, S);
+      for (let k = 0; k < 260; k++) { g.fillStyle = gray(196 + Math.floor(rnd() * 50), 0.12); g.beginPath(); g.arc(rnd() * S, rnd() * S, 4 + rnd() * 14, 0, TAU); g.fill(); }
+    } else if (kind === 'wood') {                                               // planks with a grain and a dark seam between them
+      const PW = S / 4;
+      for (let p = 0; p < 4; p++) {
+        const v = 150 + Math.floor(rnd() * 40); g.fillStyle = gray(v); g.fillRect(p * PW, 0, PW, S);
+        for (let k = 0; k < 7; k++) { g.fillStyle = gray(v - 60, 0.35); g.fillRect(p * PW + 3 + rnd() * (PW - 6), 0, 1 + rnd() * 1.5, S); }
+        g.fillStyle = gray(90); g.fillRect(p * PW, 0, 2, S);
+      }
+    } else if (kind === 'shingle') {                                            // overlapping tiles, each with its lower edge in shadow
+      const TW = 32, TH = 16;
+      g.fillStyle = gray(90); g.fillRect(0, 0, S, S);
+      for (let row = 0; row < S / TH; row++) {
+        const off = row % 2 ? TW / 2 : 0;
+        for (let col = -1; col <= S / TW; col++) {
+          const x = col * TW + off, y = row * TH, v = 190 + Math.floor(rnd() * 40);
+          g.fillStyle = gray(v); g.fillRect(x + 1, y + 1, TW - 2, TH - 2);
+          g.fillStyle = gray(v - 70, 0.45); g.fillRect(x + 1, y + TH - 5, TW - 2, 4);
+        }
+      }
+    }
+    const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return (procTexes[kind] = tex);
+  }
   function TexMerger() { this.by = {}; this.tris = 0; }
   TexMerger.prototype.add = function (key, x, y, z, rot, sx, sy, sz) {            // model with its front toward +z, scaled, turned about Y by rot, set down at (x, y, z)
     if (!VM.StructModels) return;
-    const g = structGeo(key), gk = key === 'wall' ? 'wall' : g.t, B = this.by[gk] || (this.by[gk] = { pos: [], nor: [], uv: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
+    const g = structGeo(key), gk = g.t, B = this.by[gk] || (this.by[gk] = { pos: [], nor: [], uv: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
     sx = sx || 1; sy = sy || sx; sz = sz || sx;
     for (let i = 0; i < g.p.length; i += 3) {
       const px = g.p[i] * sx, py = g.p[i + 1] * sy, pz = g.p[i + 2] * sz, nx = g.n[i], ny = g.n[i + 1], nz = g.n[i + 2];
@@ -51,18 +100,33 @@ VM.City3D = (function () {
     for (let i = 0; i < g.idx.length; i++) B.idx.push(g.idx[i] + base);
     this.tris += g.idx.length / 3;
   };
+  // a plain geometry (a box, a cone, a gable) with its base at yb and turned about Y by rot, into the bucket of its texture kind; the UVs are planar (so the
+  // texture runs on every face), and the vertex colour is the building's colour times the shade
+  TexMerger.prototype.addGeo = function (g, x, yb, z, rot, kind, color, shade) {
+    if (!g.attributes.normal) g.computeVertexNormals();
+    const P = g.attributes.position.array, N = g.attributes.normal.array, I = g.index ? g.index.array : null, unit = TILE[kind], k = shade === undefined ? 1 : shade, tint = new THREE.Color(color || '#ffffff');
+    const B = this.by['p:' + kind] || (this.by['p:' + kind] = { pos: [], nor: [], uv: [], col: [], idx: [] }), base = B.pos.length / 3, c = Math.cos(rot || 0), sn = Math.sin(rot || 0);
+    for (let i = 0; i < P.length; i += 3) {
+      const px = P[i], py = P[i + 1], pz = P[i + 2], nx = N[i], ny = N[i + 1], nz = N[i + 2];
+      B.pos.push(px * c + pz * sn + x, py + yb, -px * sn + pz * c + z); B.nor.push(nx * c + nz * sn, ny, -nx * sn + nz * c);
+      B.uv.push((Math.abs(nx) > Math.abs(nz) ? pz : px) / unit, py / unit);
+      B.col.push(tint.r * k, tint.g * k, tint.b * k);
+    }
+    if (I) for (let i = 0; i < I.length; i++) B.idx.push(I[i] + base);
+    else for (let i = 0; i < P.length / 3; i++) B.idx.push(base + i);
+    this.tris += (I ? I.length : P.length / 3) / 3;
+  };
   TexMerger.prototype.meshes = function () {
     return Object.keys(this.by).map(t => {
       const B = this.by[t], geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(B.pos, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(B.nor, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(B.uv, 2));
       geo.setIndex(B.idx);
-      if (t === 'wall' && !structMats.wall) {                                      // the brick wall, turned into grey castle stone: the texture's light and dark, none of its red
-        const tex = new THREE.TextureLoader().load(VM.StructModels.tex.t3); tex.flipY = true;
-        const m = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x2c2c30), side: THREE.DoubleSide });
-        m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float l = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)); diffuseColor.rgb = vec3(l * 0.95, l * 0.95, l) * 0.8; }'); };
-        m.customProgramCacheKey = () => 'vmwall'; m.userData.shared = true; structMats.wall = m;
+      if (t.startsWith('p:')) {                                                    // a city texture: greyscale, tinted by the vertex colour
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(B.col, 3));
+        if (!structMats[t]) { structMats[t] = new THREE.MeshLambertMaterial({ map: procTexture(t.slice(2)), vertexColors: true, emissive: new THREE.Color(0x1e1e22), side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
+        return new THREE.Mesh(geo, structMats[t]);
       }
-      if (t !== 'wall' && !structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
+      if (!structMats[t]) { const tex = new THREE.TextureLoader().load(VM.StructModels.tex[t]); tex.flipY = true; structMats[t] = new THREE.MeshLambertMaterial({ map: tex, emissive: new THREE.Color(0x585858), emissiveMap: tex, side: THREE.DoubleSide }); structMats[t].userData.shared = true; }
       return new THREE.Mesh(geo, structMats[t]);
     });
   };
@@ -70,11 +134,19 @@ VM.City3D = (function () {
   const facing = (x, z) => Math.atan2(-x, -z);                                     // turn about Y that points a model's front (+z) at the city centre
   const yawFor = (dx, dz) => -Math.atan2(dz, dx);                 // rotation about Y that turns local +x toward (dx, dz) in the x/z plane
   const place = (g, x, y, z, rot) => { if (rot) g.rotateY(rot); g.translate(x, y, z); return g; };
+  // one piece of a building: into the textured bucket of its kind (kind null: plain, vertex-coloured) when the city is being merged with textures
+  const texPiece = (M, kind, g, x, yb, z, rot, color, shade) => (kind && tx) ? tx.addGeo(g, x, yb, z, rot, kind, color, shade) : M.add(place(g, x, yb, z, rot), color, shade);
+  const tbox = (M, kind, x, yb, z, w, h, d, color, rot, shade) => texPiece(M, kind, new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0), x, yb, z, rot, color, shade);
+  const tcyl = (M, kind, x, yb, z, rt, rb, h, seg, color, shade) => texPiece(M, kind, new THREE.CylinderGeometry(rt, rb, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0, color, shade);
+  const tcone = (M, kind, x, yb, z, r, h, color, seg, shade) => texPiece(M, kind, new THREE.ConeGeometry(r, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0, color, shade);
+  // the stone of the wall, towers and gate: light grey brick (white tint, so the texture shows as it is)
+  const stoneBox = (M, x, yb, z, w, h, d, rot, shade) => tbox(M, 'brick', x, yb, z, w, h, d, '#ffffff', rot, shade);
+  const stoneCyl = (M, x, yb, z, rt, rb, h, seg, shade) => tcyl(M, 'brick', x, yb, z, rt, rb, h, seg, '#ffffff', shade);
   const box = (M, x, yb, z, w, h, d, color, rot, shade) => M.add(place(new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0), x, yb, z, rot), color, shade);
   const cyl = (M, x, yb, z, rt, rb, h, color, seg, shade) => M.add(place(new THREE.CylinderGeometry(rt, rb, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0), color, shade);
   const cone = (M, x, yb, z, r, h, color, seg, shade) => M.add(place(new THREE.ConeGeometry(r, h, seg || 8).translate(0, h / 2, 0), x, yb, z, 0), color, shade);
   const ball = (M, x, y, z, r, color, seg) => M.add(new THREE.SphereGeometry(r, seg || 6, 5).translate(x, y, z), color);
-  function gable(M, x, yb, z, w, d, h, rot, color) {            // a roof: a triangular prism, ridge along local x
+  function gable(M, x, yb, z, w, d, h, rot, color, kind) {       // a roof: a triangular prism, ridge along local x (kind: its texture, e.g. shingle)
     const g = new THREE.BufferGeometry(), a = w / 2 + 0.25, b = d / 2 + 0.25;
     const v = [
       -a, 0, -b, a, 0, -b, a, 0, b, -a, 0, -b, a, 0, b, -a, 0, b,                       // underside
@@ -82,7 +154,7 @@ VM.City3D = (function () {
       -a, 0, -b, a, 0, -b, a, h, 0, -a, 0, -b, a, h, 0, -a, h, 0,                        // back slope
       a, 0, b, -a, 0, b, -a, h, 0, a, 0, b, -a, h, 0, a, h, 0];                          // front slope
     g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
-    M.add(place(g, x, yb, z, rot), color);
+    texPiece(M, kind, g, x, yb, z, rot, color);
   }
   const mulberry = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let q = a; q = Math.imul(q ^ (q >>> 15), q | 1); q ^= q + Math.imul(q ^ (q >>> 7), q | 61); return ((q ^ (q >>> 14)) >>> 0) / 4294967296; }; };
   const polar = (r, a) => [Math.cos(a) * r, Math.sin(a) * r];
@@ -96,17 +168,17 @@ VM.City3D = (function () {
   const STONE = ['#bdb7aa', '#aeab9f', '#c8bfae'], SLATE = ['#5f6777', '#6d5c52', '#52706a'];
   function house(M, h, ci, accent) {
     if (h.style === 0 && VM.StructModels) { tx.add('tent', h.x, 0, h.z, facing(h.x, h.z) + (ci % 2 ? 0.3 : -0.3), 0.85); if (ci % 2) box(M, h.x + 1.6, 0, h.z + 0.9, 0.5, 0.45, 0.5, COL.wood, ci); return; }
-    const stone = h.style === 2, post = stone ? '#d6d1c4' : COL.woodDark;
-    const base = stone ? STONE[ci % 3] : [COL.plaster, COL.plaster2, COL.plaster3][ci % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);
-    const lb = (lx, yb, lz, w, hh, d, color, shade) => M.add(place(new THREE.BoxGeometry(w, hh, d).translate(lx, yb + hh / 2, lz), h.x, 0, h.z, h.rot), color, shade);
-    box(M, h.x, 0, h.z, h.w + 0.12, 0.2, h.d + 0.12, COL.stoneDark, h.rot);                                    // stone footing
-    box(M, h.x, 0.2, h.z, h.w, h.h - 0.2, h.d, base, h.rot, 0.96 + (ci % 3) * 0.02);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) lb(sx * h.w / 2, 0.2, sz * h.d / 2, 0.14, h.h - 0.2, 0.14, post);   // corner posts
-    for (const sz of [-1, 1]) lb(0, h.h - 0.14, sz * h.d / 2, h.w + 0.08, 0.1, 0.1, post);                // beams under the roof
-    for (const sx of [-1, 1]) lb(sx * h.w / 2, h.h - 0.14, 0, 0.1, 0.1, h.d + 0.08, post);
-    if (ci % 2 === 0) for (const sx of [-1, 1]) lb(sx * h.w * 0.28, 0.35, h.d / 2 + 0.03, 0.08, h.h - 0.6, 0.06, COL.woodDark);   // a brace pair on the front
-    gable(M, h.x, h.h, h.z, h.w, h.d, 0.9, h.rot, stone ? SLATE[h.roof % 3] : h.roof === 2 ? accent : COL.roofs[h.roof]);
-    lb(0, h.h + 0.88, 0, h.w + 0.5, 0.08, 0.1, COL.woodDark);                                                      // ridge beam
+    const stone = h.style === 2, post = stone ? '#d6d1c4' : COL.woodDark, wall = stone ? 'stone' : 'plaster';
+    const dist = h.district !== undefined ? h.district : ci, base = stone ? STONE[dist % 3] : [COL.plaster, COL.plaster2, COL.plaster3][dist % 3], c = Math.cos(h.rot), sn = Math.sin(h.rot);     // a district (the houses facing one street) shares its facade colour
+    const lb = (lx, yb, lz, w, hh, d, color, shade, kind) => texPiece(M, kind, new THREE.BoxGeometry(w, hh, d).translate(lx, yb + hh / 2, lz), h.x, 0, h.z, h.rot, color, shade);
+    tbox(M, 'stone', h.x, 0, h.z, h.w + 0.12, 0.2, h.d + 0.12, COL.stoneDark, h.rot);                           // stone footing
+    tbox(M, wall, h.x, 0.2, h.z, h.w, h.h - 0.2, h.d, base, h.rot, 0.96 + (ci % 3) * 0.02);                     // plaster (or stone) walls
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) lb(sx * h.w / 2, 0.2, sz * h.d / 2, 0.14, h.h - 0.2, 0.14, post, undefined, 'wood');   // corner posts
+    for (const sz of [-1, 1]) lb(0, h.h - 0.14, sz * h.d / 2, h.w + 0.08, 0.1, 0.1, post, undefined, 'wood');                                 // beams under the roof
+    for (const sx of [-1, 1]) lb(sx * h.w / 2, h.h - 0.14, 0, 0.1, 0.1, h.d + 0.08, post, undefined, 'wood');
+    if (ci % 2 === 0) for (const sx of [-1, 1]) lb(sx * h.w * 0.28, 0.35, h.d / 2 + 0.03, 0.08, h.h - 0.6, 0.06, COL.woodDark, undefined, 'wood');   // a brace pair on the front
+    gable(M, h.x, h.h, h.z, h.w, h.d, 0.9, h.rot, stone ? SLATE[h.roof % 3] : h.roof === 2 ? accent : COL.roofs[h.roof], 'shingle');
+    lb(0, h.h + 0.88, 0, h.w + 0.5, 0.08, 0.1, COL.woodDark, undefined, 'wood');                                                           // ridge beam
     const dOff = ((ci * 7) % 3 - 1) * h.w * 0.18;
     lb(dOff, 0.2, h.d / 2 + 0.03, 0.42, 0.85, 0.06, COL.door); lb(dOff, 1.05, h.d / 2 + 0.05, 0.56, 0.08, 0.1, COL.woodDark);   // door and lintel
     for (const sx of [-1, 1]) {
@@ -115,21 +187,21 @@ VM.City3D = (function () {
       for (const k of [-1, 1]) lb(wx + k * 0.24, 0.5, h.d / 2 + 0.05, 0.1, 0.4, 0.06, COL.woodDark);
       lb(wx, 0.42, h.d / 2 + 0.12, 0.38, 0.1, 0.14, (ci + sx) % 2 ? '#c0504a' : '#d8a02a');
     }
-    if (h.chimney) { const cx = c * h.w * 0.25, cz = -sn * h.w * 0.25; box(M, h.x + cx, h.h + 0.2, h.z + cz, 0.35, 0.9, 0.35, COL.stoneDark); box(M, h.x + cx, h.h + 1.1, h.z + cz, 0.46, 0.1, 0.46, COL.stone); }
-    if (ci % 4 === 1) { const side = ci % 8 === 1 ? 1 : -1; lb(side * (h.w / 2 + 0.45), 0, -0.1, 0.9, 0.9, h.d * 0.6, base, 0.92); lb(side * (h.w / 2 + 0.45), 0.9, -0.1, 1.05, 0.08, h.d * 0.7, COL.woodDark); }
+    if (h.chimney) { const cx = c * h.w * 0.25, cz = -sn * h.w * 0.25; tbox(M, 'stone', h.x + cx, h.h + 0.2, h.z + cz, 0.35, 0.9, 0.35, COL.stoneDark); box(M, h.x + cx, h.h + 1.1, h.z + cz, 0.46, 0.1, 0.46, COL.stone); }
+    if (ci % 4 === 1) { const side = ci % 8 === 1 ? 1 : -1; lb(side * (h.w / 2 + 0.45), 0, -0.1, 0.9, 0.9, h.d * 0.6, base, 0.92, wall); lb(side * (h.w / 2 + 0.45), 0.9, -0.1, 1.05, 0.08, h.d * 0.7, COL.woodDark, undefined, 'wood'); }
   }
 
   function buildKeep(M, L) {
     const w = { capital: 10, city: 8, town: 7, hamlet: 6 }[L.tier], hh = { capital: 4.4, city: 3.8, town: 3.4, hamlet: 3 }[L.tier];
-    box(M, 0, 0, 0, w, hh, w, COL.stone);
+    tbox(M, 'stone', 0, 0, 0, w, hh, w, COL.stone);
     for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-      cyl(M, sx * w / 2, 0, sz * w / 2, 1.2, 1.4, hh + 1.2, COL.stoneLight, 8);
-      cone(M, sx * w / 2, hh + 1.2, sz * w / 2, 1.6, 1.7, L.color, 8);
+      tcyl(M, 'stone', sx * w / 2, 0, sz * w / 2, 1.2, 1.4, hh + 1.2, 8, COL.stoneLight);
+      tcone(M, 'shingle', sx * w / 2, hh + 1.2, sz * w / 2, 1.6, 1.7, L.color, 8);
     }
     for (let i = -2; i <= 2; i++) for (const side of [-1, 1]) { box(M, i * (w / 5), hh, side * (w / 2 - 0.2), 0.8, 0.6, 0.5, COL.stoneDark); box(M, side * (w / 2 - 0.2), hh, i * (w / 5), 0.5, 0.6, 0.8, COL.stoneDark); }
     const dh = L.tier === 'capital' ? 6.5 : 4.6;
-    box(M, 0, hh, 0, w * 0.45, dh, w * 0.45, COL.stoneLight);
-    cone(M, 0, hh + dh, 0, w * 0.4, 3.2, L.color, 4, 1.0);
+    tbox(M, 'stone', 0, hh, 0, w * 0.45, dh, w * 0.45, COL.stoneLight);
+    texPiece(M, 'shingle', new THREE.ConeGeometry(w * 0.4, 3.2, 4).rotateY(Math.PI / 4).translate(0, 1.6, 0), 0, hh + dh, 0, 0, L.color, 1.0);   // the four-sided roof turned 45 degrees, so its edges run on the diagonals
     box(M, 0, 0, w / 2 + 0.05, 1.8, 2.2, 0.3, COL.door);
     cyl(M, 0, hh + dh + 3.2, 0, 0.07, 0.07, 2.2, COL.woodDark, 4);          // flagpole (the flag itself is animated)
   }
@@ -141,6 +213,10 @@ VM.City3D = (function () {
       box(M, cx, 0, cz, len, 0.05, 2.8, COL.dirt, yawFor(dx, dz), 0.95);
       box(M, dx * R * 0.5, 0, dz * R * 0.5, R, 0.05, L.paved ? 3.2 : 2.4, L.paved ? '#a39d8e' : COL.dirt, yawFor(dx, dz), L.paved ? 1 : 0.9);
     }
+    for (const st of L.streets) if (!st.gate) {                            // cross streets between the gates: the same road as a gate's, from the keep to the wall
+      const dx = Math.cos(st.angle), dz = Math.sin(st.angle);
+      box(M, dx * R * 0.5, 0, dz * R * 0.5, R, 0.05, L.paved ? 3.2 : 2.4, L.paved ? '#a39d8e' : COL.dirt, yawFor(dx, dz), L.paved ? 1 : 0.9);
+    }
     if (lvl === 0) {
       for (const g of L.gates) for (const side of [-1, 1]) { const a = g.angle + side * 0.11, p = polar(R, a); cyl(M, p[0], 0, p[1], 0.22, 0.25, 3, COL.woodDark, 6); box(M, p[0], 2.8, p[1], 0.1, 0.7, 0.5, L.color, 0); }
       return;
@@ -150,18 +226,18 @@ VM.City3D = (function () {
       const [x, z] = polar(R, s.angle), rot = yawFor(-Math.sin(s.angle), Math.cos(s.angle));
       if (s.damage === 2) { for (let k = 0; k < 4; k++) box(M, x + (k - 1.5) * 0.5, 0, z + (k % 2) * 0.4, 0.8, 0.5 + (k % 3) * 0.3, 0.8, COL.rockDark, k); return; }
       const h = s.damage === 1 ? wh * 0.62 : wh;
-      if (VM.StructModels) tx.add('wall', x, 0, z, rot, chord / 3, h / 1.64, Math.max(1, th / 0.6)); else box(M, x, 0, z, chord, h, th, COL.stone, rot, s.damage ? 0.8 : 1);
+      stoneBox(M, x, 0, z, chord, h, th, rot, s.damage ? 0.8 : 1);
       if (s.damage === 1) box(M, x + 0.3, 0, z, 0.9, 0.5, 0.9, COL.rockDark, 0.6);
-      else if (!VM.StructModels && lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
+      else if (lvl >= 2 && i % 2 === 0) { for (const off of [-0.55, 0.55]) { const ox = Math.cos(s.angle + Math.PI / 2) * chord * off * 0.5, oz = Math.sin(s.angle + Math.PI / 2) * chord * off * 0.5; box(M, x + ox - 0.0, h, z + oz, 0.7, 0.5, th * 0.5, COL.stoneDark, rot); } }
     });
     for (const a of W.towers) {
       const [x, z] = polar(R, a), th2 = lvl >= 2 ? 1.5 : 1.1, hh = wh + (lvl >= 2 ? 1.4 : 0.8);
-      cyl(M, x, 0, z, th2, th2 * 1.1, hh, COL.stoneLight, 8);
-      if (lvl >= 2) cone(M, x, hh, z, th2 * 1.3, 1.7, accent, 8); else cyl(M, x, hh, z, th2 * 1.15, th2 * 1.15, 0.35, COL.stoneDark, 8);
+      stoneCyl(M, x, 0, z, th2, th2 * 1.1, hh, 8);
+      if (lvl >= 2) tcone(M, 'shingle', x, hh, z, th2 * 1.3, 1.7, accent, 8); else cyl(M, x, hh, z, th2 * 1.15, th2 * 1.15, 0.35, COL.stoneDark, 8);
     }
     for (const g of L.gates) {                                              // the gate: an arch between two heavier towers
       const [x, z] = polar(R, g.angle), rot = yawFor(-Math.sin(g.angle), Math.cos(g.angle)), broken = L.wall.hpFrac <= 0 && L.besieged;
-      box(M, x, wh * 0.72, z, 3.8, wh * 0.28, th + 0.3, COL.stone, rot);
+      stoneBox(M, x, wh * 0.72, z, 3.8, wh * 0.28, th + 0.3, rot);
       if (!broken) box(M, x - Math.cos(g.angle) * 0.0, 0, z, 0.35, wh * 0.72, 3.0, COL.door, rot + Math.PI / 2, 0.9);
       else box(M, x + 0.5, 0, z + 0.3, 1.1, 0.7, 1.1, COL.rockDark, 0.4);
       box(M, x, wh + 0.3, z, 0.12, 1.6, 0.12, COL.woodDark, 0);
@@ -223,7 +299,7 @@ VM.City3D = (function () {
     const B = L.barracks;
     if (B.level >= 1) {
       const len = 5 + B.level, rot = -B.rot + Math.PI / 2;
-      box(M, B.x, 0, B.z, len, 2.4, 3, COL.plaster3, rot); gable(M, B.x, 2.4, B.z, len, 3, 1.4, rot, COL.roofs[2]);
+      tbox(M, 'plaster', B.x, 0, B.z, len, 2.4, 3, COL.plaster3, rot); gable(M, B.x, 2.4, B.z, len, 3, 1.4, rot, COL.roofs[2], 'shingle');
       cyl(M, B.x - Math.cos(B.rot) * 3, 0, B.z - Math.sin(B.rot) * 3, 0.08, 0.08, 4.4, COL.woodDark, 4);
       box(M, B.x - Math.cos(B.rot) * 3, 3.2, B.z - Math.sin(B.rot) * 3, 0.06, 1.0, 1.4, accent, rot);
     }
@@ -237,9 +313,9 @@ VM.City3D = (function () {
     // Temple
     const T = L.temple;
     if (T.level >= 1) {
-      cyl(M, T.x, 0, T.z, 1.7, 1.9, 0.6, COL.stoneLight, 8);
+      tcyl(M, 'stone', T.x, 0, T.z, 1.7, 1.9, 0.6, 8, COL.stoneLight);
       if (T.level === 1) { cyl(M, T.x, 0.6, T.z, 1.1, 1.2, 1.6, COL.plaster, 8); ball(M, T.x, 2.3, T.z, 1.2, COL.gold, 7); }
-      else { box(M, T.x, 0.6, T.z, 2.2, 3.6 + T.level, 2.2, COL.plaster); cone(M, T.x, 4.2 + T.level, T.z, 1.8, 2.6, COL.roofs[2], 6); if (T.level >= 3) { ball(M, T.x, 8.9, T.z, 0.45, COL.glow, 6); for (const k of [0, 1, 2, 3]) { const p = polar(2.6, k * Math.PI / 2 + 0.7); cyl(M, T.x + p[0], 0, T.z + p[1], 0.25, 0.3, 3.2, COL.stoneLight, 6); } } }
+      else { tbox(M, 'plaster', T.x, 0.6, T.z, 2.2, 3.6 + T.level, 2.2, COL.plaster); tcone(M, 'shingle', T.x, 4.2 + T.level, T.z, 1.8, 2.6, COL.roofs[2], 6); if (T.level >= 3) { ball(M, T.x, 8.9, T.z, 0.45, COL.glow, 6); for (const k of [0, 1, 2, 3]) { const p = polar(2.6, k * Math.PI / 2 + 0.7); cyl(M, T.x + p[0], 0, T.z + p[1], 0.25, 0.3, 3.2, COL.stoneLight, 6); } } }
     }
     // Depot
     if (L.depot) {
@@ -252,7 +328,7 @@ VM.City3D = (function () {
       box(M, f.x, 0, f.z, f.w, 0.08, f.d, COL.soil, f.rot);
       for (let r = 0; r < 5; r++) { const o = (r - 2) * (f.d / 5.2), c = Math.sin(f.rot), sn = Math.cos(f.rot); box(M, f.x + c * o, 0.08, f.z + sn * o, f.w * 0.88, 0.3, 0.5, f.crop ? COL.wheat : COL.crop, f.rot); }
     }
-    for (const fh of L.farmhouses) { box(M, fh.x, 0, fh.z, 3.2, 1.8, 2.4, COL.plaster2, -fh.rot); gable(M, fh.x, 1.8, fh.z, 3.2, 2.4, 1.3, -fh.rot, COL.roofs[1]); cyl(M, fh.x + 2.6, 0, fh.z, 0.55, 0.65, 2.2, COL.hay, 7); }
+    for (const fh of L.farmhouses) { tbox(M, 'plaster', fh.x, 0, fh.z, 3.2, 1.8, 2.4, COL.plaster2, -fh.rot); gable(M, fh.x, 1.8, fh.z, 3.2, 2.4, 1.3, -fh.rot, COL.roofs[1], 'shingle'); cyl(M, fh.x + 2.6, 0, fh.z, 0.55, 0.65, 2.2, COL.hay, 7); }
     // Features
     for (const f of L.features) {
       if (f.kind === 'tree' && VM.StructModels) tx.add('tree', f.x, 0, f.z, f.rot, 0.85 * f.size / 2.2 + 0.15);

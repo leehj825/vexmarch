@@ -53,7 +53,7 @@ VM.Commands = (function () {
       const o = state.officers[cmd.officer];
       if (!o || o.owner !== cmd.faction) return fail('not your officer');
       if (o.army !== null) return fail('officer leads an army');
-      if (o.role === 'traveling' || o.role === 'searching') return fail('officer is busy');
+      if (o.role === 'traveling' || o.role === 'searching' || o.role === 'hostage') return fail('officer is busy');
       state.cities.forEach(c => { if (c.governor === o.id) c.governor = null; });
       const old = state.officers[city.governor]; if (old) old.role = 'idle';
       city.governor = o.id; o.role = 'governor'; o.loc = city.id;
@@ -105,6 +105,15 @@ VM.Commands = (function () {
     giftOfficer(state, cmd) { return VM.Officers.gift(state, cmd.faction, cmd.officer); },
     proposeAlliance(state, cmd) { return VM.Diplo.proposeAlliance(state, cmd.faction, cmd.to); },
     breakAlliance(state, cmd) { return VM.Diplo.breakAlliance(state, cmd.faction); },
+    storyChoice(state, cmd) { return VM.Story.choose(state, cmd.choice | 0); },
+    marry(state, cmd) { return VM.Diplo.marry(state, cmd.faction); },
+    exchangeHostages(state, cmd) { return VM.Diplo.exchangeHostages(state, cmd.faction); },
+    openRoute(state, cmd) { return VM.Trade.open(state, cmd.faction, cmd.a, cmd.b); },
+    closeRoute(state, cmd) { return VM.Trade.close(state, cmd.faction, cmd.route); },
+    chooseDoctrine(state, cmd) { return VM.Doctrine.pick(state, cmd.faction, cmd.id); },
+    proposeVassal(state, cmd) { return VM.Diplo.proposeVassal(state, cmd.faction, cmd.to); },
+    duel(state, cmd) { return VM.Duel.duel(state, cmd.faction, cmd.army, cmd.target); },
+    askAid(state, cmd) { return VM.Diplo.askAid(state, cmd.faction); },
     giftFaction(state, cmd) { return VM.Diplo.gift(state, cmd.faction, cmd.to, cmd.gold); },
     proposeMerge(state, cmd) { return VM.Diplo.proposeMerge(state, cmd.faction, cmd.to); },
     answerOffer(state, cmd) { return VM.Diplo.answerOffer(state, cmd.faction, cmd.offer, !!cmd.accept); },

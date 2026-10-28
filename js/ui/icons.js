@@ -119,7 +119,7 @@ VM.Icons = (function () {
     order: { hold: 'hold', defend: 'shield', reinforce: 'reinforce', raid: 'raid' },
     ability: { charge: 'bolt', fire: 'flame', rally: 'horn' },
     trait: { Rash: 'flame', Cautious: 'eye', Loyal: 'handshake', Greedy: 'bag', Brave: 'chevrons', Schemer: 'mask' },
-    role: { governor: 'crown', commander: 'flag', idle: 'zzz', traveling: 'go', searching: 'search' },
+    role: { governor: 'crown', commander: 'flag', idle: 'zzz', hostage: 'unlink', traveling: 'go', searching: 'search' },
     alert: { attack: 'alert', army: 'flag', officer: 'mask', proposal: 'ask', battle: 'swords', famine: 'bread', diplo: 'handshake', info: 'info' },
     event: { attacked: 'alert', battle: 'swords', rout: 'back', destroyed: 'skull', captured: 'flag', breach: 'wall', blocked: 'stop', cut: 'unlink', officerCaptured: 'mask', officerDied: 'skull', eliminated: 'skull',
       defected: 'mask', loyaltyLow: 'heart', wanderer: 'pop', found: 'search', searchFailed: 'search', recruited: 'pop', arrived: 'go', built: 'house', starving: 'bread', proposal: 'ask',
@@ -133,6 +133,12 @@ VM.Icons = (function () {
     const hairShape = style === 0 ? '<path d="M7.500 11c0-5 3-7 4.500-7s4.500 2 4.500 7c-1-2-3-3-4.500-3S8.500 9 7.500 11z"/>' : style === 1 ? '<path d="M7 13V9c0-4 2.500-6 5-6s5 2 5 6v4c-.5-3-2-5-5-5s-4.500 2-5 5z"/>' : '<path d="M7.500 10.500c1-4 3-5 4.500-5s3.500 1 4.500 5c-2-1-3-1.500-4.500-1.500s-2.500.5-4.500 1.500z"/>';
     return `<svg class="pt" width="${w}" height="${w}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="${bg}"/><path d="M3 24c0-5 4-8 9-8s9 3 9 8z" fill="${color || '#888'}"/><rect x="10.500" y="13" width="3" height="3.500" fill="${skin}"/><ellipse cx="12" cy="10" rx="4" ry="4.600" fill="${skin}"/><g fill="${hair}">${hairShape}</g><circle cx="10.200" cy="10.200" r=".6" fill="#1a1210"/><circle cx="13.800" cy="10.200" r=".6" fill="#1a1210"/></svg>`;
   }
+  // A house crest: a shield in the house colour with the house's emblem (the icon set's own paths), gold edged
+  const CREST = { 1: 'sword', 2: 'anchor', 3: 'sprout', 4: 'mountain', 5: 'cross', 6: 'horse' };
+  function crest(house, color, size) {
+    const w = size || 40, sym = S[CREST[house]] || '';
+    return `<svg class="crest" width="${w}" height="${Math.round(w * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M4 4h32v20c0 9-7 15-16 18C11 39 4 33 4 24z" fill="${color || '#888'}" stroke="#f2d27a" stroke-width="2.5"/><svg x="10" y="10" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5ead0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${sym}</svg></svg>`;
+  }
   if (typeof document !== 'undefined' && document.body) sprite();
-  return { MAP, portrait, S, sprite, svg, w, t, stat, btn, meter, pips, esc, has: n => !!S[n] };
+  return { MAP, portrait, crest, S, sprite, svg, w, t, stat, btn, meter, pips, esc, has: n => !!S[n] };
 })();

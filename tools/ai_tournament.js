@@ -9,6 +9,8 @@ for (let seed = 1; seed <= seeds; seed++) {
   const levels = base.map((_, i) => base[(i + seed - 1) % base.length]);      // rotate the levels over the start positions
   const s = VM.Sim.create({ seed, aiAll: true, difficulty: 'normal', factions: levels.length });
   s.factions.forEach((f, i) => { if (!f.neutral) f.ai.level = levels[i - 1]; });
+  if (process.env.HAZARDS) VM.Hazards.setOn(s, true);   // HAZARDS=1: with random events
+  if (process.env.FOG) VM.Fog.setOn(s, true);        // FOG=1 npm run tournament: the same games with fog of war
   for (let y = 0; y < years && !s.over; y++) VM.Sim.advance(s, Y);
   const counts = s.factions.filter(f => !f.neutral).map(f => s.cities.filter(c => c.owner === f.id).length);
   const top = counts.indexOf(Math.max(...counts));

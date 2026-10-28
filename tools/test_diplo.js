@@ -195,4 +195,49 @@ test('AI-vs-AI: diplomacy happens, state stays sane for five years', () => {
   console.log(`       (pacts ${pacts}, merges ${merges}, breaks ${breaks})`);
 });
 
+test('ask for help: an ally sends its idle armies to a threatened city, then goes back to its own orders; no help without a threat', () => {
+  const s = world(); VM.Diplo.ensure(s).allies.push({ a: 1, b: 2, since: 0 });
+  assert(!ex(s, 1, { type: 'askAid' }).ok, 'nothing threatens us yet');
+  const mine = s.cities.find(c => c.owner === 1), helper = army(s, 2, s.cities[capOf(s, 2)].id, { infantry: 60 });
+  mine.besieged = true;
+  const r = ex(s, 1, { type: 'askAid' }); assert(r.ok && r.sent === 1 && r.city === mine.id, JSON.stringify(r));
+  assert(helper.aid && helper.aid.city === mine.id && helper.dest === mine.id, 'the army is on its way');
+  assert(!ex(s, 1, { type: 'askAid' }).ok, 'cool-down');
+  mine.besieged = false; run(s, 3); assert(helper.aid, 'still helping');
+  run(s, VM.CFG.DIPLO.aidDays + 5); assert(!helper.aid && helper.order !== 'hold', 'back to its own orders');
+});
+
+test('an AI ally helps a partner under siege on its own', () => {
+  const s = world(); s.aiOn = true; VM.Diplo.ensure(s).allies.push({ a: 1, b: 2, since: 0 });
+  const mine = s.cities.find(c => c.owner === 1), helper = army(s, 2, s.cities[capOf(s, 2)].id, { infantry: 60 });
+  army(s, 3, mine.id, { infantry: 200 }); run(s, 3);
+  assert(helper.aid && helper.aid.for === 1, 'sent without being asked');
+});
+
+test('marriage: costs a dowry, needs an old pact and good will, stops an AI ally betraying, and breaking it costs double', () => {
+  const s = world(); VM.Diplo.ensure(s).allies.push({ a: 1, b: 2, since: 0 }); s.time = 10;
+  assert(!ex(s, 1, { type: 'marry' }).ok, 'too young'); s.time = 70; VM.Diplo.addOp(s, 2, 1, 40);
+  const g1 = s.factions[1].gold, g2 = s.factions[2].gold; assert(ex(s, 1, { type: 'marry' }).ok, 'wed');
+  assert(s.factions[1].gold === g1 - VM.CFG.DIPLO.marryCost && s.factions[2].gold === g2 + VM.CFG.DIPLO.marryCost, 'the dowry'); assert(!ex(s, 1, { type: 'marry' }).ok, 'only once');
+  const t1 = VM.Diplo.trust(s, 1); ex(s, 1, { type: 'breakAlliance' }); assert.strictEqual(VM.Diplo.trust(s, 1), t1 + VM.CFG.DIPLO.breakTrust * 2, 'double trust loss');
+  const betrays = married => { const u = world(); u.aiOn = true; VM.Diplo.ensure(u).allies.push({ a: 1, b: 2, since: 0, married }); u.time = 200;
+    for (const c of u.cities) if (c.owner !== 2) c.owner = 1;                      // the two hold everything: an AI ally ends the pact now
+    u.officers.forEach(o => { if (o.owner === 2) o.trait = 'Rash'; }); u.factions[2].ai.dnext = 0; VM.Diplo.think(u, u.factions[2]); return !VM.Diplo.allied(u, 1, 2); };
+  assert(betrays(false), 'an unmarried AI ally betrays at the end'); assert(!betrays(true), 'a married AI keeps its word');
+});
+
+test('hostages: each side gives an idle officer; they cannot lead or govern; breaking the pact keeps the breaker\'s hostage, ending it otherwise sends them home', () => {
+  const s = world(); VM.Diplo.ensure(s).allies.push({ a: 1, b: 2, since: 0 }); s.time = 40; VM.Diplo.addOp(s, 2, 1, 20);
+  const r = ex(s, 1, { type: 'exchangeHostages' }); assert(r.ok, JSON.stringify(r));
+  const mine = s.officers[r.mine], theirs = s.officers[r.theirs]; assert(mine.role === 'hostage' && mine.hostage === 2 && mine.loc === s.factions[2].capital && theirs.hostage === 1);
+  assert(!ex(s, 1, { type: 'exchangeHostages' }).ok, 'one exchange at a time');
+  assert(!ex(s, 1, { type: 'setGovernor', city: s.cities.find(c => c.owner === 1).id, officer: mine.id }).ok, 'a hostage does not govern');
+  ex(s, 1, { type: 'breakAlliance' });
+  assert(theirs.owner === 2 && theirs.role === 'idle' && theirs.hostage === null, 'their hostage goes home');
+  assert(mine.owner === 2 && mine.role === 'idle', 'the breaker\'s hostage joins the wronged house');
+  const u = world(); VM.Diplo.ensure(u).allies.push({ a: 1, b: 2, since: 0 }); u.time = 40; VM.Diplo.addOp(u, 2, 1, 20);
+  const q = ex(u, 1, { type: 'exchangeHostages' }); VM.Diplo.drop(u, 2);
+  assert(u.officers[q.mine].owner === 1 && u.officers[q.mine].role === 'idle' && u.officers[q.mine].hostage === null, 'a pact that ends by a house falling frees the hostage');
+});
+
 console.log(`${passed} passed, ${failed} failed`); process.exit(failed ? 1 : 0);
