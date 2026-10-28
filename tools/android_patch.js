@@ -83,5 +83,9 @@ if (process.env.VX_KEYSTORE && !gradle.includes('signingConfigs')) {
     }`);
   gradle = gradle.replace(/(buildTypes \{\s*release \{)/, '$1\n            signingConfig signingConfigs.release');
 }
+// Play's automatic protection needs Android 7.0 (API 24) or newer; Capacitor's template still says 22
+gradle = gradle.replace(/minSdkVersion [^\n]+/, 'minSdkVersion 24');
+const variablesF = path.join(root, 'android/variables.gradle');
+if (fs.existsSync(variablesF)) fs.writeFileSync(variablesF, fs.readFileSync(variablesF, 'utf8').replace(/minSdkVersion\s*=\s*\d+/, 'minSdkVersion = 24'));
 fs.writeFileSync(gradleF, gradle);
 console.log('build.gradle: version ' + (process.env.VX_VERSION_NAME || '') + ' (' + (process.env.VX_VERSION_CODE || 1) + ')' + (process.env.VX_KEYSTORE ? ', release signing set' : ''));
