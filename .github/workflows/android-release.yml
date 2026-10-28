@@ -1,0 +1,82 @@
+# Release build of Vexmarch for Google Play, run on every merge to main (and by hand from Actions -> "Android release").
+# It builds the signed app bundle (.aab, what Play Console takes) and the signed release APK (for installing directly on a phone).
+# Both are uploaded as artifacts: "vexmarch-release-<version>" holds the .aab and the .apk.
+# The release build uses Vexmarch's REAL AdMob ids (tools/ads_ids.js), as a store build must.
+# It needs these repository secrets (Settings -> Secrets and variables -> Actions):
+#   KEYSTORE_B64   the upload keystore file, base64 encoded (base64 -w0 your.jks)
+#   KEYSTORE_PASSWORD the keystore password
+#   KEY_ALIAS         the key alias inside the keystore
+#   KEY_PASSWORD      the key password
+# The version code is the workflow run number, so every upload is higher than the last one (Play refuses a code it has seen).
+name: Android release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Check the signing secrets are set
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          for v in KEYSTORE KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Secret for $v is not set (see the top of .github/workflows/android-release.yml)"; exit 1; fi
+          done
+      - name: Accept Android SDK licenses (the runner already has the SDK)
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Test the game logic
+        run: npm ci && npm test
+      - name: Decode the keystore
+        env:
+          KEYSTORE: ${{ secrets.KEYSTORE_B64 }}
+        run: echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+      - name: Generate the Android project, the game and the release signing
+        env:
+          VX_ADS: real
+          VX_VERSION_CODE: ${{ github.run_number }}
+          VX_VERSION_NAME: ${{ github.run_number }}
+          VX_KEYSTORE: ${{ runner.temp }}/release.jks
+          VX_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VX_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          VX_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          npm run www
+          [ -d android ] || npx cap add android
+          node tools/android_patch.js
+          npx cap sync android
+      - name: Build the app bundle and the release APK
+        working-directory: android
+        env:
+          VX_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          VX_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          VX_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: chmod +x gradlew && ./gradlew bundleRelease assembleRelease --no-daemon
+      - name: Name the files after the version and commit
+        id: name
+        run: |
+          V="${{ github.run_number }}-${GITHUB_SHA::7}"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          cp android/app/build/outputs/bundle/release/app-release.aab "vexmarch-release-$V.aab"
+          cp android/app/build/outputs/apk/release/app-release.apk "vexmarch-release-$V.apk"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: vexmarch-release-${{ steps.name.outputs.version }}
+          path: vexmarch-release-*
+          if-no-files-found: error

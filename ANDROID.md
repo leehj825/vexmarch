@@ -35,4 +35,10 @@ or, on GitHub, **Actions -> Android debug APK -> Run workflow -> ads: real**. Ev
 - The AdMob app id in the manifest and the network-state permission the ads need.
 
 ## Not covered here
+## Release builds (merge to main)
+
+`.github/workflows/android-release.yml` runs on every merge to `main` (or by hand: Actions -> "Android release" -> Run workflow). It builds the signed app bundle (`.aab`, for Play Console) and the signed release APK, with Vexmarch's real AdMob ids, and uploads both as the artifact `vexmarch-release-<run>-<commit>`. The version code is the run number, so each upload is higher than the last.
+
+It needs four repository secrets (Settings -> Secrets and variables -> Actions): `KEYSTORE_B64` (the upload keystore, `base64 -w0 your.jks`), `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`. Keep the keystore and its passwords safe: losing the upload key means Play cannot take updates from that app under the same listing without a key reset. If a secret is missing, the run stops with a message naming it.
+
 Play Store publishing needs a release signing key, an app bundle (`./gradlew bundleRelease`), a developer account, a privacy policy and store assets (the feature graphic is in `icons/`). **The APK has not been built or run yet**: the Android SDK was not available where the project was written, so the first workflow run is the real test. If it fails, the log will say why.

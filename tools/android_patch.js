@@ -65,3 +65,23 @@ if (!styles.includes('windowSplashScreenBackground')) {
   fs.writeFileSync(stylesF, styles);
 }
 console.log('dark system splash set');
+
+// Release signing and versions, for the release build (.github/workflows/android-release.yml). The keystore is a file the workflow decodes from a secret;
+// the passwords are read from the environment by Gradle, never written into the project. The version code must rise with every upload to Google Play.
+const gradleF = path.join(root, 'android/app/build.gradle');
+let gradle = fs.readFileSync(gradleF, 'utf8');
+gradle = gradle.replace(/versionCode \d+/, `versionCode ${process.env.VX_VERSION_CODE || 1}`).replace(/versionName "[^"]*"/, `versionName "${process.env.VX_VERSION_NAME || cfg.version || '1.0'}"`);
+if (process.env.VX_KEYSTORE && !gradle.includes('signingConfigs')) {
+  gradle = gradle.replace(/android \{/, `android {
+    signingConfigs {
+        release {
+            storeFile file("${process.env.VX_KEYSTORE}")
+            storePassword System.getenv("VX_KEYSTORE_PASSWORD")
+            keyAlias System.getenv("VX_KEY_ALIAS")
+            keyPassword System.getenv("VX_KEY_PASSWORD")
+        }
+    }`);
+  gradle = gradle.replace(/(buildTypes \{\s*release \{)/, '$1\n            signingConfig signingConfigs.release');
+}
+fs.writeFileSync(gradleF, gradle);
+console.log('build.gradle: version ' + (process.env.VX_VERSION_NAME || '') + ' (' + (process.env.VX_VERSION_CODE || 1) + ')' + (process.env.VX_KEYSTORE ? ', release signing set' : ''));
